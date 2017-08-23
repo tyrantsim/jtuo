@@ -1,0 +1,31 @@
+package com.github.tyrantsim.jtuo;
+
+enum Skill {
+
+    // Placeholder for no-skill:
+    NO_SKILL,
+
+    // Activation (harmful):
+    ENFEEBLE, JAM, MORTAR, SIEGE, STRIKE, SUNDER, WEAKEN,
+
+    // Activation (helpful):
+    ENHANCE, EVOLVE, HEAL, MEND, OVERLOAD, PROTECT, RALLY,
+    EBRAGE, ENTRAP, RUSH,
+
+    // Activation (unclassified/polymorphic):
+    MIMIC,
+
+    // Defensive:
+    ARMOR, AVENGE, CORROSIVE, COUNTER, EVADE, SUBDUE,
+    PAYBACK, REVENGE, TRIBUTE, REFRESH, WALL, BARRIER,
+
+    // Combat-Modifier:
+    COALITION, LEGION, PIERCE, RUPTURE, SWIPE, DRAIN, VENOM,
+
+    // Damage-Dependent:
+    BERSERK, INHIBIT, SABOTAGE, LEECH, POISON,
+
+    // Triggered:
+    ALLEGIANCE, FLURRY, VALOR, STASIS, SUMMON,
+
+}
