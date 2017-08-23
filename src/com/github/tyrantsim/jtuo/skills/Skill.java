@@ -10,7 +10,7 @@ public enum Skill {
 
     // Activation (helpful):
     ENHANCE, EVOLVE, HEAL, MEND, OVERLOAD, PROTECT, RALLY,
-    EBRAGE, ENTRAP, RUSH,
+    ENRAGE, ENTRAP, RUSH,
 
     // Activation (unclassified/polymorphic):
     MIMIC,

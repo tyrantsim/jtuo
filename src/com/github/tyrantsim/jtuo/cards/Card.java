@@ -17,7 +17,7 @@ public class Card {
     String name = "";
     int level;
     Faction faction = Faction.IMPERIAL;
-    int rarirty = 1;
+    int rarity = 1;
     int fusionLevel;
     int set;
 
