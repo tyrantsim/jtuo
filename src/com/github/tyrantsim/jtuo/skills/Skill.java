@@ -1,6 +1,6 @@
-package com.github.tyrantsim.jtuo;
+package com.github.tyrantsim.jtuo.skills;
 
-enum Skill {
+public enum Skill {
 
     // Placeholder for no-skill:
     NO_SKILL,

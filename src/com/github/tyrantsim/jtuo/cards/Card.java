@@ -1,9 +1,13 @@
-package com.github.tyrantsim.jtuo;
+package com.github.tyrantsim.jtuo.cards;
+
+import com.github.tyrantsim.jtuo.skills.Skill;
+import com.github.tyrantsim.jtuo.skills.SkillSpec;
+import com.github.tyrantsim.jtuo.skills.SkillTrigger;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 
-class Card {
+public class Card {
 
     int id;
     int baseId; // The id of the original card if a card is unique and alt/upgraded. The own id of the card otherwise.
@@ -34,19 +38,19 @@ class Card {
 
     void addSkill(SkillTrigger trigger, Skill id, int x, Faction y, int n, int c, Skill s, Skill s2, boolean all, int cardId) {
         SkillSpec spec = new SkillSpec();
-        spec.id = id;
-        spec.x = x;
-        spec.y = y;
-        spec.n = n;
-        spec.s = s;
-        spec.s2 = s2;
-        spec.all = all;
-        spec.cardId = cardId;
+        spec.setId(id);
+        spec.setX(x);
+        spec.setY(y);
+        spec.setN(n);
+        spec.setS(s);
+        spec.setS2(s2);
+        spec.setAll(all);
+        spec.setCardId(cardId);
 
         // remove previous copy of such skill.id
-        skills.removeIf(ss -> ss.id == id);
-        skillsOnPlay.removeIf(ss -> ss.id == id);
-        skillsOnDeath.removeIf(ss -> ss.id == id);
+        skills.removeIf(ss -> ss.getId() == id);
+        skillsOnPlay.removeIf(ss -> ss.getId() == id);
+        skillsOnDeath.removeIf(ss -> ss.getId() == id);
 
         // add a new one
         switch(trigger) {

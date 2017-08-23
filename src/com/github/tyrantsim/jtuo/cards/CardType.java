@@ -1,4 +1,4 @@
-package com.github.tyrantsim.jtuo;
+package com.github.tyrantsim.jtuo.cards;
 
 enum CardType {
 
