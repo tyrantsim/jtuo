@@ -14,10 +14,10 @@ public class Cards {
     public static final int[] UPGARDE_COST = {0, 5, 15, 30, 75, 150};
 
     // Dominion cost 2D array of maps
-    Map<Card, Integer>[][] dominionCost = new HashMap[3][7];
+    public static Map<Card, Integer>[][] dominionCost = new HashMap[3][7];
 
     // Dominion refund 2D array of maps
-    Map<Card, Integer>[][] dominionRefund = new HashMap[3][7];
+    public static Map<Card, Integer>[][] dominionRefund = new HashMap[3][7];
 
     // Minimum possible score in different game modes
     public static final int[] MIN_POSSIBLE_SCORE = {0, 0, 0, 10, 5, 5, 5, 0};
@@ -31,34 +31,34 @@ public class Cards {
     /* Data initialization from cards.h */
 
     // All cards list
-    List<Card> allCards = new ArrayList<Card>();
+    public static List<Card> allCards = new ArrayList<Card>();
 
     // Cards by ID map
-    Map<Integer, Card> cardsById = new HashMap<Integer, Card>();
+    public static Map<Integer, Card> cardsById = new HashMap<Integer, Card>();
 
     // Unordered set of player cards
-    Set<Card> playerCards = new HashSet<Card>();
+    public static Set<Card> playerCards = new HashSet<Card>();
 
     // Cards by name map
-    Map<String, Card> cardsByName = new HashMap<String, Card>();
+    public static Map<String, Card> cardsByName = new HashMap<String, Card>();
 
     // List of player commanders
-    List<Card> playerCommanders = new ArrayList<Card>();
+    public static List<Card> playerCommanders = new ArrayList<Card>();
 
     // List of player assaults
-    List<Card> playerAssaults = new ArrayList<Card>();
+    public static List<Card> playerAssaults = new ArrayList<Card>();
 
     // List of player structures
-    List<Card> playerStructures = new ArrayList<Card>();
+    public static List<Card> playerStructures = new ArrayList<Card>();
 
     // Map of player cards abbreviations
-    Map<String, String> playerCardsAbbr = new HashMap<String, String>();
+    public static Map<String, String> playerCardsAbbr = new HashMap<String, String>();
 
     // Unordered set of visible cards (???hand maybe???)
-    Set<Integer> visibleCardset = new HashSet<Integer>();
+    public static Set<Integer> visibleCardset = new HashSet<Integer>();
 
     // Unordered set of ambiguous names (???)
-    Set<String> ambiguousNames = new HashSet<String>();
+    public static Set<String> ambiguousNames = new HashSet<String>();
 
     /* End of data from cards.h */
 
@@ -70,20 +70,14 @@ public class Cards {
         return cardName.replaceAll("[\\s;:,\"'!]", "").toLowerCase();
     }
 
-    public static List<String> getAbbreviations(final String name) {
-
-        // TODO
-        return null;
-    }
-
-    final Card getCardById(final int id) throws Exception {
+    public static Card getCardById(final int id) throws Exception {
         if (!cardsById.containsKey(id))
             throw new Exception("No card with ID " + id);
         else
             return cardsById.get(id);
     }
 
-    void organize() {
+    public static void organize() {
 
         cardsById.clear();
         playerCards.clear();
@@ -137,7 +131,7 @@ public class Cards {
 
     }
 
-    void fixDominionRecipes() {
+    public static void fixDominionRecipes() {
         for (Card card: allCards) {
             if (card.category == CardCategory.DOMINION_ALPHA) {
                 Map<Card, Integer> domCost = dominionCost[card.fusionLevel][card.level];
@@ -151,24 +145,50 @@ public class Cards {
         }
     }
 
-    void addCard(Card card, final String name) {
+    public static void addCard(Card card, final String name) {
+
+        String simpleName = simplifyName(name);
 
         // Detect card duplicates
-        if (!cardsByName.containsKey(name)) {
+        if (cardsByName.containsKey(simpleName)) {
 
-            // No duplicates - Go!
-            // TODO
+            // Match param card set and card by name set
+            if (visibleCardset.contains(cardsByName.get(simpleName).set)
+                    == visibleCardset.contains(card.set)) {
+
+                // Both cards have the same name in the same set
+                ambiguousNames.add(simpleName);
+            }
 
         } else {
 
-            // Match param card and card by name
-            // TODO
+            // No duplicates - Go!
+            ambiguousNames.remove(simpleName);
+            cardsByName.put(simpleName, card);
+
+            if (visibleCardset.contains(card.set) && !playerCards.contains(card)) {
+
+                playerCards.add(card);
+
+                switch (card.type) {
+                    case ASSAULT:
+                        playerAssaults.add(card);
+                        break;
+                    case COMMANDER:
+                        playerCommanders.add(card);
+                        break;
+                    case STRUCTURE:
+                        playerStructures.add(card);
+                        break;
+                }
+
+            }
 
         }
 
     }
 
-    void eraseFusionRecipe(int id) throws Exception {
+    public static void eraseFusionRecipe(int id) throws Exception {
         cardsById.get(getCardById(id).baseId).recipeCards.clear();
     }
 
