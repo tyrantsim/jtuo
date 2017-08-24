@@ -9,12 +9,12 @@ import java.util.*;
 public class Deck {
 
     Cards allCards;
-    DeckType deckType;
+    DeckType deckType = DeckType.DECK;
     int id;
     String name;
     int upgradePoints;
     int upgradeOpportunities;
-    DeckStrategy strategy;
+    DeckStrategy strategy = DeckStrategy.RANDOM;
 
     Card commander;
     Card alphaDominion;
