@@ -40,5 +40,15 @@ public class Field {
     boolean assaultBloodlusted = false;
     int bloodlustValue;
 
+    // TODO: Should this method be here?
+    Results play() {
+        // TODO: implement this
+        return null;
+    }
+
+    // Getters & Setters
+    Hand[] getPlayers() {
+        return players;
+    }
 
 }

@@ -39,4 +39,18 @@ public class CardStatus {
     boolean rushAttempted;
     boolean sundered;
 
+    void set(Card card) {
+        // TODO: implement this
+    }
+
+    final int skill(Skill skillId) {
+        // TODO: implement this
+        return -1;
+    }
+
+    // Getters & Setters
+    public Card getCard() {
+        return card;
+    }
+
 }

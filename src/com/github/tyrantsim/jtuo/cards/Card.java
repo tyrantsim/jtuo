@@ -116,4 +116,9 @@ public class Card {
         return id;
     }
 
+    // Getters & Setters
+    public Faction getFaction() {
+        return faction;
+    }
+
 }

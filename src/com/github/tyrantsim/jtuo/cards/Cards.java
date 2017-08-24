@@ -11,7 +11,7 @@ public class Cards {
     /* Arrays and maps from tyrant.h */
 
     // Card upgrade SP cost
-    int[] upgradeCost = {0, 5, 15, 30, 75, 150};
+    public static final int[] UPGARDE_COST = {0, 5, 15, 30, 75, 150};
 
     // Dominion cost 2D array of maps
     Map<Card, Integer>[][] dominionCost = new HashMap[3][7];
@@ -20,10 +20,10 @@ public class Cards {
     Map<Card, Integer>[][] dominionRefund = new HashMap[3][7];
 
     // Minimum possible score in different game modes
-    int[] minPossibleScore = {0, 0, 0, 10, 5, 5, 5, 0};
+    public static final int[] MIN_POSSIBLE_SCORE = {0, 0, 0, 10, 5, 5, 5, 0};
 
     // Maximum possible score in different game modes
-    int[] maxPossibleScore = {100, 100, 100, 100, 65, 65, 100, 100};
+    public static final int[] MAX_POSSIBLE_SCORE = {100, 100, 100, 100, 65, 65, 100, 100};
 
     /* End of arrays and maps from tyrant.h */
 
