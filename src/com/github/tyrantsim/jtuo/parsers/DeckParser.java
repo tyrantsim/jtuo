@@ -1,8 +1,10 @@
 package com.github.tyrantsim.jtuo.parsers;
 
+import com.github.tyrantsim.jtuo.decks.Deck;
 import com.github.tyrantsim.jtuo.util.Pair;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class DeckParser {
 
@@ -11,9 +13,10 @@ public class DeckParser {
      *          The key is the deck name, the value is the factor (weight of deck out of all decks)
      */
 
-    /* Fields from read.cpp */
-
     private static Set<String> expandingDecks = new HashSet<String>();
+
+    public static Map<String, Deck> decksByName = new HashMap<String, Deck>();
+
 
     /* Methods from read.cpp */
 
@@ -36,8 +39,57 @@ public class DeckParser {
     }
 
     public static Map<String, Double> expandDeckToList(String deckName) {
-        // TODO
-        return null;
+
+        if (expandingDecks.contains(deckName)) {
+            // Circular reference, return empty decklist
+            System.err.println("WARNING: There is a circular referred deck: " + deckName);
+            return new HashMap<String, Double>();
+        }
+
+        String deckStr = deckName;
+        Deck deck = findDeckById(deckName);
+
+        if (deck != null) {
+
+            deckStr = deck.getDeckString();
+
+            if (deckStr.contains(";") || deckStr.contains(":") || findDeckById(deckName) != null) {
+                // Deck name refers to deck list
+                expandingDecks.add(deckName);
+                Map<String, Double> deckList = parseDeckList(deckStr);
+                expandingDecks.remove(deckName);
+                return normalize(deckList);
+            }
+        }
+
+        Map<String, Double> res = new HashMap<String, Double>();
+
+        if (deckStr.length() >= 3 && deckStr.startsWith("/") && deckStr.endsWith("/")) {
+            // Deck name is or refers to a regex
+            Pattern p = Pattern.compile(deckStr.substring(1, deckStr.length() - 1));
+
+            expandingDecks.add(deckName);
+            for (String key: decksByName.keySet()) {
+                if (p.matcher(key).find()) {
+                    Map<String, Double> deckList = expandDeckToList(key);
+                    for (String it: deckList.keySet()) {
+                        res.put(it, deckList.get(it));
+                    }
+                }
+            }
+            expandingDecks.remove(deckName);
+
+            if (res.size() == 0)
+                System.err.println("Warning: Regular expression matches nothing: " + deckStr);
+
+            return normalize(res);
+
+        } else {
+            // Deck name is a normal deck
+            res.put(deckName, 1.0d);
+            return res;
+        }
+
     }
 
     public static Map<String, Double> parseDeckList(String listString) {
@@ -83,7 +135,8 @@ public class DeckParser {
         return null;
     }
 
-
-
+    public static Deck findDeckById(String deckName) {
+        return decksByName.getOrDefault(deckName, null);
+    }
 
 }
