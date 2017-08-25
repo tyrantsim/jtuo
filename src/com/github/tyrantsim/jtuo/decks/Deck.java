@@ -9,99 +9,127 @@ import java.util.*;
 
 public class Deck {
 
-    Cards allCards;
-    DeckType deckType = DeckType.DECK;
-    int id;
-    String name;
-    int upgradePoints;
-    int upgradeOpportunities;
-    DeckStrategy strategy = DeckStrategy.RANDOM;
+    private Cards allCards;
+    private DeckType deckType = DeckType.DECK;
+    private int id;
+    private String name;
+    private int upgradePoints;
+    private int upgradeOpportunities;
+    private DeckStrategy strategy = DeckStrategy.RANDOM;
 
-    Card commander;
-    Card alphaDominion;
-    int commanderMaxLevel;
-    ArrayList<Card> cards;
-    HashMap<Integer, Integer> cardMarks; // <positions of card, prefix mark>: -1 indicating the commander. E.g, used as a mark to be kept in attacking deck when optimizing.
+    private Card commander;
+    private Card alphaDominion;
+    private int commanderMaxLevel;
+    private List<Card> cards = new ArrayList<>();
+    private Map<Integer, Integer> cardMarks; // <positions of card, prefix mark>: -1 indicating the commander. E.g, used as a mark to be kept in attacking deck when optimizing.
 
-    Card shuffledCommander;
-    Deque<Card> shuffledForts;
-    Deque<Card> shuffledCards;
+    private Card shuffledCommander;
+    private List<Card> shuffledForts = new ArrayList<>();
+    private List<Card> shuffledCards = new ArrayList<>();
 
     // card id -> card order
-    HashMap<Integer, List<Integer>> order;
-    ArrayList<Variable> variableForts;
-    ArrayList<Variable> variableCards;
+    private HashMap<Integer, List<Integer>> order;
+    private int fortsPoolAmount, cardsPoolAmount;
+    private List<Card> fortsPool = new ArrayList<>();
+    private List<Card> cardsPool = new ArrayList<>();
 
-    private class Variable {
-        int amount;
-        int replicates;
-        ArrayList<Card> cardList;
-    }
+    private int deckSize;
+    private int missionReq;
+    private int level;
 
-    int deckSize;
-    int missionReq;
-    int level;
+    private String deckString;
+    private Set<Integer> vipCards;
+    private List<Integer> givenHand;
+    private List<Card> fortressCards = new ArrayList<>();
+    private List<SkillSpec> effects;
 
-    String deckString;
-    Set<Integer> vipCards;
-    ArrayList<Integer> givenHand;
-    ArrayList<Card> fortressCards;
-    ArrayList<SkillSpec> effects;
-
-    public void shuffle(Random re) {
+    public void shuffle(Random random) {
         shuffledCommander = commander;
+
         shuffledForts.clear();
         shuffledForts.addAll(fortressCards);
+        addRandomForts(random);
+
+        shuffledCards.clear();
         shuffledCards.addAll(cards);
-        if(!variableForts.isEmpty()) {
-            if(strategy != DeckStrategy.RANDOM) {
-                throw new RuntimeException("Support only random strategy for raid/quest deck.");
-            }
-            for(Variable cardPool : variableForts) {
-                int amount = cardPool.amount;
-                int replicates = cardPool.replicates;
-                ArrayList<Card> cardList = cardPool.cardList;
-                partialShuffle(cardList, amount, re);
-                for(int rep = 0; rep < replicates; ++rep) {
-                    shuffledForts.add(cardList.get(amount));
-                }
+        addRandomCards(random);
+
+        distributeUpgradePoints(random);
+
+        if (strategy == DeckStrategy.ORDERED) {
+            order.clear();
+            int i = 0;
+            for (Card card : cards) {
+                order.get(card.getId()).add(i);
+                i++;
             }
         }
-        if(!variableForts.isEmpty()) {
-            if(strategy == DeckStrategy.RANDOM) {
-                throw new RuntimeException("Support only random strategy for raid/quest deck");
-            }
-            for(Variable cardPool : variableCards) {
-                int amount = cardPool.amount;
-                int replicates = cardPool.replicates;
-                ArrayList<Card> cardList = cardPool.cardList;
-                partialShuffle(cardList, amount, re);
-                for(int rep = 0; rep < replicates; ++rep) {
-                    shuffledCards.add(cardList.get(amount));
-                }
-            }
-        }
-        if(upgradePoints > 0) {
-            int remainingUpgradePoints = upgradePoints;
-            ArrayList<Pair<Deque<Card>, Integer>> upCards;
-            Deque<Card> commanderStorage = new LinkedList<>();
-            commanderStorage.add(shuffledCommander);
-            // TODO: finish this
-        }
-        if(strategy == DeckStrategy.ORDERED) {
-            // TODO: implement this
-        }
-        if(strategy != DeckStrategy.EXACT_ORDERED) {
-            // TODO: implement this
+
+        if (strategy != DeckStrategy.EXACT_ORDERED) {
+            Collections.shuffle(shuffledCards, random);
+            Collections.shuffle(shuffledForts, random);
         }
     }
 
-    void partialShuffle(List<Card> cardList, int middle, Random re) {
-        // TODO: implement this
+    private void addRandomForts(Random random) {
+        if (strategy != DeckStrategy.RANDOM) {
+            throw new RuntimeException("Support only random strategy for raid/quest deck.");
+        }
+        Collections.shuffle(fortsPool, random);
+        for (int i = 0; i < fortsPoolAmount; i++) {
+            shuffledForts.add(fortsPool.get(i));
+        }
     }
+
+    private void addRandomCards(Random random) {
+        if(strategy != DeckStrategy.RANDOM) {
+            throw new RuntimeException("Support only random strategy for raid/quest deck");
+        }
+        Collections.shuffle(cardsPool, random);
+        for (int i = 0; i < cardsPoolAmount; i++) {
+            shuffledCards.add(cardsPool.get(i));
+        }
+    }
+
+    private void distributeUpgradePoints(Random random) {
+        int remainingUpgradePoints = upgradePoints;
+        ArrayList<Card> cardsToUpgrade = new ArrayList<>();
+        cardsToUpgrade.add(shuffledCommander);
+        cardsToUpgrade.addAll(shuffledForts);
+        cardsToUpgrade.addAll(shuffledCards);
+
+        while (remainingUpgradePoints > 0 && cardsToUpgrade.size() > 0) {
+            int randomIndex = random.nextInt(cardsToUpgrade.size());
+            Card card = cardsToUpgrade.get(randomIndex);
+            if (card.isTopLevelCard()) {
+                cardsToUpgrade.remove(randomIndex);
+            }
+            card.upgradeSelf();
+            remainingUpgradePoints--;
+        }
+
+        shuffledCommander = cardsToUpgrade.get(0);
+    }
+
 
     // Getters & Setters
-    public Deque<Card> getShuffledCards() {
+    void setUpgradePoints(int upgradePoints) {
+        this.upgradePoints = upgradePoints;
+    }
+
+    void setDeckStrategy(DeckStrategy strategy) {
+        this.strategy = strategy;
+    }
+
+    void setCommander(Card commander) {
+        this.commander = commander;
+    }
+
+    void setCards(List<Card> cards) {
+        this.cards = cards;
+    }
+
+    public List<Card> getShuffledCards() {
         return shuffledCards;
     }
 
