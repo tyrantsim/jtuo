@@ -137,4 +137,8 @@ public class Deck {
         return shuffledCommander;
     }
 
+    public String getDeckString() {
+        return deckString;
+    }
+
 }
