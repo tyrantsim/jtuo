@@ -111,6 +111,11 @@ public class Deck {
         shuffledCommander = cardsToUpgrade.get(0);
     }
 
+    public String shortDescription() {
+        // TODO: Implement this
+        return "";
+    }
+
 
     // Getters & Setters
     void setUpgradePoints(int upgradePoints) {

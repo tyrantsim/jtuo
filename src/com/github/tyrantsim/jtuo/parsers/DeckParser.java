@@ -1,5 +1,6 @@
 package com.github.tyrantsim.jtuo.parsers;
 
+import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.decks.Deck;
 import com.github.tyrantsim.jtuo.util.Pair;
 
@@ -125,9 +126,8 @@ public class DeckParser {
 
     }
 
-    public static Map<String, Double> parseCardSpec(final String cardSpec, int cardId, int cardNum, char numSign, char mark) {
+    public static void parseCardSpec(final String cardSpec, int cardId, int cardNum, char numSign, char mark) {
         // TODO
-        return null;
     }
 
     public static Pair<List<Integer>, Map<Integer, Character>> stringToIds(String deckString, String desc) {
@@ -137,6 +137,11 @@ public class DeckParser {
 
     public static Deck findDeckById(String deckName) {
         return decksByName.getOrDefault(deckName, null);
+    }
+
+    public static void addDeck(Deck deck, String deckName) {
+        decksByName.put(deckName, deck);
+        decksByName.put(Cards.simplifyName(deckName), deck);
     }
 
 }
