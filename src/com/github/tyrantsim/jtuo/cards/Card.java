@@ -242,6 +242,31 @@ public class Card implements Cloneable {
         this.usedForCards = usedForCards;
     }
 
+    void set(Card card) {
+        this.id = card.id;
+        this.baseId = card.baseId;
+        this.type = card.type;
+        this.category = card.category;
+        this.name = card.name;
+        this.level = card.level;
+        this.faction = card.faction;
+        this.rarity = card.rarity;
+        this.fusionLevel = card.fusionLevel;
+        this.set = card.set;
+        this.attack = card.attack;
+        this.health = card.health;
+        this.delay = card.delay;
+        this.skills = card.skills;
+        this.skillsOnPlay = card.skillsOnPlay;
+        this.skillsOnDeath = card.skillsOnDeath;
+        this.skillValue = card.skillValue;
+        this.skillTrigger = card.skillTrigger;
+        this.topLevelCard = card.topLevelCard;
+        this.recipeCost = card.recipeCost;
+        this.recipeCards = card.recipeCards;
+        this.usedForCards = card.usedForCards;
+    }
+
     void addSkill(SkillTrigger trigger, Skill id, int x, Faction y, int n, int c, Skill s, Skill s2, boolean all, int cardId) {
         SkillSpec spec = new SkillSpec();
         spec.setId(id);
@@ -291,7 +316,7 @@ public class Card implements Cloneable {
         addSkill(trigger, id, x, y, n, c, s, Skill.NO_SKILL, false, 0);
     }
 
-    boolean isTopLevelCard() {
+    public boolean isTopLevelCard() {
         return equals(topLevelCard);
     }
 
@@ -299,12 +324,16 @@ public class Card implements Cloneable {
         return id == baseId;
     }
 
-    Card upgraded() {
+    public Card upgraded() {
         return isTopLevelCard() ? this : usedForCards.keySet().iterator().next();
     }
 
-    Card downgraded() {
+    public Card downgraded() {
         return isLowLevelCard() ? this : recipeCards.keySet().iterator().next();
+    }
+
+    public void upgradeSelf() {
+        set(upgraded());
     }
 
     @Override
