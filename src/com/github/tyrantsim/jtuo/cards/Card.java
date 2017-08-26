@@ -26,7 +26,7 @@ public class Card implements Cloneable {
     int health;
     int delay;
 
-    ArrayList<SkillSpec> skills;
+    ArrayList<SkillSpec> skills = new ArrayList<>();
     ArrayList<SkillSpec> skillsOnPlay;
     ArrayList<SkillSpec> skillsOnDeath;
     int[] skillValue = new int[Skill.values().length];

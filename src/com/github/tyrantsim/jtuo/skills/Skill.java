@@ -16,7 +16,7 @@ public enum Skill {
     MIMIC,
 
     // Defensive:
-    ARMOR, AVENGE, CORROSIVE, COUNTER, EVADE, SUBDUE,
+    ARMORED, AVENGE, CORROSIVE, COUNTER, EVADE, SUBDUE,
     PAYBACK, REVENGE, TRIBUTE, REFRESH, WALL, BARRIER,
 
     // Combat-Modifier:

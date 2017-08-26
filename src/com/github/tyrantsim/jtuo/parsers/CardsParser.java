@@ -2,8 +2,10 @@ package com.github.tyrantsim.jtuo.parsers;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Hashtable;
+import java.util.List;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -17,11 +19,14 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import com.github.tyrantsim.jtuo.cards.Card;
+import com.github.tyrantsim.jtuo.skills.Skill;
+import com.github.tyrantsim.jtuo.skills.SkillSpec;
 
 /**
  * @author Brikikeks
@@ -138,16 +143,15 @@ public class CardsParser {
                         baseCard.setName(name);
                     }
                 }
-                if (unitChild.getNodeName().equals("fusion_level")) {
-                    String level = unitChild.getFirstChild().getNodeValue();
-                    System.out.println(level);
-                    baseCard.setFusionLevel(Integer.parseInt(level));
+                
+                if (unitChild.getNodeName().equals("rarity")) {
+                    if (unitChild.getFirstChild().getNodeValue() != null) {
+                        baseCard.setRarity(Integer.parseInt(unitChild.getFirstChild().getNodeValue()));
+                    }
                 }
                 
-                if (unitChild.getNodeName().equals("attack")) {
-                    String attack = unitChild.getFirstChild().getNodeValue();
-                    System.out.println(attack);
-                    baseCard.setAttack(Integer.parseInt(attack));
+                if (baseCard != null) {
+                    updateSameCardAttributes(unitChild, baseCard);
                 }
                 // attack
                 // health
@@ -189,17 +193,8 @@ public class CardsParser {
                                     card.setName(name);
                                 }
                             }
-                            if (unitChild.getNodeName().equals("fusion_level")) {
-                                String level = unitChild.getFirstChild().getNodeValue();
-                                System.out.println(level);
-                                card.setFusionLevel(Integer.parseInt(level));
-                            }
-                            
-                            if (unitChild.getNodeName().equals("attack")) {
-                                String attack = unitChild.getFirstChild().getNodeValue();
-                                System.out.println(attack);
-                                card.setAttack(Integer.parseInt(attack));
-                            }
+
+                            updateSameCardAttributes(unitChild, card);
 
                         }
                         if (id != null) {
@@ -214,5 +209,52 @@ public class CardsParser {
         }
 
         return cards;
+    }
+
+    private static void updateSameCardAttributes(Node unitChild, Card card) {
+        if (unitChild.getNodeName().equals("attack")) {
+            String attack = unitChild.getFirstChild().getNodeValue();
+            card.setAttack(Integer.parseInt(attack));
+        }
+        if (unitChild.getNodeName().equals("health")) {
+            String health = unitChild.getFirstChild().getNodeValue();
+            card.setHealth(Integer.parseInt(health));
+        }
+        if (unitChild.getNodeName().equals("cost")) {
+            String cost = unitChild.getFirstChild().getNodeValue();
+            card.setRecipeCost(Integer.parseInt(cost));
+        }
+        if (unitChild.getNodeName().equals("fusion_level")) {
+            String level = unitChild.getFirstChild().getNodeValue();
+            card.setFusionLevel(Integer.parseInt(level));
+        }
+        if (unitChild.getNodeName().equals("skill")) {
+            NamedNodeMap skill = unitChild.getAttributes();
+            String id = skill.getNamedItem("id") == null ? "" : skill.getNamedItem("id").getNodeValue();
+            String x = skill.getNamedItem("x") == null ? "" : skill.getNamedItem("x").getNodeValue();
+            String all = skill.getNamedItem("all") == null ? "" : skill.getNamedItem("all").getNodeValue();
+            //Integer.parseInt(level)
+            ArrayList<SkillSpec> skillSpecs = card.getSkills();
+            boolean skill_found = false;
+            for (SkillSpec skillSpec : skillSpecs) {
+                if (skillSpec.getId().equals(id)) {
+                    skillSpec.setAll(all.equals("1"));
+                    skillSpec.setX(Float.parseFloat(x));
+                    //skillSpec.setAll(all);
+                    skill_found = true;
+                }  
+            }
+            if (!skill_found) {
+                SkillSpec new_skill = new SkillSpec();
+                new_skill.setAll(all.equals("1"));
+                new_skill.setId(Skill.valueOf(id.toUpperCase()));
+                new_skill.setX(Float.parseFloat(x));
+                skillSpecs.add(new_skill);
+            }
+            
+            // <skill id="allegiance" x="2"/>
+            // <skill all="1" id="enfeeble" x="4"/>
+            // <skill id="legion" x="4"/>
+        }
     }
 }
