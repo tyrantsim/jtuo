@@ -2,10 +2,7 @@ package com.github.tyrantsim.jtuo.parsers;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Hashtable;
-import java.util.List;
+import java.util.*;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -133,6 +130,7 @@ public class CardsParser {
             Integer baseIdInt = null;
             Integer idInt = null;
             Card baseCard = null;
+            Map<Integer, Card> upgrades = new Hashtable<>();
             for (int j = 0; j < unitChilds.getLength(); j++) {
                 Node unitChild = unitChilds.item(j);
                 System.out.println(unitChild.getNodeName());
@@ -207,10 +205,7 @@ public class CardsParser {
 
                         if (id != null) {
                             System.out.println(id + ":" + name + level_prefix);
-                            baseCard.addUsedForCard(card, 1);
-                            if(baseCard.getTopLevelCard().getLevel() < card.getLevel()) {
-                                baseCard.setTopLevelCard(card);
-                            }
+                            upgrades.put(card.getLevel(), card);
 
                             card.setId(idInt);
                             cards.put(idInt, card); // name + level_prefix
@@ -218,6 +213,22 @@ public class CardsParser {
 
                     }
                 }
+            }
+
+            Card topLevelCard = baseCard;
+            for (Card card : upgrades.values()) {
+                if (card.getLevel() > topLevelCard.getLevel()) {
+                    topLevelCard = card;
+                }
+            }
+            baseCard.setTopLevelCard(topLevelCard);
+            for (Card card : upgrades.values()) {
+                if (card.getLevel() == baseCard.getLevel() + 1) {
+                    baseCard.addUsedForCard(card, 1);
+                } else if (card.getLevel() != baseCard.getLevel()) {
+                    upgrades.get(card.getLevel() - 1).addUsedForCard(card, 1);
+                }
+                card.setTopLevelCard(topLevelCard);
             }
         }
 
