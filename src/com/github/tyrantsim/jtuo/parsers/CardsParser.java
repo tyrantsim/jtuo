@@ -70,6 +70,12 @@ public class CardsParser {
 
         File card1 = new File(new File(".", "data"), file);
 
+        if (!card1.getParentFile().exists()) {
+            if (!card1.getParentFile().mkdirs()) {
+                System.err.println("Failed to create data folder");
+            }
+        }
+
         System.out.println(file);
         
         if (!card1.exists() || ((new Date().getTime() - card1.lastModified()) > 86400000)) {
@@ -81,7 +87,7 @@ public class CardsParser {
                 Transformer transformer = TransformerFactory.newInstance().newTransformer();
                 transformer.setOutputProperty(OutputKeys.INDENT, "yes");
                 DOMSource source = new DOMSource(document);
-                StreamResult console = new StreamResult(file);
+                StreamResult console = new StreamResult(card1);
                 transformer.transform(source, console);
             } catch (SAXException e) {
                 // TODO Auto-generated catch block
@@ -108,7 +114,7 @@ public class CardsParser {
             }
         } else {
             try {
-                cards.putAll(readCards(DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(new File(file))));
+                cards.putAll(readCards(DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(card1)));
             } catch (SAXException | ParserConfigurationException | IOException e) {
                 e.printStackTrace();
             }
@@ -198,8 +204,14 @@ public class CardsParser {
                             updateSameCardAttributes(unitChild, card);
 
                         }
+
                         if (id != null) {
                             System.out.println(id + ":" + name + level_prefix);
+                            baseCard.addUsedForCard(card, 1);
+                            if(baseCard.getTopLevelCard().getLevel() < card.getLevel()) {
+                                baseCard.setTopLevelCard(card);
+                            }
+
                             card.setId(idInt);
                             cards.put(idInt, card); // name + level_prefix
                         }

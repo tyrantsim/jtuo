@@ -16,7 +16,7 @@ public class Card implements Cloneable {
     CardCategory category = CardCategory.NORMAL;
 
     String name = "";
-    int level;
+    int level = 1;
     Faction faction = Faction.IMPERIAL;
     int rarity = 1;
     int fusionLevel;
@@ -34,13 +34,175 @@ public class Card implements Cloneable {
 
     Card topLevelCard = this; // [TU] corresponding full-level card
     int recipeCost;
-    HashMap<Card, Integer> recipeCards;
-    HashMap<Card, Integer> usedForCards;
+    HashMap<Card, Integer> recipeCards = new HashMap<>();
+    HashMap<Card, Integer> usedForCards = new HashMap<>();
 
-    public Card(int baseId, String name) {
+    public Card(int id, String name) {
         super();
-        this.baseId = baseId;
+        this.id = id;
+        this.baseId = id;
         this.name = name;
+    }
+
+    public Card(int id, int baseId, CardType type, CardCategory category, String name, int level, Faction faction, int rarity, int fusionLevel, int set, int attack, int health, int delay, ArrayList<SkillSpec> skills,
+            ArrayList<SkillSpec> skillsOnPlay, ArrayList<SkillSpec> skillsOnDeath, int[] skillValue, SkillTrigger[] skillTrigger, Card topLevelCard, int recipeCost, HashMap<Card, Integer> recipeCards, HashMap<Card, Integer> usedForCards) {
+        super();
+        this.id = id;
+        this.baseId = baseId;
+        this.type = type;
+        this.category = category;
+        this.name = name;
+        this.level = level;
+        this.faction = faction;
+        this.rarity = rarity;
+        this.fusionLevel = fusionLevel;
+        this.set = set;
+        this.attack = attack;
+        this.health = health;
+        this.delay = delay;
+        this.skills = skills;
+        this.skillsOnPlay = skillsOnPlay;
+        this.skillsOnDeath = skillsOnDeath;
+        this.skillValue = skillValue;
+        this.skillTrigger = skillTrigger;
+        this.topLevelCard = topLevelCard;
+        this.recipeCost = recipeCost;
+        this.recipeCards = recipeCards;
+        this.usedForCards = usedForCards;
+    }
+
+    void set(Card card) {
+        this.id = card.id;
+        this.baseId = card.baseId;
+        this.type = card.type;
+        this.category = card.category;
+        this.name = card.name;
+        this.level = card.level;
+        this.faction = card.faction;
+        this.rarity = card.rarity;
+        this.fusionLevel = card.fusionLevel;
+        this.set = card.set;
+        this.attack = card.attack;
+        this.health = card.health;
+        this.delay = card.delay;
+        this.skills = card.skills;
+        this.skillsOnPlay = card.skillsOnPlay;
+        this.skillsOnDeath = card.skillsOnDeath;
+        this.skillValue = card.skillValue;
+        this.skillTrigger = card.skillTrigger;
+        this.topLevelCard = card.topLevelCard;
+        this.recipeCost = card.recipeCost;
+        this.recipeCards = card.recipeCards;
+        this.usedForCards = card.usedForCards;
+    }
+
+    void addSkill(SkillTrigger trigger, Skill id, int x, Faction y, int n, int c, Skill s, Skill s2, boolean all, int cardId) {
+        SkillSpec spec = new SkillSpec();
+        spec.setId(id);
+        spec.setX(x);
+        spec.setY(y);
+        spec.setN(n);
+        spec.setS(s);
+        spec.setS2(s2);
+        spec.setAll(all);
+        spec.setCardId(cardId);
+
+        // remove previous copy of such skill.id
+        skills.removeIf(ss -> ss.getId() == id);
+        skillsOnPlay.removeIf(ss -> ss.getId() == id);
+        skillsOnDeath.removeIf(ss -> ss.getId() == id);
+
+        // add a new one
+        switch (trigger) {
+        case ACTIVATE:
+            skills.add(spec);
+            break;
+        case PLAY:
+            skillsOnPlay.add(spec);
+            break;
+        case DEATH:
+            skillsOnDeath.add(spec);
+            break;
+        default:
+            throw new AssertionError("No storage for skill with trigger " + trigger);
+        }
+
+        // setup value
+        if (x != 0) {
+            skillValue[id.ordinal()] = x;
+        } else if (n != 0) {
+            skillValue[id.ordinal()] = n;
+        } else if (cardId != 0) {
+            skillValue[id.ordinal()] = cardId;
+        } else {
+            skillValue[id.ordinal()] = 1;
+        }
+
+        skillTrigger[id.ordinal()] = trigger;
+    }
+
+    void addSkill(SkillTrigger trigger, Skill id, int x, Faction y, int n, int c, Skill s) {
+        addSkill(trigger, id, x, y, n, c, s, Skill.NO_SKILL, false, 0);
+    }
+
+    public boolean isTopLevelCard() {
+        return equals(topLevelCard);
+    }
+
+    boolean isLowLevelCard() {
+        return id == baseId;
+    }
+
+    public Card upgraded() {
+        return isTopLevelCard() ? this : usedForCards.keySet().iterator().next();
+    }
+
+    public Card downgraded() {
+        return isLowLevelCard() ? this : recipeCards.keySet().iterator().next();
+    }
+
+    public void upgradeSelf() {
+        set(upgraded());
+    }
+
+    public void addUsedForCard(Card usedFor, int amount) {
+        this.usedForCards.put(usedFor, amount);
+    }
+
+    @Override
+    public Card clone() {
+        try {
+            return (Card) super.clone();
+        } catch (CloneNotSupportedException e) {
+            return null;
+        }
+    }
+
+    @Override
+    public String toString() {
+        return baseId + "/" + id + ": " + name;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        Card card = (Card) o;
+
+        return id == card.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return id;
+    }
+
+    // Getters & Setters
+    public Faction getFaction() {
+        return faction;
     }
 
     public int getId() {
@@ -215,160 +377,4 @@ public class Card implements Cloneable {
         this.faction = faction;
     }
 
-    public Card(int id, int baseId, CardType type, CardCategory category, String name, int level, Faction faction, int rarity, int fusionLevel, int set, int attack, int health, int delay, ArrayList<SkillSpec> skills,
-            ArrayList<SkillSpec> skillsOnPlay, ArrayList<SkillSpec> skillsOnDeath, int[] skillValue, SkillTrigger[] skillTrigger, Card topLevelCard, int recipeCost, HashMap<Card, Integer> recipeCards, HashMap<Card, Integer> usedForCards) {
-        super();
-        this.id = id;
-        this.baseId = baseId;
-        this.type = type;
-        this.category = category;
-        this.name = name;
-        this.level = level;
-        this.faction = faction;
-        this.rarity = rarity;
-        this.fusionLevel = fusionLevel;
-        this.set = set;
-        this.attack = attack;
-        this.health = health;
-        this.delay = delay;
-        this.skills = skills;
-        this.skillsOnPlay = skillsOnPlay;
-        this.skillsOnDeath = skillsOnDeath;
-        this.skillValue = skillValue;
-        this.skillTrigger = skillTrigger;
-        this.topLevelCard = topLevelCard;
-        this.recipeCost = recipeCost;
-        this.recipeCards = recipeCards;
-        this.usedForCards = usedForCards;
-    }
-
-    void set(Card card) {
-        this.id = card.id;
-        this.baseId = card.baseId;
-        this.type = card.type;
-        this.category = card.category;
-        this.name = card.name;
-        this.level = card.level;
-        this.faction = card.faction;
-        this.rarity = card.rarity;
-        this.fusionLevel = card.fusionLevel;
-        this.set = card.set;
-        this.attack = card.attack;
-        this.health = card.health;
-        this.delay = card.delay;
-        this.skills = card.skills;
-        this.skillsOnPlay = card.skillsOnPlay;
-        this.skillsOnDeath = card.skillsOnDeath;
-        this.skillValue = card.skillValue;
-        this.skillTrigger = card.skillTrigger;
-        this.topLevelCard = card.topLevelCard;
-        this.recipeCost = card.recipeCost;
-        this.recipeCards = card.recipeCards;
-        this.usedForCards = card.usedForCards;
-    }
-
-    void addSkill(SkillTrigger trigger, Skill id, int x, Faction y, int n, int c, Skill s, Skill s2, boolean all, int cardId) {
-        SkillSpec spec = new SkillSpec();
-        spec.setId(id);
-        spec.setX(x);
-        spec.setY(y);
-        spec.setN(n);
-        spec.setS(s);
-        spec.setS2(s2);
-        spec.setAll(all);
-        spec.setCardId(cardId);
-
-        // remove previous copy of such skill.id
-        skills.removeIf(ss -> ss.getId() == id);
-        skillsOnPlay.removeIf(ss -> ss.getId() == id);
-        skillsOnDeath.removeIf(ss -> ss.getId() == id);
-
-        // add a new one
-        switch (trigger) {
-        case ACTIVATE:
-            skills.add(spec);
-            break;
-        case PLAY:
-            skillsOnPlay.add(spec);
-            break;
-        case DEATH:
-            skillsOnDeath.add(spec);
-            break;
-        default:
-            throw new AssertionError("No storage for skill with trigger " + trigger);
-        }
-
-        // setup value
-        if (x != 0) {
-            skillValue[id.ordinal()] = x;
-        } else if (n != 0) {
-            skillValue[id.ordinal()] = n;
-        } else if (cardId != 0) {
-            skillValue[id.ordinal()] = cardId;
-        } else {
-            skillValue[id.ordinal()] = 1;
-        }
-
-        skillTrigger[id.ordinal()] = trigger;
-    }
-
-    void addSkill(SkillTrigger trigger, Skill id, int x, Faction y, int n, int c, Skill s) {
-        addSkill(trigger, id, x, y, n, c, s, Skill.NO_SKILL, false, 0);
-    }
-
-    public boolean isTopLevelCard() {
-        return equals(topLevelCard);
-    }
-
-    boolean isLowLevelCard() {
-        return id == baseId;
-    }
-
-    public Card upgraded() {
-        return isTopLevelCard() ? this : usedForCards.keySet().iterator().next();
-    }
-
-    public Card downgraded() {
-        return isLowLevelCard() ? this : recipeCards.keySet().iterator().next();
-    }
-
-    public void upgradeSelf() {
-        set(upgraded());
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o)
-            return true;
-        if (o == null || getClass() != o.getClass())
-            return false;
-
-        Card card = (Card) o;
-
-        return id == card.id;
-    }
-
-    @Override
-    public int hashCode() {
-        return id;
-    }
-
-    // Getters & Setters
-    public Faction getFaction() {
-        return faction;
-    }
-
-    @Override
-    public String toString() {
-        return baseId + "/" + id + ": " + name;
-    }
-
-    @Override
-    public Card clone() {
-        try {
-            return (Card) super.clone();
-        } catch (CloneNotSupportedException e) {
-            return null;
-        }
-    }
 }
