@@ -6,7 +6,7 @@ public enum Skill {
     NO_SKILL,
 
     // Activation (harmful):
-    ENFEEBLE, JAM, MORTAR, SIEGE, STRIKE, SUNDER, WEAKEN,
+    ENFEEBLE, JAM, BESIEGE, SIEGE, STRIKE, SUNDER, WEAKEN,
 
     // Activation (helpful):
     ENHANCE, EVOLVE, HEAL, MEND, OVERLOAD, PROTECT, RALLY,

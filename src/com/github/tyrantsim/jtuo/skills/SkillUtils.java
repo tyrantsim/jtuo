@@ -6,7 +6,7 @@ public class SkillUtils {
         switch (skillId) {
             case ENFEEBLE:
             case JAM:
-            case MORTAR:
+            case BESIEGE:
             case SIEGE:
             case STRIKE:
             case SUNDER:
@@ -56,7 +56,7 @@ public class SkillUtils {
     public static boolean isActivationSkillWithX(final Skill skillId) {
         switch (skillId) {
             case ENFEEBLE:
-            case MORTAR:
+            case BESIEGE:
             case SIEGE:
             case STRIKE:
             case SUNDER:
