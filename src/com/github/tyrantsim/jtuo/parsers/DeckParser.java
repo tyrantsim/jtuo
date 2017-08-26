@@ -3,6 +3,7 @@ package com.github.tyrantsim.jtuo.parsers;
 import com.github.tyrantsim.jtuo.cards.CardSpec;
 import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.decks.Deck;
+import com.github.tyrantsim.jtuo.decks.Decks;
 import com.github.tyrantsim.jtuo.util.Pair;
 
 import java.util.*;
@@ -16,8 +17,6 @@ public class DeckParser {
      */
 
     private static Set<String> expandingDecks = new HashSet<String>();
-
-    public static Map<String, Deck> decksByName = new HashMap<String, Deck>();
 
 
     /* Methods from read.cpp */
@@ -49,13 +48,13 @@ public class DeckParser {
         }
 
         String deckStr = deckName;
-        Deck deck = findDeckById(deckName);
+        Deck deck = Decks.findDeckByName(deckName);
 
         if (deck != null) {
 
             deckStr = deck.getDeckString();
 
-            if (deckStr.contains(";") || deckStr.contains(":") || findDeckById(deckName) != null) {
+            if (deckStr.contains(";") || deckStr.contains(":") || Decks.findDeckByName(deckName) != null) {
                 // Deck name refers to deck list
                 expandingDecks.add(deckName);
                 Map<String, Double> deckList = parseDeckList(deckStr);
@@ -71,7 +70,7 @@ public class DeckParser {
             Pattern p = Pattern.compile(deckStr.substring(1, deckStr.length() - 1));
 
             expandingDecks.add(deckName);
-            for (String key: decksByName.keySet()) {
+            for (String key: Decks.byName.keySet()) {
                 if (p.matcher(key).find()) {
                     Map<String, Double> deckList = expandDeckToList(key);
                     for (String it: deckList.keySet()) {
@@ -204,15 +203,6 @@ public class DeckParser {
     public static Pair<List<Integer>, Map<Integer, Character>> stringToIds(String deckString, String desc) {
         // TODO
         return null;
-    }
-
-    public static Deck findDeckById(String deckName) {
-        return decksByName.getOrDefault(deckName, null);
-    }
-
-    public static void addDeck(Deck deck, String deckName) {
-        decksByName.put(deckName, deck);
-        decksByName.put(Cards.simplifyName(deckName), deck);
     }
 
 }

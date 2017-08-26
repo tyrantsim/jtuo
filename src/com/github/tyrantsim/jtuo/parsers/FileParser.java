@@ -3,7 +3,9 @@ package com.github.tyrantsim.jtuo.parsers;
 import com.github.tyrantsim.jtuo.cards.CardSpec;
 import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.decks.Deck;
+import com.github.tyrantsim.jtuo.decks.DeckType;
 import com.github.tyrantsim.jtuo.decks.Decks;
+import org.junit.Test;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -97,13 +99,17 @@ public class FileParser {
                 String[] splitLine;
                 if (line.contains(":") && !(splitLine = line.split(":"))[0].trim().isEmpty() && !splitLine[1].trim().isEmpty()) {
 
-                    Deck deck = DeckParser.findDeckById(splitLine[0].trim());
+                    Deck deck = Decks.findDeckByName(splitLine[0].trim());
 
                     if (deck != null)
                         System.err.println("Warning in custom deck file " + filename + " at line " + numLine
                                 + ", name conflicts, overrides " + deck.shortDescription());
 
-                    // TODO: Not finished, figure this part out
+                    deck = new Deck(DeckType.CUSTOM_DECK, numLine, splitLine[0].trim());
+                    deck.setDeckString(splitLine[1].trim());
+                    Decks.decks.add(deck);
+                    Decks.addDeck(deck, splitLine[0].trim());
+                    Decks.addDeck(deck, "Custom Deck #" + deck.getId());
 
                 } else {
                     System.err.println("Error in custom deck file " + filename + " at line "
@@ -182,7 +188,32 @@ public class FileParser {
     }
 
     public static void readBgeAliases(Map<String, String> bgeAliases, String filename) {
-        // TODO
+
+        File file = new File(filename);
+
+        int numLine = 0;
+        try (Scanner sc = new Scanner(file)) {
+            while (sc.hasNext()) {
+                numLine++;
+                String line = sc.nextLine();
+
+                String[] splitLine;
+                if (line.contains(":") && !(splitLine = line.split(":"))[0].trim().isEmpty() && !splitLine[1].trim().isEmpty()) {
+                    bgeAliases.put(Cards.simplifyName(splitLine[0].trim()), splitLine[1].trim());
+                } else {
+                    System.err.println("Error in BGE file " + filename + " at line "
+                            + numLine + ", could not read the name.");
+                }
+            }
+        } catch (FileNotFoundException e) {
+            System.err.println("BGE file not found: " + filename);
+        } catch (Exception e) {
+            System.err.print("Exception while parsing the BGE file " + filename);
+            if (numLine > 0)
+                System.err.print(" at line " + numLine);
+            System.err.println(": " + e.getMessage());
+        }
+
     }
 
 }

@@ -43,6 +43,23 @@ public class Deck {
     private List<Card> fortressCards = new ArrayList<>();
     private List<SkillSpec> effects;
 
+    public Deck(DeckType deckType, int id, String name) {
+
+        this.deckType = deckType;
+        this.id = id;
+        this.name = name;
+
+        upgradePoints = 0;
+        upgradeOpportunities = 0;
+        strategy = DeckStrategy.RANDOM;
+        commander = null;
+        alphaDominion = null;
+        shuffledCommander = null;
+        deckSize = 0;
+        missionReq = 0;
+
+    }
+
     public void shuffle(Random random) {
         shuffledCommander = commander;
 
@@ -134,6 +151,8 @@ public class Deck {
         this.cards = cards;
     }
 
+    public void setDeckString(String deckString) { this.deckString = deckString; }
+
     public List<Card> getShuffledCards() {
         return shuffledCards;
     }
@@ -145,5 +164,7 @@ public class Deck {
     public String getDeckString() {
         return deckString;
     }
+
+    public int getId() { return id; }
 
 }
