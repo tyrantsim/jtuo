@@ -33,9 +33,8 @@ import com.github.tyrantsim.jtuo.skills.SkillSpec;
  */
 public class CardsParser {
 
-
     public static Hashtable<Integer, Card> cards = new Hashtable<>();
-    
+
     public static boolean initialized = false;
 
     static {
@@ -70,6 +69,8 @@ public class CardsParser {
     public static void readCards(String file) throws FileNotFoundException {
 
         File card1 = new File(new File(".", "data"), file);
+
+        System.out.println(file);
         
         if (!card1.exists() || ((new Date().getTime() - card1.lastModified()) > 86400000)) {
             try {
@@ -123,8 +124,8 @@ public class CardsParser {
             NodeList unitChilds = unit.getChildNodes();
             String name = "";
             String baseId = "";
-            Integer baseIdInt =  null;
-            Integer idInt =  null;
+            Integer baseIdInt = null;
+            Integer idInt = null;
             Card baseCard = null;
             for (int j = 0; j < unitChilds.getLength(); j++) {
                 Node unitChild = unitChilds.item(j);
@@ -143,13 +144,13 @@ public class CardsParser {
                         baseCard.setName(name);
                     }
                 }
-                
+
                 if (unitChild.getNodeName().equals("rarity")) {
                     if (unitChild.getFirstChild().getNodeValue() != null) {
                         baseCard.setRarity(Integer.parseInt(unitChild.getFirstChild().getNodeValue()));
                     }
                 }
-                
+
                 if (baseCard != null) {
                     updateSameCardAttributes(unitChild, baseCard);
                 }
@@ -163,10 +164,10 @@ public class CardsParser {
                     // card = new Card(baseIdInt, name);
 
                     cards.put(baseIdInt, baseCard);
-                    
+
                     // System.out.println("" + name);
                     if (unitChild.getNodeName().equals("upgrade")) {
-                        //Card card = (Card)baseCard.clone();
+                        // Card card = (Card)baseCard.clone();
                         Card card = baseCard.clone();
                         NodeList upgradeChilds = unitChild.getChildNodes();
                         String level_prefix = "";
@@ -184,7 +185,7 @@ public class CardsParser {
                             }
                             if (upgradeChild.getNodeName().equals("card_id")) {
                                 id = upgradeChild.getFirstChild().getNodeValue();
-                                idInt =  Integer.parseInt(id);
+                                idInt = Integer.parseInt(id);
                                 card.setId(idInt);
                             }
                             if (unitChild.getNodeName().equals("name")) {
@@ -200,7 +201,7 @@ public class CardsParser {
                         if (id != null) {
                             System.out.println(id + ":" + name + level_prefix);
                             card.setId(idInt);
-                            cards.put(idInt, card); //name + level_prefix
+                            cards.put(idInt, card); // name + level_prefix
                         }
 
                     }
@@ -212,19 +213,22 @@ public class CardsParser {
     }
 
     private static void updateSameCardAttributes(Node unitChild, Card card) {
-        if (unitChild.getNodeName().equals("attack")) {
-            String attack = unitChild.getFirstChild().getNodeValue();
-            card.setAttack(Integer.parseInt(attack));
+        if (unitChild.getNodeName().equals("attack") && unitChild.getFirstChild() != null) {
+            if (unitChild.getFirstChild() != null) {
+                System.out.println(card.getName());
+                String attack = unitChild.getFirstChild().getNodeValue();
+                card.setAttack(Integer.parseInt(attack));
+            }
         }
-        if (unitChild.getNodeName().equals("health")) {
+        if (unitChild.getNodeName().equals("health") && unitChild.getFirstChild() != null) {
             String health = unitChild.getFirstChild().getNodeValue();
             card.setHealth(Integer.parseInt(health));
         }
-        if (unitChild.getNodeName().equals("cost")) {
+        if (unitChild.getNodeName().equals("cost") && unitChild.getFirstChild() != null) {
             String cost = unitChild.getFirstChild().getNodeValue();
             card.setRecipeCost(Integer.parseInt(cost));
         }
-        if (unitChild.getNodeName().equals("fusion_level")) {
+        if (unitChild.getNodeName().equals("fusion_level") && unitChild.getFirstChild() != null) {
             String level = unitChild.getFirstChild().getNodeValue();
             card.setFusionLevel(Integer.parseInt(level));
         }
@@ -233,25 +237,30 @@ public class CardsParser {
             String id = skill.getNamedItem("id") == null ? "" : skill.getNamedItem("id").getNodeValue();
             String x = skill.getNamedItem("x") == null ? "" : skill.getNamedItem("x").getNodeValue();
             String all = skill.getNamedItem("all") == null ? "" : skill.getNamedItem("all").getNodeValue();
-            //Integer.parseInt(level)
+            // Integer.parseInt(level)
             ArrayList<SkillSpec> skillSpecs = card.getSkills();
             boolean skill_found = false;
             for (SkillSpec skillSpec : skillSpecs) {
                 if (skillSpec.getId().equals(id)) {
                     skillSpec.setAll(all.equals("1"));
-                    skillSpec.setX(Float.parseFloat(x));
-                    //skillSpec.setAll(all);
+                    if (!x.isEmpty()) {
+                        skillSpec.setX(Float.parseFloat(x));
+                    }
+                    // skillSpec.setAll(all);
                     skill_found = true;
-                }  
+                }
             }
             if (!skill_found) {
                 SkillSpec new_skill = new SkillSpec();
                 new_skill.setAll(all.equals("1"));
+                System.out.println(id.toUpperCase());
                 new_skill.setId(Skill.valueOf(id.toUpperCase()));
-                new_skill.setX(Float.parseFloat(x));
+                if (!x.isEmpty()) {
+                    new_skill.setX(Float.parseFloat(x));
+                }
                 skillSpecs.add(new_skill);
             }
-            
+
             // <skill id="allegiance" x="2"/>
             // <skill all="1" id="enfeeble" x="4"/>
             // <skill id="legion" x="4"/>
