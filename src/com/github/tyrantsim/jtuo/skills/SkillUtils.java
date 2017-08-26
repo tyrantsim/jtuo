@@ -78,7 +78,7 @@ public class SkillUtils {
 
     public static boolean isDefensiveSkill(final Skill skillId) {
         switch (skillId) {
-            case ARMOR:
+            case ARMORED:
             case AVENGE:
             case CORROSIVE:
             case COUNTER:
