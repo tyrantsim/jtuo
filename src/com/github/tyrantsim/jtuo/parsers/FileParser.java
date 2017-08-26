@@ -1,5 +1,6 @@
 package com.github.tyrantsim.jtuo.parsers;
 
+import com.github.tyrantsim.jtuo.cards.CardSpec;
 import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.decks.Deck;
 import com.github.tyrantsim.jtuo.decks.Decks;
@@ -9,6 +10,8 @@ import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
+
+import static com.github.tyrantsim.jtuo.parsers.DeckParser.parseCardSpec;
 
 public class FileParser {
 
@@ -59,12 +62,8 @@ public class FileParser {
                 if (ParserUtils.isLineIgnored(line))
                     continue;
 
-                int cardId = 0;
-                int cardNum = 1;
-                char numSign = 0;
-                char mark = 0;
-                DeckParser.parseCardSpec(line, cardId, cardNum, numSign, mark);
-                customCards.put(cardId, cardNum);
+                CardSpec cardSpec = parseCardSpec(line);
+                customCards.put(cardSpec.getCardId(), cardSpec.getCardNum());
             }
 
         } catch (Exception e) {
@@ -120,17 +119,17 @@ public class FileParser {
 
     }
 
-    public static void addOwnedCard(Map<Integer, Integer> ownedCards, String cardSpec) throws Exception {
+    public static void addOwnedCard(Map<Integer, Integer> ownedCards, String cardStr) throws Exception {
 
-        int cardId = 0;
-        int cardNum = 1;
-        char numSign = 0;
-        char mark = 0;
-        DeckParser.parseCardSpec(cardSpec, cardId, cardNum, numSign, mark);
+        CardSpec cardSpec = DeckParser.parseCardSpec(cardStr);
+
+        int cardId = cardSpec.getCardId();
+        int cardNum = cardSpec.getCardNum();
+        char numSign = cardSpec.getNumSign();
+
         Cards.getCardById(cardId);
-        assert (mark == 0);
 
-        if (numSign == 0) {
+        if (cardSpec.getNumSign() == 0) {
             ownedCards.put(cardId, cardNum);
         } else if (numSign == '+') {
             ownedCards.put(cardId, ownedCards.getOrDefault(cardId, 0) + cardNum);

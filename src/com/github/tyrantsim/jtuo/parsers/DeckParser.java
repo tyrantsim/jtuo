@@ -1,5 +1,6 @@
 package com.github.tyrantsim.jtuo.parsers;
 
+import com.github.tyrantsim.jtuo.cards.CardSpec;
 import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.decks.Deck;
 import com.github.tyrantsim.jtuo.util.Pair;
@@ -126,8 +127,78 @@ public class DeckParser {
 
     }
 
-    public static void parseCardSpec(final String cardSpec, int cardId, int cardNum, char numSign, char mark) {
-        // TODO
+    public static CardSpec parseCardSpec(final String cardStr) throws Exception {
+
+        CardSpec cardSpec = new CardSpec();
+
+        // Default values
+        int cardId = 0;
+        int cardNum = 1;
+        char numSign = 0;
+
+        // Tokenize card string
+        StringTokenizer tokenizer = new StringTokenizer(cardStr, "#(");
+        String cardName = (String) tokenizer.nextElement();
+
+        // Check lock mark
+        if (cardName.startsWith("!")) {
+            cardSpec.setMarked(true);
+            cardName = cardName.substring(1);
+        } else {
+            cardSpec.setMarked(false);
+        }
+
+        String simpleName = Cards.simplifyName(cardName);
+
+        // Check if string is abbreviation
+        if (Cards.playerCardsAbbr.containsKey(simpleName))
+            simpleName = Cards.simplifyName(Cards.playerCardsAbbr.get(simpleName));
+
+        // Get card ID
+        if (Cards.cardsByName.containsKey(simpleName)) {
+
+            // Check if string is a card name
+            cardId = Cards.cardsByName.get(simpleName).getId();
+            if (Cards.ambiguousNames.contains(simpleName))
+                System.err.println("WARNING: There are multiple cards named " + cardName
+                        + " in cards.xml. [" + cardId + "] is used.");
+
+        } else if (simpleName.contains("[") && simpleName.indexOf('[') < simpleName.indexOf(']')) {
+
+            // Check ID number between '[]' quotes
+            try {
+                cardId = Integer.parseInt(simpleName.substring(
+                        simpleName.indexOf('['), simpleName.indexOf(']')).trim());
+            } catch (NumberFormatException e) {
+                System.err.println("Error: Squared brackets must contain a card ID number");
+            }
+
+        }
+
+        // Parse second part of cardStr - after # or (
+        if (tokenizer.hasMoreElements()) {
+            String cardAmount = ((String) tokenizer.nextElement()).trim();
+
+            // Get numSign (for adding or removing cards)
+            if (cardAmount.startsWith("+") || cardAmount.startsWith("-") || cardAmount.startsWith("$"))
+                numSign = cardAmount.charAt(0);
+
+            // Get cardNum (amount of cards)
+            try {
+                cardNum = Integer.parseInt(cardAmount.replaceAll("[^\\d]", ""));
+            } catch (NumberFormatException e) { /* Ignore */}
+
+        }
+
+        if (cardId == 0)
+            throw new Exception("Unknown card: " + cardName);
+
+        // Assign values to CardSpec object
+        cardSpec.setCardId(cardId);
+        cardSpec.setCardNum(cardNum);
+        cardSpec.setNumSign(numSign);
+
+        return cardSpec;
     }
 
     public static Pair<List<Integer>, Map<Integer, Character>> stringToIds(String deckString, String desc) {
