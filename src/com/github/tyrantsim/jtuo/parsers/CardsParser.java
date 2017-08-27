@@ -197,7 +197,7 @@ public class CardsParser {
 
                             if (upgradeChild.getNodeName().equals("level")) {
                                 String level = upgradeChild.getFirstChild().getNodeValue();
-                                if (level != null && Integer.valueOf(level) < 6) {
+                                if (level != null && Integer.valueOf(level) <= 6) {
                                     level_prefix = "-" + level;
                                     card.setLevel(Integer.parseInt(level));
                                 }
