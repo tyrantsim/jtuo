@@ -1,7 +1,6 @@
 package com.github.tyrantsim.jtuo.cards;
 
-enum CardCategory {
-
+public enum CardCategory {
     NORMAL,
     SPECIAL,
     FORTRESS_DEFENSE,
@@ -9,5 +8,4 @@ enum CardCategory {
     FORTRESS_CONQUEST,
     DOMINION_ALPHA,
     DOMINION_MATERIAL,
-
 }

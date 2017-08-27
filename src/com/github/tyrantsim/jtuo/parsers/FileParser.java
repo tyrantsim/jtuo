@@ -1,11 +1,6 @@
 package com.github.tyrantsim.jtuo.parsers;
 
-import com.github.tyrantsim.jtuo.cards.CardSpec;
-import com.github.tyrantsim.jtuo.cards.Cards;
-import com.github.tyrantsim.jtuo.decks.Deck;
-import com.github.tyrantsim.jtuo.decks.DeckType;
-import com.github.tyrantsim.jtuo.decks.Decks;
-import org.junit.Test;
+import static com.github.tyrantsim.jtuo.parsers.DeckParser.parseCardSpec;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -13,7 +8,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
-import static com.github.tyrantsim.jtuo.parsers.DeckParser.parseCardSpec;
+import com.github.tyrantsim.jtuo.cards.CardSpec;
+import com.github.tyrantsim.jtuo.cards.Cards;
+import com.github.tyrantsim.jtuo.decks.Deck;
+import com.github.tyrantsim.jtuo.decks.DeckType;
+import com.github.tyrantsim.jtuo.decks.Decks;
 
 public class FileParser {
 

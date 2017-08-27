@@ -180,7 +180,7 @@ public class Card implements Cloneable {
 
     @Override
     public String toString() {
-        return baseId + "/" + id + ": " + name;
+        return baseId + "/" + id + ": " + type.name() + " " + faction.name() + " " + name;
     }
 
     @Override

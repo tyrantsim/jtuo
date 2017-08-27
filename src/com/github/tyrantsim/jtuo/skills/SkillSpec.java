@@ -13,6 +13,8 @@ public class SkillSpec {
     Skill s2;
     boolean all;
     int cardId;
+    String trigger;
+
 
     public Skill getId() {
         return id;
@@ -84,5 +86,14 @@ public class SkillSpec {
 
     public void setCardId(int cardId) {
         this.cardId = cardId;
+    }
+    
+    
+    public String getTrigger() {
+        return trigger;
+    }
+
+    public void setTrigger(String trigger) {
+        this.trigger = trigger;
     }
 }

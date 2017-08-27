@@ -1,9 +1,7 @@
 package com.github.tyrantsim.jtuo.cards;
 
-enum CardType {
-
+public enum CardType {
     COMMANDER,
     ASSAULT,
     STRUCTURE,
-
 }

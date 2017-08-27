@@ -31,7 +31,7 @@ public class Cards {
     /* Data initialization from cards.h */
 
     // All cards list
-    public static List<Card> allCards = new ArrayList<Card>();
+    public static List<Card> allCards = new ArrayList<Card>(50000);
 
     // Cards by ID map
     public static Map<Integer, Card> cardsById = new HashMap<Integer, Card>();
