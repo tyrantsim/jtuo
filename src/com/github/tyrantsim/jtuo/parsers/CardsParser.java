@@ -65,17 +65,16 @@ public class CardsParser {
 
     public static void readCards(String file) throws FileNotFoundException {
 
-        File card1 = new File(new File(".", "data"), file);
-
-        if (!card1.getParentFile().exists()) {
-            if (!card1.getParentFile().mkdirs()) {
+        File cardFile = new File(new File(".", "data"), file);
+        if (!cardFile.getParentFile().exists()) {
+            if (!cardFile.getParentFile().mkdirs()) {
                 System.err.println("Failed to create data folder");
             }
         }
 
         System.out.println(file);
         
-        if (!card1.exists() || ((new Date().getTime() - card1.lastModified()) > 86400000)) {
+        if (!cardFile.exists() || ((new Date().getTime() - cardFile.lastModified()) > 86400000)) {
             try {
                 // http://mobile.tyrantonline.com/assets/cards_section_1.xml
                 Document document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse("http://mobile.tyrantonline.com/assets/" + file);
@@ -84,34 +83,16 @@ public class CardsParser {
                 Transformer transformer = TransformerFactory.newInstance().newTransformer();
                 transformer.setOutputProperty(OutputKeys.INDENT, "yes");
                 DOMSource source = new DOMSource(document);
-                StreamResult console = new StreamResult(card1);
+                StreamResult console = new StreamResult(cardFile);
                 transformer.transform(source, console);
-            } catch (SAXException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
             } catch (FileNotFoundException fnfe) {
-                // TODO: handle exception
                 throw fnfe;
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-
-            } catch (ParserConfigurationException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } catch (TransformerConfigurationException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } catch (TransformerFactoryConfigurationError e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } catch (TransformerException e) {
-                // TODO Auto-generated catch block
+            } catch (SAXException | IOException | ParserConfigurationException | TransformerFactoryConfigurationError | TransformerException e) {
                 e.printStackTrace();
             }
         } else {
             try {
-                cards.putAll(readCards(DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(card1)));
+                cards.putAll(readCards(DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(cardFile)));
             } catch (SAXException | ParserConfigurationException | IOException e) {
                 e.printStackTrace();
             }
@@ -133,8 +114,7 @@ public class CardsParser {
             Map<Integer, Card> upgrades = new Hashtable<>();
             for (int j = 0; j < unitChilds.getLength(); j++) {
                 Node unitChild = unitChilds.item(j);
-                System.out.println(unitChild.getNodeName());
-                System.out.println(unitChild.getNodeValue());
+                //System.out.println(unitChild.getNodeName());
                 if (unitChild.getNodeName().equals("id")) {
                     if (unitChild.getFirstChild().getNodeValue() != null) {
                         baseId = unitChild.getFirstChild().getNodeValue();
@@ -202,7 +182,6 @@ public class CardsParser {
                             updateSameCardAttributes(unitChild, card);
 
                         }
-
                         if (id != null) {
                             System.out.println(id + ":" + name + level_prefix);
                             upgrades.put(card.getLevel(), card);
