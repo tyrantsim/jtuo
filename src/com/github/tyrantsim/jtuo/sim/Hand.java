@@ -6,7 +6,7 @@ import com.github.tyrantsim.jtuo.skills.Skill;
 import java.util.ArrayList;
 import java.util.Random;
 
-class Hand {
+public class Hand {
 
     Deck deck;
     CardStatus commander;
@@ -24,6 +24,15 @@ class Hand {
         if (commander.skill(Skill.STASIS) != 0) {
             stasisFactionBitmap |= (1 << commander.getCard().getFaction().ordinal());
         }
+    }
+
+    // Getters & Setters
+    public Deck getDeck() {
+        return deck;
+    }
+
+    public CardStatus getCommander() {
+        return commander;
     }
 
 }

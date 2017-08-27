@@ -137,6 +137,10 @@ public class Deck {
         return "";
     }
 
+    public Card next() {
+        // TODO: implement this
+        return null;
+    }
 
     // Getters & Setters
     void setUpgradePoints(int upgradePoints) {

@@ -48,9 +48,17 @@ public class CardStatus {
         return -1;
     }
 
+    public boolean isAlive() {
+        return hp > 0;
+    }
+
     // Getters & Setters
     public Card getCard() {
         return card;
+    }
+
+    public void setPlayer(int player) {
+        this.player = player;
     }
 
 }

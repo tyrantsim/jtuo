@@ -1,5 +1,6 @@
 package com.github.tyrantsim.jtuo.sim;
 
+import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.util.Pair;
 
@@ -10,8 +11,12 @@ import java.util.Random;
 
 public class Field {
 
+    private static final int PLAYER_INDEX_ATTACKER = 0;
+    private static final int PLAYER_INDEX_DEFFENDER = 1;
+
     boolean end;
     Random random;
+    Cards cards;
     // players[0]: the attacker, players[1]: the defender
     Hand[] players = new Hand[2];
     int tapi; // current turn's active player index
@@ -22,8 +27,8 @@ public class Field {
     int turn = 1;
     GameMode gameMode;
     OptimizationMode optimizationMode;
-    PassiveBGE[] bg_effects = new PassiveBGE[2]; // passive BGE
-    ArrayList<SkillSpec> bgSkills = new ArrayList<>(2);
+    PassiveBGE[] yourBGEffects, enemyBGEffects;
+    ArrayList<SkillSpec> yourBGSkills, enemyBGSkills;
     // With the introduction of on death skills, a single skill can trigger arbitrary many skills.
     // They are stored in this, and cleared after all have been performed.
     Deque<Pair<CardStatus, SkillSpec>> skillQueue;
@@ -40,15 +45,128 @@ public class Field {
     boolean assaultBloodlusted = false;
     int bloodlustValue;
 
-    // TODO: Should this method be here?
-    Results play() {
+    public Field(Random random, Cards cards, Hand yourHand, Hand enemyHand, GameMode gameMode, OptimizationMode optimizationMode, PassiveBGE[] yourBGEffects, PassiveBGE[] enemyBGEffects, ArrayList<SkillSpec> yourBGSkills, ArrayList<SkillSpec> enemyBGSkills) {
+        this.end = false;
+        this.random = random;
+        this.cards = cards;
+        this.players = new Hand[]{ yourHand, enemyHand };
+        this.turn = 1;
+        this.gameMode = gameMode;
+        this.optimizationMode = optimizationMode;
+        this.yourBGEffects = yourBGEffects;
+        this.enemyBGEffects = enemyBGEffects;
+        this.yourBGSkills = yourBGSkills;
+        this.enemyBGSkills = enemyBGSkills;
+        this.assaultBloodlusted = false;
+    }
+
+    public void prepareAction() {
         // TODO: implement this
-        return null;
+    }
+
+    public void finalizeAction() {
+        // TODO: implement this
+    }
+
+    public void nextTurn() {
+        turn++;
     }
 
     // Getters & Setters
-    Hand[] getPlayers() {
+    public Hand[] getPlayers() {
         return players;
+    }
+
+    public void setEnd(boolean end) {
+        this.end = end;
+    }
+
+    public boolean isEnd() {
+        return end;
+    }
+
+    public Hand getPlayer(int index) {
+        return getPlayers()[index];
+    }
+
+    public Hand getAttacker() {
+        return getPlayer(PLAYER_INDEX_ATTACKER);
+    }
+
+    public Hand getDefender() {
+        return getPlayer(PLAYER_INDEX_DEFFENDER);
+    }
+
+    public void setTapi(int tapi) {
+        this.tapi = tapi;
+    }
+
+    public int getTapi() {
+        return tapi;
+    }
+
+    public void setTipi(int tipi) {
+        this.tipi = tipi;
+    }
+
+    public int getTipi() {
+        return tipi;
+    }
+
+    public void setTap(Hand tap) {
+        this.tap = tap;
+    }
+
+    public Hand getTap() {
+        return tap;
+    }
+
+    public void setTip(Hand tip) {
+        this.tip = tip;
+    }
+
+    public Hand getTip() {
+        return tip;
+    }
+
+    public int getTurn() {
+        return turn;
+    }
+
+    public GameMode getGameMode() {
+        return gameMode;
+    }
+
+    public OptimizationMode getOptimizationMode() {
+        return optimizationMode;
+    }
+
+    public void setCurrentPhase(FieldPhase phase) {
+        this.currentPhase = phase;
+    }
+
+    public FieldPhase getCurrentPhase() {
+        return currentPhase;
+    }
+
+    public PassiveBGE[] getBGEffects(int playerIndex) {
+        if (playerIndex == PLAYER_INDEX_ATTACKER) {
+            return yourBGEffects;
+        } else if (playerIndex == PLAYER_INDEX_DEFFENDER) {
+            return enemyBGEffects;
+        } else {
+            throw new AssertionError("Unknown playerIndex: " + playerIndex);
+        }
+    }
+
+    public ArrayList<SkillSpec> getBGSkills(int playerIndex) {
+        if (playerIndex == PLAYER_INDEX_ATTACKER) {
+            return yourBGSkills;
+        } else if (playerIndex == PLAYER_INDEX_DEFFENDER) {
+            return enemyBGSkills;
+        } else {
+            throw new AssertionError("Unknown playerIndex: " + playerIndex);
+        }
     }
 
 }

@@ -11,25 +11,32 @@ import java.util.Random;
 
 public class SimulationData {
 
-    Random re;
+    Random random;
     Cards cards;
     Decks decks;
     Hand yourHand;
     ArrayList<Deck> enemyDecks;
     ArrayList<Hand> enemyHands;
     ArrayList<Double> factors;
-    GameMode gamemode;
+    GameMode gameMode;
     PassiveBGE[] yourBGEffects, enemyBGEffects;
     ArrayList<SkillSpec> yourBGSkills, enemyBGSkills;
 
     public ArrayList<Results> evaluate() {
         ArrayList<Results> res = new ArrayList<>(enemyHands.size());
         for (Hand enemyHand : enemyHands) {
-            yourHand.reset(re);
-            enemyHand.reset(re);
-            Field fd = new Field();
-            // TODO: a lot of setters here
-            Results result = fd.play(); // ???
+            yourHand.reset(random);
+            enemyHand.reset(random);
+            Field fd = new Field(
+                    random,
+                    cards,
+                    yourHand, enemyHand,
+                    gameMode,
+                    TyrantOptimize.optimizationMode,
+                    yourBGEffects, enemyBGEffects,
+                    yourBGSkills, enemyBGSkills
+            );
+            Results result = TyrantOptimize.play(fd); // ???
             if (!TyrantOptimize.modeOpenTheDeck) {
                 // are there remaining (unopened) cards ?
                 if (fd.getPlayers()[1].deck.getShuffledCards().size() != 0) {
