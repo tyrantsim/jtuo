@@ -27,8 +27,8 @@ public class Card implements Cloneable {
     int delay;
 
     ArrayList<SkillSpec> skills = new ArrayList<>();
-    ArrayList<SkillSpec> skillsOnPlay;
-    ArrayList<SkillSpec> skillsOnDeath;
+    ArrayList<SkillSpec> skillsOnPlay = new ArrayList<>();
+    ArrayList<SkillSpec> skillsOnDeath = new ArrayList<>();
     int[] skillValue = new int[Skill.values().length];
     SkillTrigger[] skillTrigger = new SkillTrigger[Skill.values().length];
 
@@ -172,9 +172,15 @@ public class Card implements Cloneable {
     @Override
     public Card clone() {
         try {
-            return (Card) super.clone();
+            Card copy = (Card) super.clone();
+            copy.skills = new ArrayList<>(this.skills);
+            copy.skillsOnPlay = new ArrayList<>(this.skillsOnPlay);
+            copy.skillsOnDeath = new ArrayList<>(this.skillsOnDeath);
+            copy.recipeCards = new HashMap<>(this.recipeCards);
+            copy.usedForCards = new HashMap<>(this.usedForCards);
+            return copy;
         } catch (CloneNotSupportedException e) {
-            return null;
+            throw new AssertionError("Card object cloning is not supported");
         }
     }
 
