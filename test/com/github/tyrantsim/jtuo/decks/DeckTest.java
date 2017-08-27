@@ -25,8 +25,7 @@ public class DeckTest {
 
     @Test
     public void testShuffle() {
-        Random random = new Random();
-        Card commander = CardsParser.cards.get(1000);
+        Card commander = CardsParser.cards.get(1000).clone();
 
         Deck deck = new Deck();
         deck.setDeckStrategy(DeckStrategy.RANDOM);
@@ -59,6 +58,7 @@ public class DeckTest {
         assertTrue(deck.getShuffledCommander().getName().startsWith("Cyrus"));
 
         // Check upgrade points distribution
+        deck.setCommander(CardsParser.cards.get(1000).clone());
         deck.setCards(Arrays.asList(
                 getRandomFirstLevelCardCopy(),
                 getRandomFirstLevelCardCopy(),
@@ -74,12 +74,11 @@ public class DeckTest {
         deck.setUpgradePoints(2);
         deck.shuffle(random);
 
-        System.out.println(Arrays.toString(deck.getShuffledCards().toArray()));
         int upgradedBy = 0;
         for (Card card : deck.getShuffledCards()) {
             upgradedBy += card.getLevel() - 1;
         }
-        upgradedBy += commander.getLevel() - 1;
+        upgradedBy += deck.getShuffledCommander().getLevel() - 1;
         assertEquals(2, upgradedBy);
     }
 
