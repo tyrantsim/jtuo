@@ -14,11 +14,11 @@ public class CardsParserTest {
         Card infantry = CardsParser.cards.get(1);
 
         assertEquals(1, infantry.getId());
-        assertEquals("Infantry", infantry.getName());
+        assertEquals("Infantry-1", infantry.getName());
         assertEquals(1, infantry.getLevel());
 
         assertEquals(2, infantry.upgraded().getId());
-        assertEquals("Infantry", infantry.upgraded().getName());
+        assertEquals("Infantry-2", infantry.upgraded().getName());
         assertEquals(2, infantry.upgraded().getLevel());
 
         assertEquals(3, infantry.getTopLevelCard().getId());
