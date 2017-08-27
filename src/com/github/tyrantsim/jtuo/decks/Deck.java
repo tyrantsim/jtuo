@@ -60,6 +60,10 @@ public class Deck {
 
     }
 
+    public Deck() {
+        this(null, 0, null);
+    }
+
     public void shuffle(Random random) {
         shuffledCommander = commander;
 
@@ -163,6 +167,10 @@ public class Deck {
 
     public String getDeckString() {
         return deckString;
+    }
+
+    public List<Card> getCards() {
+        return cards;
     }
 
     public int getId() { return id; }
