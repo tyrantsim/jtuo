@@ -117,7 +117,6 @@ public class DeckParser {
                 res.put(key, deckList.get(key) * factor);
         }
 
-
         return res;
 
     }
@@ -196,9 +195,54 @@ public class DeckParser {
         return cardSpec;
     }
 
-    public static Pair<List<Integer>, Map<Integer, Character>> stringToIds(String deckString, String desc) {
+    public static Pair<List<Integer>, Map<Integer, Boolean>> stringToIds(String deckString, String desc) {
 
-        return null;
+        List<Integer> cardIds = new ArrayList<Integer>();
+        Map<Integer, Boolean> cardMarks = new HashMap<Integer, Boolean>();
+        List<String> errList = new ArrayList<String>();
+        StringTokenizer tokenizer = new StringTokenizer(deckString, ":,");
+        int p = -1;
+
+        while (tokenizer.hasMoreElements()) {
+            String cardStr = (String) tokenizer.nextElement();
+            try {
+                CardSpec cardSpec = DeckParser.parseCardSpec(cardStr);
+                for (int i = 0; i < cardSpec.getCardNum(); i++) {
+                    cardIds.add(cardSpec.getCardId());
+                    if (cardSpec.isMarked())
+                        cardMarks.put(p, Boolean.TRUE);
+                    p++;
+                }
+            } catch (Exception e) {
+                errList.add(e.getMessage());
+            }
+        }
+
+        if (!cardIds.isEmpty()) {
+            if (!errList.isEmpty()) {
+                System.err.print("WARNING: Ignore some cards while resolving " + desc + ": ");
+                for (String err: errList)
+                    System.out.print("[" + err + "]");
+                System.out.println();
+            }
+            return new Pair<List<Integer>, Map<Integer, Boolean>>(cardIds, cardMarks);
+        }
+
+        try {
+            Deck.hashToIds(deckString, cardIds);
+            for (Integer cardId: cardIds) {
+                try {
+                    Cards.getCardById(cardId);
+                } catch (Exception e) {
+                    throw new RuntimeException("Deck not found. Error to treat as hash: " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error: Failed to resolve " + desc + ": " + e.getMessage());
+            throw e;
+        }
+
+        return new Pair<List<Integer>, Map<Integer, Boolean>>(cardIds, cardMarks);
     }
 
 }

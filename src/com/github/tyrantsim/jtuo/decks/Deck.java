@@ -2,9 +2,13 @@ package com.github.tyrantsim.jtuo.decks;
 
 import com.github.tyrantsim.jtuo.Constants;
 import com.github.tyrantsim.jtuo.cards.Card;
+import com.github.tyrantsim.jtuo.cards.CardCategory;
+import com.github.tyrantsim.jtuo.cards.CardType;
 import com.github.tyrantsim.jtuo.cards.Cards;
+import com.github.tyrantsim.jtuo.parsers.DeckParser;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.util.OptionalCardPool;
+import com.github.tyrantsim.jtuo.util.Pair;
 
 import java.util.*;
 
@@ -23,7 +27,7 @@ public class Deck implements Cloneable {
     private int commanderMaxLevel;
     private List<Card> cards = new ArrayList<>();
     // <positions of card, prefix mark>: -1 indicating the commander. E.g, used as a mark to be kept in attacking deck when optimizing.
-    private Map<Integer, Integer> cardMarks = new HashMap<>();
+    private Map<Integer, Boolean> cardMarks = new HashMap<>();
 
     private Card shuffledCommander;
     private List<Card> shuffledForts = new ArrayList<>();
@@ -68,6 +72,64 @@ public class Deck implements Cloneable {
 
     public Deck() {
         this(null, 0, null);
+    }
+
+    public void set(List<Integer> ids, Map<Integer, Boolean> marks) {
+
+        commander = null;
+        strategy = DeckStrategy.RANDOM;
+        int nonDeckCardsSeen = 0;
+
+        for (Integer id: ids) {
+            Card card;
+            try {
+                card = Cards.getCardById(id);
+            } catch (Exception e) {
+                System.err.println("WARNING: " + e.getMessage());
+                continue;
+            }
+
+            if (card.getType() == CardType.COMMANDER) {
+                if (commander == null) {
+                    commander = card;
+                    if (marks.containsKey(-1))
+                        cardMarks.put(-1, Boolean.TRUE);
+                } else {
+                    nonDeckCardsSeen++;
+                    System.err.println("WARNING: Ignoring additional commander " + card.getName()
+                            + " (" + commander.getName() + " already in deck)");
+                }
+            } else if (card.getCategory() == CardCategory.DOMINION_ALPHA) {
+                addDominion(card, false);
+                nonDeckCardsSeen++;
+            } else if (card.getCategory() == CardCategory.FORTRESS_DEFENSE
+                    || card.getCategory() == CardCategory.FORTRESS_SIEGE) {
+                fortressCards.add(card);
+                nonDeckCardsSeen++;
+            } else {
+                cards.add(card);
+                int markDst = cards.size() - 1;
+                int markSrc = markDst + nonDeckCardsSeen;
+
+                if (marks.containsKey(markSrc))
+                    cardMarks.put(markDst, Boolean.TRUE);
+            }
+        }
+
+        if (commander == null)
+            throw new RuntimeException("While constructing a deck: no commander found");
+
+        commanderMaxLevel = commander.getTopLevelCard().getLevel();
+        deckSize = cards.size();
+
+    }
+
+    public void addDominions(String deckString, boolean overrideDom) {
+        // TODO: implement this
+    }
+
+    public void addDominion(Card domCard, boolean overrideDom) {
+        // TODO: implement this
     }
 
     public void shuffle(Random random) {
@@ -140,7 +202,6 @@ public class Deck implements Cloneable {
 
     public String hash() {
 
-        String s;
         List<Card> deckAllCards = new ArrayList<Card>();
 
         deckAllCards.add(commander);
@@ -173,9 +234,7 @@ public class Deck implements Cloneable {
 
     }
 
-    public List<Integer> hashToIds(String hash) {
-
-        List<Integer> ids = new ArrayList<Integer>();
+    public static void hashToIds(String hash, List<Integer> ids) {
 
         String chars = Constants.BASE64_CHARS;
 
@@ -202,8 +261,6 @@ public class Deck implements Cloneable {
             charat++;
             ids.add(id);
         }
-
-        return ids;
     }
 
     public String shortDescription() {
@@ -276,14 +333,74 @@ public class Deck implements Cloneable {
 
         StringBuilder sb = new StringBuilder(mediumDescription() + "\n");
 
-        // TODO: implement this
+        if (commander != null)
+            showUpgrades(sb, commander, commanderMaxLevel, "");
+        else
+            sb.append("No commander\n");
+
+        for (Card card: fortressCards)
+            showUpgrades(sb, card, card.getTopLevelCard().getLevel(), "");
+
+        for (Card card: cards)
+            showUpgrades(sb, card, card.getTopLevelCard().getLevel(), "");
+
+        if (variableForts.getReplicates() > 0) {
+            sb.append(variableForts.getReplicates());
+            sb.append(" copies of each of ");
+        }
+        sb.append(variableForts.getAmount());
+        sb.append(" in:\n");
+        for (Card card: variableForts.getPool())
+            showUpgrades(sb, card, card.getTopLevelCard().getLevel(), "  ");
+
+        if (variableCards.getReplicates() > 0) {
+            sb.append(variableCards.getReplicates());
+            sb.append(" copies of each of ");
+        }
+        sb.append(variableCards.getAmount());
+        sb.append(" in:\n");
+        for (Card card: variableCards.getPool())
+            showUpgrades(sb, card, card.getTopLevelCard().getLevel(), "  ");
 
         return sb.toString();
-
     }
 
     public void showUpgrades(StringBuilder sb, Card card, int cardMaxLevel, String leadingChars) {
         // TODO: implement this
+    }
+
+    public void resolve() {
+        if (commander != null)
+            return;
+
+        Pair<List<Integer>, Map<Integer, Boolean>> idMarks = DeckParser.stringToIds(deckString, shortDescription());
+        set(idMarks.getFirst(), idMarks.getSecond());
+        deckString = "";
+
+    }
+
+    public void shrink(int deckLength) {
+        if (cards.size() > deckLength)
+            cards.subList(deckLength, cards.size()).clear();
+    }
+
+    public void setVipCards(String deckString) {
+        vipCards.addAll(DeckParser.stringToIds(deckString, "vip").getFirst());
+    }
+
+    public void setGivenHand(String deckString) {
+        givenHand = DeckParser.stringToIds(deckString, "hand").getFirst();
+    }
+
+    public void addForts(String deckString) {
+        Pair<List<Integer>, Map<Integer, Boolean>> idMarks = DeckParser.stringToIds(deckString, "fortress_cards");
+        for (Integer id: idMarks.getFirst()) {
+            try {
+                fortressCards.add(Cards.getCardById(id));
+            } catch (Exception e) {
+                System.err.println("Warning: " + e.getMessage());
+            }
+        }
     }
 
     public Card next() {

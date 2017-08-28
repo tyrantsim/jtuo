@@ -12,7 +12,7 @@ public class OptionalCardPool {
     private List<Card> pool;
 
     public OptionalCardPool() {
-        this(0, 0, new ArrayList<Card>());
+        this(1, 1, new ArrayList<Card>());
     }
 
     public OptionalCardPool(int amount, int replicates, List<Card> pool) {
@@ -45,6 +45,34 @@ public class OptionalCardPool {
         this.pool = pool;
     }
 
-    // TODO: override equals and hashcode methods
+    @Override
+    public boolean equals(Object other) {
+        if (this == other)
+            return true;
 
+        if (!(other instanceof OptionalCardPool))
+            return false;
+
+        OptionalCardPool otherPool = (OptionalCardPool) other;
+        if (this.amount == otherPool.amount && this.replicates == otherPool.replicates
+                && this.pool.size() == otherPool.pool.size()) {
+            for (int i = 0; i < this.pool.size(); i++) {
+                if (!this.pool.get(i).equals(otherPool.pool.get(i)))
+                    return false;
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = 17;
+        result = 37 * result + amount;
+        result = 37 * result + replicates;
+        for (Card card: pool)
+            result = 37 * result + card.hashCode();
+        return result;
+    }
 }
