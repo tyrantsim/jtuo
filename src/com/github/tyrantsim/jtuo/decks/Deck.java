@@ -4,6 +4,7 @@ import com.github.tyrantsim.jtuo.Constants;
 import com.github.tyrantsim.jtuo.cards.Card;
 import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
+import com.github.tyrantsim.jtuo.util.OptionalCardPool;
 
 import java.util.*;
 
@@ -43,6 +44,10 @@ public class Deck implements Cloneable {
     private List<Integer> givenHand = new ArrayList<>();
     private List<Card> fortressCards = new ArrayList<>();
     private List<SkillSpec> effects = new ArrayList<>();
+
+    // Optional card pools
+    OptionalCardPool variableForts = new OptionalCardPool();
+    OptionalCardPool variableCards = new OptionalCardPool();
 
     public Deck(DeckType deckType, int id, String name) {
 
@@ -168,7 +173,8 @@ public class Deck implements Cloneable {
 
     }
 
-    public static List<Integer> hashToIds(String hash) {
+    public List<Integer> hashToIds(String hash) {
+
         List<Integer> ids = new ArrayList<Integer>();
 
         String chars = Constants.BASE64_CHARS;
@@ -216,6 +222,68 @@ public class Deck implements Cloneable {
             desc += ": " + deckString;
 
         return desc;
+    }
+
+    public String mediumDescription() {
+
+        StringBuilder sb = new StringBuilder(shortDescription() + "\n");
+
+        if (commander != null)
+            sb.append(commander.getName());
+        else
+            sb.append("No commander");
+
+        if (alphaDominion != null) {
+            sb.append(", ");
+            sb.append(alphaDominion.getName());
+        }
+
+        for (Card card: fortressCards) {
+            sb.append(", ");
+            sb.append(card.getName());
+        }
+
+        for (Card card: cards) {
+            sb.append(", ");
+            sb.append(card.getName());
+        }
+
+        int numPoolCards;
+        if ((numPoolCards = variableForts.getAmount() * variableForts.getReplicates()) > 0) {
+            sb.append(", and ");
+            sb.append(numPoolCards);
+            sb.append(" fortresses from pool");
+        }
+
+        if ((numPoolCards = variableCards.getAmount() * variableCards.getReplicates()) > 0) {
+            sb.append(", and ");
+            sb.append(numPoolCards);
+            sb.append(" cards from pool");
+        }
+
+        if (upgradePoints > 0) {
+            sb.append(" +");
+            sb.append(upgradePoints);
+            sb.append("/");
+            sb.append(upgradeOpportunities);
+        }
+
+        return sb.toString();
+
+    }
+
+    public String longDescription() {
+
+        StringBuilder sb = new StringBuilder(mediumDescription() + "\n");
+
+        // TODO: implement this
+
+        return sb.toString();
+
+    }
+
+    public void showUpgrades(StringBuilder sb, Card card, int cardMaxLevel, String leadingChars) {
+        // TODO: implement this
     }
 
     public Card next() {
