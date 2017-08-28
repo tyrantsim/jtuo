@@ -4,7 +4,6 @@ import com.github.tyrantsim.jtuo.Constants;
 import com.github.tyrantsim.jtuo.cards.Card;
 import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
-import com.github.tyrantsim.jtuo.util.Pair;
 
 import java.util.*;
 
@@ -170,42 +169,35 @@ public class Deck implements Cloneable {
     }
 
     public static List<Integer> hashToIds(String hash) {
-        // TODO: NOT FINISHED!!
         List<Integer> ids = new ArrayList<Integer>();
 
         String chars = Constants.BASE64_CHARS;
 
         int charat = 0;
-        char pc = hash.charAt(charat);
 
         while (charat < hash.length()) {
-
-            System.out.println(pc);
+            String pc = hash.substring(charat);
 
             int id = 0;
             int factor = 1;
-            String p = chars.substring(chars.indexOf(pc));
-            int d = chars.length() - chars.indexOf(p);
-            System.out.println("id: " + id + ", pc: " + pc + ", p: " + p + ", d: " + d);
+            String p;
+            int d = chars.indexOf(pc.charAt(0));
 
-            while (d < 32 && charat < hash.length()) {
-                System.out.println("INNER = id: " + id + ", pc: " + pc + ", p: " + p + ", d: " + d);
+            while (d < 32) {
                 id += factor * d;
                 factor *= 32;
                 if (++charat < hash.length()) {
-                    pc = hash.charAt(++charat);
-                    p = chars.substring(chars.indexOf(pc));
-                    d = chars.length() - chars.indexOf(p);
+                    pc = hash.substring(charat);
+                    p = chars.substring(chars.indexOf(pc.charAt(0)));
+                    d = chars.indexOf(p.charAt(0));
                 }
             }
             id += factor * (d - 32);
-            if (++charat < hash.length())
-                pc = hash.charAt(++charat);
+            charat++;
             ids.add(id);
         }
 
         return ids;
-
     }
 
     public String shortDescription() {
