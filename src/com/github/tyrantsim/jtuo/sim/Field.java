@@ -4,10 +4,7 @@ import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.util.Pair;
 
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 public class Field {
 
@@ -28,11 +25,11 @@ public class Field {
     GameMode gameMode;
     OptimizationMode optimizationMode;
     PassiveBGE[] yourBGEffects, enemyBGEffects;
-    ArrayList<SkillSpec> yourBGSkills, enemyBGSkills;
+    List<SkillSpec> yourBGSkills, enemyBGSkills;
     // With the introduction of on death skills, a single skill can trigger arbitrary many skills.
     // They are stored in this, and cleared after all have been performed.
     Deque<Pair<CardStatus, SkillSpec>> skillQueue;
-    ArrayList<CardStatus> killedUnits;
+    List<CardStatus> killedUnits;
     Map<CardStatus, Integer> damagedUnitsToItems;
 
     // the current phase of the turn: starts with PLAYCARD_PHASE, then COMMANDER_PHASE, STRUCTURES_PHASE, and ASSAULTS_PHASE
@@ -45,7 +42,9 @@ public class Field {
     boolean assaultBloodlusted = false;
     int bloodlustValue;
 
-    public Field(Random random, Cards cards, Hand yourHand, Hand enemyHand, GameMode gameMode, OptimizationMode optimizationMode, PassiveBGE[] yourBGEffects, PassiveBGE[] enemyBGEffects, ArrayList<SkillSpec> yourBGSkills, ArrayList<SkillSpec> enemyBGSkills) {
+    public Field(Random random, Cards cards, Hand yourHand, Hand enemyHand, GameMode gameMode,
+                 OptimizationMode optimizationMode, PassiveBGE[] yourBGEffects, PassiveBGE[] enemyBGEffects,
+                 List<SkillSpec> yourBGSkills, List<SkillSpec> enemyBGSkills) {
         this.end = false;
         this.random = random;
         this.cards = cards;
@@ -159,7 +158,7 @@ public class Field {
         }
     }
 
-    public ArrayList<SkillSpec> getBGSkills(int playerIndex) {
+    public List<SkillSpec> getBGSkills(int playerIndex) {
         if (playerIndex == PLAYER_INDEX_ATTACKER) {
             return yourBGSkills;
         } else if (playerIndex == PLAYER_INDEX_DEFFENDER) {

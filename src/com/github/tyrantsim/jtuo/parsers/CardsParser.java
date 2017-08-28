@@ -62,6 +62,10 @@ public class CardsParser {
         Cards.organize();
     }
 
+    public static Card getCardCopy(int id) {
+        return cards.get(id).clone();
+    }
+
     public static void main(String[] args) throws IOException, InterruptedException {
         CardsParser.initialize();
     }

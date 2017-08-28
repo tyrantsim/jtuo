@@ -7,7 +7,7 @@ import com.github.tyrantsim.jtuo.util.Pair;
 
 import java.util.*;
 
-public class Deck {
+public class Deck implements Cloneable {
 
     private Cards allCards;
     private DeckType deckType = DeckType.DECK;
@@ -21,14 +21,15 @@ public class Deck {
     private Card alphaDominion;
     private int commanderMaxLevel;
     private List<Card> cards = new ArrayList<>();
-    private Map<Integer, Integer> cardMarks; // <positions of card, prefix mark>: -1 indicating the commander. E.g, used as a mark to be kept in attacking deck when optimizing.
+    // <positions of card, prefix mark>: -1 indicating the commander. E.g, used as a mark to be kept in attacking deck when optimizing.
+    private Map<Integer, Integer> cardMarks = new HashMap<>();
 
     private Card shuffledCommander;
     private List<Card> shuffledForts = new ArrayList<>();
     private List<Card> shuffledCards = new ArrayList<>();
 
     // card id -> card order
-    private HashMap<Integer, List<Integer>> order;
+    private HashMap<Integer, List<Integer>> order = new HashMap<>();
     private int fortsPoolAmount, cardsPoolAmount;
     private List<Card> fortsPool = new ArrayList<>();
     private List<Card> cardsPool = new ArrayList<>();
@@ -38,10 +39,10 @@ public class Deck {
     private int level;
 
     private String deckString;
-    private Set<Integer> vipCards;
-    private List<Integer> givenHand;
+    private Set<Integer> vipCards = new HashSet<>();
+    private List<Integer> givenHand = new ArrayList<>();
     private List<Card> fortressCards = new ArrayList<>();
-    private List<SkillSpec> effects;
+    private List<SkillSpec> effects = new ArrayList<>();
 
     public Deck(DeckType deckType, int id, String name) {
 
@@ -155,6 +156,27 @@ public class Deck {
         return null;
     }
 
+    @Override
+    public Deck clone() {
+        try {
+            Deck copy = ((Deck) super.clone());
+            copy.cards = new ArrayList<>(cards);
+            copy.cardMarks = new HashMap<>(cardMarks);
+            copy.shuffledForts = new ArrayList<>(shuffledForts);
+            copy.shuffledCards = new ArrayList<>(shuffledCards);
+            copy.order = new HashMap<>(order);
+            copy.fortsPool = new ArrayList<>(fortsPool);
+            copy.cardsPool = new ArrayList<>(cardsPool);
+            copy.vipCards = new HashSet<>(vipCards);
+            copy.givenHand = new ArrayList<>(givenHand);
+            copy.fortressCards = new ArrayList<>(fortressCards);
+            copy.effects = new ArrayList<>(effects);
+            return copy;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+    }
+
     // Getters & Setters
     void setUpgradePoints(int upgradePoints) {
         this.upgradePoints = upgradePoints;
@@ -164,11 +186,11 @@ public class Deck {
         this.strategy = strategy;
     }
 
-    void setCommander(Card commander) {
+    public void setCommander(Card commander) {
         this.commander = commander;
     }
 
-    void setCards(List<Card> cards) {
+    public void setCards(List<Card> cards) {
         this.cards = cards;
     }
 

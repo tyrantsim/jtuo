@@ -9,11 +9,15 @@ import java.util.Random;
 public class Hand {
 
     Deck deck;
-    CardStatus commander;
+    CardStatus commander = new CardStatus();
     ArrayList<CardStatus> assaults = new ArrayList<>(15);
     ArrayList<CardStatus> structures = new ArrayList<>(15);
     int stasisFactionBitmap;
     int totalCardsDestroyed;
+
+    public Hand(Deck deck) {
+        this.deck = deck;
+    }
 
     void reset(Random random) {
         assaults.clear();
@@ -27,6 +31,10 @@ public class Hand {
     }
 
     // Getters & Setters
+    public void setDeck(Deck deck) {
+        this.deck = deck;
+    }
+
     public Deck getDeck() {
         return deck;
     }

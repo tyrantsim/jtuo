@@ -29,7 +29,7 @@ public class CardStatus {
     int enranged;
     int entrapped;
 
-    int[] primarySkillOffset = new int[Skill.values().length];
+    int[] primarySkillOffset;
     int[] evolvedSkillOffset = new int[Skill.values().length];
     int[] enhancedValue = new int[Skill.values().length];
     int[] skillCd = new int[Skill.values().length];
@@ -40,7 +40,39 @@ public class CardStatus {
     boolean sundered;
 
     void set(Card card) {
-        // TODO: implement this
+        this.card = card;
+
+        index = 0;
+        player = 0;
+        delay = card.getDelay();
+        hp = card.getHealth();
+        step = CardStep.NONE;
+        permHealthBuff = 0;
+        permAttackBuff = 0;
+        corrodedRate = 0;
+        corrodedWeakened = 0;
+        subdued = 0;
+        enfeebled = 0;
+        evaded = 0;
+        inhibited = 0;
+        sabotaged = 0;
+        paybacked = 0;
+        tributed = 0;
+        poisoned = 0;
+        protectedBy = 0;
+        protectedByStasis = 0;
+        enranged = 0;
+        entrapped = 0;
+
+        jammed = false;
+        overloaded = false;
+        rushAttempted = false;
+        sundered = false;
+
+        primarySkillOffset = new int[Skill.values().length];
+        evolvedSkillOffset = new int[Skill.values().length];
+        enhancedValue = new int[Skill.values().length];
+        skillCd = new int[Skill.values().length];
     }
 
     final int skill(Skill skillId) {

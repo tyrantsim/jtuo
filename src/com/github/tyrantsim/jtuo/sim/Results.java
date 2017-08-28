@@ -15,4 +15,21 @@ public class Results {
         return this;
     }
 
+    // Getters & Setters
+    public long getWins() {
+        return wins;
+    }
+
+    public long getLosses() {
+        return losses;
+    }
+
+    public long getDraws() {
+        return draws;
+    }
+
+    public long getPoints() {
+        return points;
+    }
+
 }
