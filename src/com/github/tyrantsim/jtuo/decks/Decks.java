@@ -23,4 +23,14 @@ public class Decks {
         byName.put(Cards.simplifyName(deckName), deck);
     }
 
+    public static String getDeckTypeAsString(DeckType deckType) {
+        switch (deckType) {
+            case CUSTOM_DECK: return "Custom Deck";
+            case RAID: return "Raid";
+            case MISSION: return "Mission";
+            case CAMPAIGN: return "Campaign";
+            case DECK: default: return "Deck";
+        }
+    }
+
 }

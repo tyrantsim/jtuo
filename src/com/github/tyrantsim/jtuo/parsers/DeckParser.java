@@ -87,7 +87,7 @@ public class DeckParser {
 
         } else {
             // Deck name is a normal deck
-            res.put(deckName, 1.0d);
+            res.put(deckStr, 1.0d);
             return res;
         }
 
@@ -97,30 +97,26 @@ public class DeckParser {
 
         Map<String, Double> res = new HashMap<String, Double>();
 
-        if (listString.contains(";")) {
-            for (String token: listString.split(";")) {
+        for (String token: listString.split(";")) {
 
-                double factor = 1.0d;
-                String deckName;
+            double factor = 1.0d;
+            String deckName;
 
-                if (token.contains(":")) {
-                    String[] splitToken = token.split(":");
-                    deckName = splitToken[0];
-                    try {
-                        factor = Double.parseDouble(splitToken[1]);
-                    } catch (NumberFormatException e) {
-                        System.err.println("WARNING: Is ':' a typo? Skip deck [" + token + "]");
-                    }
-                } else {
-                    deckName = token;
+            String[] splitToken = token.split(":");
+            deckName = splitToken[0].trim();
+            if (splitToken.length > 1) {
+                try {
+                    factor = Double.parseDouble(splitToken[1].trim());
+                } catch (NumberFormatException e) {
+                    System.err.println("WARNING: Is ':' a typo? Skip deck [" + token + "]");
                 }
-
-                Map<String, Double> deckList = expandDeckToList(deckName);
-                for (String key: deckList.keySet())
-                    res.put(key, deckList.get(key) * factor);
-
             }
+
+            Map<String, Double> deckList = expandDeckToList(deckName);
+            for (String key: deckList.keySet())
+                res.put(key, deckList.get(key) * factor);
         }
+
 
         return res;
 
@@ -167,7 +163,7 @@ public class DeckParser {
             // Check ID number between '[]' quotes
             try {
                 cardId = Integer.parseInt(simpleName.substring(
-                        simpleName.indexOf('['), simpleName.indexOf(']')).trim());
+                        simpleName.indexOf('[') + 1, simpleName.indexOf(']')).trim());
             } catch (NumberFormatException e) {
                 System.err.println("Error: Squared brackets must contain a card ID number");
             }
@@ -201,7 +197,7 @@ public class DeckParser {
     }
 
     public static Pair<List<Integer>, Map<Integer, Character>> stringToIds(String deckString, String desc) {
-        // TODO
+
         return null;
     }
 

@@ -133,8 +133,21 @@ public class Deck {
     }
 
     public String shortDescription() {
-        // TODO: Implement this
-        return "";
+
+        String desc = Decks.getDeckTypeAsString(deckType);
+
+        if (id > 0)
+            desc += " #" + id;
+
+        if (!name.isEmpty())
+            desc += " \"" + name + "\"";
+
+        if (deckString.isEmpty()) {
+            // TODO: Add hash to string
+        } else
+            desc += ": " + deckString;
+
+        return desc;
     }
 
     public Card next() {

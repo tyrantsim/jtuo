@@ -14,6 +14,7 @@ import com.github.tyrantsim.jtuo.decks.Deck;
 import com.github.tyrantsim.jtuo.decks.DeckType;
 import com.github.tyrantsim.jtuo.decks.Decks;
 
+
 public class FileParser {
 
     private static Map<Integer, Integer> customCards = new HashMap<Integer, Integer>();
@@ -32,14 +33,16 @@ public class FileParser {
                 if (ParserUtils.isLineIgnored(line))
                     continue;
 
-                String[] splitLine;
-                if (line.contains(":") && !(splitLine = line.split(":"))[0].trim().isEmpty() && !splitLine[1].trim().isEmpty()) {
-                    if (Cards.cardsByName.containsKey(splitLine[0].trim())) {
+                if (line.contains(":") && !line.substring(line.indexOf(":") + 1).trim().isEmpty()
+                        && !line.substring(0, line.indexOf(":")).trim().isEmpty()) {
+
+                    if (Cards.cardsByName.containsKey(line.substring(0, line.indexOf(":")).trim())) {
                         System.err.println("Warning in card abbreviation file " + filename + " at line "
                                 + numLine + ": ignored because the name has been used by an existing card.");
                     } else {
                         // OK - put card name in abbrs map
-                        Cards.playerCardsAbbr.put(Cards.simplifyName(splitLine[0].trim()), splitLine[1].trim());
+                        Cards.playerCardsAbbr.put(Cards.simplifyName(line.substring(0, line.indexOf(":")).trim()),
+                                line.substring(line.indexOf(":") + 1).trim());
                     }
                 } else {
                     System.err.println("Error in card abbreviation file " + filename + " at line "
@@ -95,19 +98,19 @@ public class FileParser {
                 if (ParserUtils.isLineIgnored(line))
                     continue;
 
-                String[] splitLine;
-                if (line.contains(":") && !(splitLine = line.split(":"))[0].trim().isEmpty() && !splitLine[1].trim().isEmpty()) {
+                if (line.contains(":") && !line.substring(line.indexOf(":") + 1).trim().isEmpty()
+                        && !line.substring(0, line.indexOf(":")).trim().isEmpty()) {
 
-                    Deck deck = Decks.findDeckByName(splitLine[0].trim());
+                    Deck deck = Decks.findDeckByName(line.substring(0, line.indexOf(":")).trim());
 
                     if (deck != null)
                         System.err.println("Warning in custom deck file " + filename + " at line " + numLine
                                 + ", name conflicts, overrides " + deck.shortDescription());
 
-                    deck = new Deck(DeckType.CUSTOM_DECK, numLine, splitLine[0].trim());
-                    deck.setDeckString(splitLine[1].trim());
+                    deck = new Deck(DeckType.CUSTOM_DECK, numLine, line.substring(0, line.indexOf(":")).trim());
+                    deck.setDeckString(line.substring(line.indexOf(":") + 1).trim());
                     Decks.decks.add(deck);
-                    Decks.addDeck(deck, splitLine[0].trim());
+                    Decks.addDeck(deck, line.substring(0, line.indexOf(":")).trim());
                     Decks.addDeck(deck, "Custom Deck #" + deck.getId());
 
                 } else {
@@ -141,6 +144,9 @@ public class FileParser {
         } else if (numSign == '-') {
             ownedCards.put(cardId, (ownedCards.getOrDefault(cardId, 0) > cardNum)
                     ? ownedCards.get(cardId) - cardNum : 0);
+
+            if (ownedCards.get(cardId) == 0)
+                ownedCards.remove(cardId);
         }
     }
 
@@ -153,7 +159,7 @@ public class FileParser {
             // Parse as string
             try {
                 for (String cardSpec: filename.split("\\s*,\\s*"))
-                    addOwnedCard(ownedCards, cardSpec);
+                    addOwnedCard(ownedCards, cardSpec.trim());
             } catch (Exception e) {
                 System.err.println("Error: Failed to parse owned cards: '" + filename
                         + "' is neither a file nor a valid set of cards (" + e.getMessage() + ")");
@@ -165,7 +171,7 @@ public class FileParser {
             int numLine = 0;
             try (Scanner sc = new Scanner(file)) {
 
-                while (sc.hasNext()) {
+                while (sc.hasNextLine()) {
                     numLine++;
                     String line = sc.nextLine().trim();
 
@@ -192,12 +198,17 @@ public class FileParser {
 
         int numLine = 0;
         try (Scanner sc = new Scanner(file)) {
-            while (sc.hasNext()) {
+            while (sc.hasNextLine()) {
                 numLine++;
                 String line = sc.nextLine();
 
-                String[] splitLine;
-                if (line.contains(":") && !(splitLine = line.split(":"))[0].trim().isEmpty() && !splitLine[1].trim().isEmpty()) {
+                if (ParserUtils.isLineIgnored(line))
+                    continue;
+
+                if (line.contains(":") && !line.substring(line.indexOf(":") + 1).trim().isEmpty()
+                        && !line.substring(0, line.indexOf(":")).trim().isEmpty()) {
+
+                    String[] splitLine = line.split(":");
                     bgeAliases.put(Cards.simplifyName(splitLine[0].trim()), splitLine[1].trim());
                 } else {
                     System.err.println("Error in BGE file " + filename + " at line "
