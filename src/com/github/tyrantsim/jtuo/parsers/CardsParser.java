@@ -1,4 +1,5 @@
 package com.github.tyrantsim.jtuo.parsers;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -6,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.TreeMap;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -31,19 +33,17 @@ import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.cards.Faction;
 import com.github.tyrantsim.jtuo.skills.Skill;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
-
+import com.github.tyrantsim.jtuo.skills.SkillTrigger;
 /**
  * @author Brikikeks
  */
 public class CardsParser {
 
-    public static Hashtable<Integer, Card> cards = new Hashtable<>();
+    public static Map<Integer, Card> cards = new TreeMap<>();
 
     public static boolean initialized = false;
 
-    static {
-
-        // cards.putAll(readCards("cards_section_9.xml"));
+    static {// cards.putAll(readCards("cards_section_9.xml"));
     }
 
     public static void initialize() {
@@ -63,15 +63,9 @@ public class CardsParser {
         Cards.organize();
     }
 
-    /**
-     * @param args
-     * @throws IOException
-     * @throws InterruptedException
-     */
     public static void main(String[] args) throws IOException, InterruptedException {
         CardsParser.initialize();
     }
-
 
     public static void readCards(String file) throws FileNotFoundException {
 
@@ -81,7 +75,6 @@ public class CardsParser {
                 System.err.println("Failed to create data folder");
             }
         }
-
         System.out.println(file);
         
         if (!cardFile.exists() || ((new Date().getTime() - cardFile.lastModified()) > 86400000)) {
@@ -109,9 +102,8 @@ public class CardsParser {
         }
     }
 
-    private static Hashtable<Integer, Card> readCards(Document parse) {
-        Hashtable<Integer, Card> cards = new Hashtable<>();
-
+    private static Map<Integer, Card> readCards(Document parse) {
+        TreeMap<Integer, Card> cards = new TreeMap<>();
         NodeList units = parse.getElementsByTagName("unit");
         for (int i = 0; i < units.getLength(); i++) {
             Node unit = units.item(i);
@@ -121,7 +113,7 @@ public class CardsParser {
             Integer baseIdInt = null;
             Integer idInt = null;
             Card baseCard = null;
-            Map<Integer, Card> upgrades = new Hashtable<>();
+            Map<Integer, Card> upgrades = new TreeMap<>();
             for (int j = 0; j < unitChilds.getLength(); j++) {
                 Node unitChild = unitChilds.item(j);
                 //System.out.println(unitChild.getNodeName());
@@ -178,7 +170,6 @@ public class CardsParser {
                 // cost
                 // rarity
                 // skill
-                //
                 
                 if (baseIdInt != null && name != null && !name.isEmpty()) {
                     // card = new Card(baseIdInt, name);
@@ -194,10 +185,9 @@ public class CardsParser {
                         String id = "";
                         for (int l = 0; l < upgradeChilds.getLength(); l++) {
                             Node upgradeChild = upgradeChilds.item(l);
-
                             if (upgradeChild.getNodeName().equals("level")) {
                                 String level = upgradeChild.getFirstChild().getNodeValue();
-                                if (level != null) {
+                                if (level != null && Integer.valueOf(level) < 6) {
                                     level_prefix = "-" + level;
                                     card.setLevel(Integer.parseInt(level));
                                 }
@@ -213,13 +203,10 @@ public class CardsParser {
                                     card.setName(name);
                                 }
                             }
-
                             updateSameCardAttributes(unitChild, card);
-
                         }
                         if (id != null) {
                             upgrades.put(card.getLevel(), card);
-
                             card.setId(idInt);
                             cards.put(idInt, card); // name + level_prefix
                         }
@@ -227,6 +214,7 @@ public class CardsParser {
                     }
                 }
             }
+            
             recognizeCardType(baseCard);
             Card topLevelCard = baseCard;
             for (Card card : upgrades.values()) {
@@ -368,13 +356,18 @@ public class CardsParser {
             baseCard.setCategory(CardCategory.DOMINION_ALPHA);
             break;
         default:
-            // [50001 .. 55000]
+            // [55001 .. ...]
             baseCard.setType(CardType.ASSAULT);
             break;
         }
     }
 
     private static void updateSameCardAttributes(Node unitChild, Card card) {
+        if (unitChild.getNodeName().equals("cost") && unitChild.getFirstChild() != null) {
+            String cost = unitChild.getFirstChild().getNodeValue();
+            card.setRecipeCost(Integer.parseInt(cost));
+        }
+
         if (unitChild.getNodeName().equals("attack") && unitChild.getFirstChild() != null) {
             if (unitChild.getFirstChild() != null) {
                 String attack = unitChild.getFirstChild().getNodeValue();
@@ -384,10 +377,6 @@ public class CardsParser {
         if (unitChild.getNodeName().equals("health") && unitChild.getFirstChild() != null) {
             String health = unitChild.getFirstChild().getNodeValue();
             card.setHealth(Integer.parseInt(health));
-        }
-        if (unitChild.getNodeName().equals("cost") && unitChild.getFirstChild() != null) {
-            String cost = unitChild.getFirstChild().getNodeValue();
-            card.setRecipeCost(Integer.parseInt(cost));
         }
         if (unitChild.getNodeName().equals("fusion_level") && unitChild.getFirstChild() != null) {
             String level = unitChild.getFirstChild().getNodeValue();
@@ -437,8 +426,8 @@ public class CardsParser {
         if (!card_id.isEmpty()) {
             new_skill.setCardId(Integer.parseInt(card_id));
         }
-        if (!trigger.isEmpty()) {
-            new_skill.setTrigger(trigger);
+        if (trigger != null && !trigger.isEmpty()) {
+            new_skill.setTrigger(SkillTrigger.valueOf(trigger.toUpperCase()));
         }
     }
 }

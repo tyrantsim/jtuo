@@ -13,7 +13,7 @@ public class SkillSpec {
     Skill s2;
     boolean all;
     int cardId;
-    String trigger;
+    SkillTrigger trigger;
 
 
     public Skill getId() {
@@ -89,11 +89,11 @@ public class SkillSpec {
     }
     
     
-    public String getTrigger() {
+    public SkillTrigger getTrigger() {
         return trigger;
     }
 
-    public void setTrigger(String trigger) {
+    public void setTrigger(SkillTrigger trigger) {
         this.trigger = trigger;
     }
 }
