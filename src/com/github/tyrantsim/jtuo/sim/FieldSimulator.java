@@ -3,6 +3,8 @@ package com.github.tyrantsim.jtuo.sim;
 import com.github.tyrantsim.jtuo.cards.Card;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
 
+import java.util.List;
+
 public class FieldSimulator {
 
     public static int turnLimit = Integer.MAX_VALUE;
@@ -103,7 +105,56 @@ public class FieldSimulator {
     }
 
     private static void turnStartPhase(Field field) {
-        // TODO: implement this
+        // Active player's commander card
+        cooldownSkills(field.getTap().getCommander());
+
+        // Active player's assault skills:
+        // update index
+        // reduce delay; reduce skill cooldown
+        List<CardStatus> assaults = field.getTap().getAssaults();
+        for (int index = 0; index < assaults.size(); index++) {
+            CardStatus status = assaults.get(index);
+            status.setIndex(index);
+            if (status.getDelay() > 0) {
+                status.reduceDelay();
+                if (status.getDelay() == 0) {
+                    checkAndPerformValor(field, status);
+                    checkAndPerformSummon(field, status);
+                }
+            } else {
+                cooldownSkills(status);
+            }
+        }
+
+        // Active player's structure cards:
+        // update index
+        // reduce delay; reduce skill cooldown
+        List<CardStatus> structures = field.getTap().getStructures();
+        for (int index = 0; index < structures.size(); index++) {
+            CardStatus status = structures.get(index);
+            status.setIndex(index);
+            if (status.getDelay() > 0) {
+                status.reduceDelay();
+                if (status.getDelay() == 0) {
+                    checkAndPerformSummon(field, status);
+                }
+            } else {
+                cooldownSkills(status);
+            }
+        }
+
+        // Defending player's assault cards:
+        // update index
+        for (int index = 0; index < assaults.size(); index++) {
+            CardStatus status = assaults.get(index);
+            status.setIndex(index);
+        }
+
+        // Defending player's structure cards:
+        for (int index = 0; index < structures.size(); index++) {
+            CardStatus status = structures.get(index);
+            status.setIndex(index);
+        }
     }
 
     private static void resolveSkill(Field field) {
@@ -131,6 +182,18 @@ public class FieldSimulator {
     }
 
     private static void turnEndPhase(Field field) {
+        // TODO: implement this
+    }
+
+    private static void cooldownSkills(CardStatus card) {
+        // TODO: implement this
+    }
+
+    private static void checkAndPerformValor(Field field, CardStatus status) {
+        // TODO: implement this
+    }
+
+    private static void checkAndPerformSummon(Field field, CardStatus status) {
         // TODO: implement this
     }
 

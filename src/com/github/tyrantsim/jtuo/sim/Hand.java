@@ -4,16 +4,17 @@ import com.github.tyrantsim.jtuo.decks.Deck;
 import com.github.tyrantsim.jtuo.skills.Skill;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class Hand {
 
-    Deck deck;
-    CardStatus commander = new CardStatus();
-    ArrayList<CardStatus> assaults = new ArrayList<>(15);
-    ArrayList<CardStatus> structures = new ArrayList<>(15);
-    int stasisFactionBitmap;
-    int totalCardsDestroyed;
+    private Deck deck;
+    private CardStatus commander = new CardStatus();
+    private List<CardStatus> assaults = new ArrayList<>(15);
+    private List<CardStatus> structures = new ArrayList<>(15);
+    private int stasisFactionBitmap;
+    private int totalCardsDestroyed;
 
     public Hand(Deck deck) {
         this.deck = deck;
@@ -41,6 +42,14 @@ public class Hand {
 
     public CardStatus getCommander() {
         return commander;
+    }
+
+    List<CardStatus> getAssaults() {
+        return assaults;
+    }
+
+    List<CardStatus> getStructures() {
+        return structures;
     }
 
 }

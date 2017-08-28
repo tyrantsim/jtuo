@@ -5,39 +5,39 @@ import com.github.tyrantsim.jtuo.skills.Skill;
 
 public class CardStatus {
 
-    Card card;
-    int index;
-    int player;
-    int delay;
-    int hp;
-    CardStep step;
-    int permHealthBuff;
-    int permAttackBuff;
+    private Card card;
+    private int index;
+    private int player;
+    private int delay;
+    private int hp;
+    private CardStep step;
+    private int permHealthBuff;
+    private int permAttackBuff;
 
-    int corrodedRate;
-    int corrodedWeakened;
-    int subdued;
-    int enfeebled;
-    int evaded;
-    int inhibited;
-    int sabotaged;
-    int paybacked;
-    int tributed;
-    int poisoned;
-    int protectedBy;
-    int protectedByStasis;
-    int enranged;
-    int entrapped;
+    private int corrodedRate;
+    private int corrodedWeakened;
+    private int subdued;
+    private int enfeebled;
+    private int evaded;
+    private int inhibited;
+    private int sabotaged;
+    private int paybacked;
+    private int tributed;
+    private int poisoned;
+    private int protectedBy;
+    private int protectedByStasis;
+    private int enranged;
+    private int entrapped;
 
-    int[] primarySkillOffset;
-    int[] evolvedSkillOffset = new int[Skill.values().length];
-    int[] enhancedValue = new int[Skill.values().length];
-    int[] skillCd = new int[Skill.values().length];
+    private int[] primarySkillOffset;
+    private int[] evolvedSkillOffset = new int[Skill.values().length];
+    private int[] enhancedValue = new int[Skill.values().length];
+    private int[] skillCd = new int[Skill.values().length];
 
-    boolean jammed;
-    boolean overloaded;
-    boolean rushAttempted;
-    boolean sundered;
+    private boolean jammed;
+    private boolean overloaded;
+    private boolean rushAttempted;
+    private boolean sundered;
 
     void set(Card card) {
         this.card = card;
@@ -80,7 +80,11 @@ public class CardStatus {
         return -1;
     }
 
-    public boolean isAlive() {
+    void reduceDelay() {
+        delay--;
+    }
+
+    boolean isAlive() {
         return hp > 0;
     }
 
@@ -89,8 +93,16 @@ public class CardStatus {
         return card;
     }
 
-    public void setPlayer(int player) {
+    void setIndex(int index) {
+        this.index = index;
+    }
+
+    void setPlayer(int player) {
         this.player = player;
+    }
+
+    int getDelay() {
+        return delay;
     }
 
 }

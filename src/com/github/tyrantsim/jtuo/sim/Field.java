@@ -30,7 +30,7 @@ public class Field {
     // They are stored in this, and cleared after all have been performed.
     Deque<Pair<CardStatus, SkillSpec>> skillQueue;
     List<CardStatus> killedUnits;
-    Map<CardStatus, Integer> damagedUnitsToItems;
+    Map<CardStatus, Integer> damagedUnitsToItems = new HashMap<>();
 
     // the current phase of the turn: starts with PLAYCARD_PHASE, then COMMANDER_PHASE, STRUCTURES_PHASE, and ASSAULTS_PHASE
     FieldPhase currentPhase;
@@ -60,7 +60,7 @@ public class Field {
     }
 
     public void prepareAction() {
-        // TODO: implement this
+        damagedUnitsToItems.clear();
     }
 
     public void finalizeAction() {
