@@ -1,6 +1,5 @@
 package com.github.tyrantsim.jtuo.parsers;
 
-import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.decks.Deck;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -18,7 +17,7 @@ public class FileParserTest {
 
     @Test
     public void testCards() throws Exception {
-        List<Integer> ids = Deck.hashToIds("LU4EBRhbHDhTeEhbZKhBLOh");
+        List<Integer> ids = new Deck().hashToIds("LU4EBRhbHDhTeEhbZKhBLOh");
         assertEquals((Integer) 25227, ids.get(0));
         assertEquals((Integer) 50212, ids.get(1));
         assertEquals((Integer) 36091, ids.get(2));

@@ -1,6 +1,7 @@
 package com.github.tyrantsim.jtuo.sim;
 
 import com.github.tyrantsim.jtuo.cards.Cards;
+import com.github.tyrantsim.jtuo.skills.Skill;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.util.Pair;
 
@@ -30,7 +31,7 @@ public class Field {
     // They are stored in this, and cleared after all have been performed.
     Deque<Pair<CardStatus, SkillSpec>> skillQueue;
     List<CardStatus> killedUnits;
-    Map<CardStatus, Integer> damagedUnitsToItems;
+    Map<CardStatus, Integer> damagedUnitsToItems = new HashMap<>();
 
     // the current phase of the turn: starts with PLAYCARD_PHASE, then COMMANDER_PHASE, STRUCTURES_PHASE, and ASSAULTS_PHASE
     FieldPhase currentPhase;
@@ -60,11 +61,25 @@ public class Field {
     }
 
     public void prepareAction() {
-        // TODO: implement this
+        damagedUnitsToItems.clear();
     }
 
     public void finalizeAction() {
-        // TODO: implement this
+        for (CardStatus dmgStatus : damagedUnitsToItems.keySet()) {
+            int dmg = damagedUnitsToItems.get(dmgStatus);
+
+            if (dmg == 0 || !dmgStatus.isAlive()) continue;
+
+            int barrierBase = dmgStatus.skill(Skill.BARRIER);
+            if (barrierBase != 0) {
+                int protectValue = barrierBase * dmg;
+                dmgStatus.addProtection(protectValue);
+            }
+        }
+    }
+
+    void addSkillToQueue(CardStatus status, SkillSpec skillSpec) {
+        this.skillQueue.add(new Pair<>(status, skillSpec));
     }
 
     public void nextTurn() {

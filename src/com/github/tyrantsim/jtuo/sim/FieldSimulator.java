@@ -1,7 +1,10 @@
 package com.github.tyrantsim.jtuo.sim;
 
 import com.github.tyrantsim.jtuo.cards.Card;
+import com.github.tyrantsim.jtuo.skills.Skill;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
+
+import java.util.List;
 
 public class FieldSimulator {
 
@@ -33,7 +36,7 @@ public class FieldSimulator {
             // Play a card
             Card playedCard = field.getTap().getDeck().next();
             if (playedCard != null) {
-                simulatePlayCardPhase(field);
+                simulatePlayCardPhase(field, playedCard);
             }
             if (field.isEnd()) {
                 break;
@@ -103,15 +106,112 @@ public class FieldSimulator {
     }
 
     private static void turnStartPhase(Field field) {
-        // TODO: implement this
+        // Active player's commander card
+        cooldownSkills(field.getTap().getCommander());
+
+        // Active player's assault skills:
+        // update index
+        // reduce delay; reduce skill cooldown
+        List<CardStatus> assaults = field.getTap().getAssaults();
+        for (int index = 0; index < assaults.size(); index++) {
+            CardStatus status = assaults.get(index);
+            status.setIndex(index);
+            if (status.getDelay() > 0) {
+                status.reduceDelay();
+                if (status.getDelay() == 0) {
+                    checkAndPerformValor(field, status);
+                    checkAndPerformSummon(field, status);
+                }
+            } else {
+                cooldownSkills(status);
+            }
+        }
+
+        // Active player's structure cards:
+        // update index
+        // reduce delay; reduce skill cooldown
+        List<CardStatus> structures = field.getTap().getStructures();
+        for (int index = 0; index < structures.size(); index++) {
+            CardStatus status = structures.get(index);
+            status.setIndex(index);
+            if (status.getDelay() > 0) {
+                status.reduceDelay();
+                if (status.getDelay() == 0) {
+                    checkAndPerformSummon(field, status);
+                }
+            } else {
+                cooldownSkills(status);
+            }
+        }
+
+        // Defending player's assault cards:
+        // update index
+        for (int index = 0; index < assaults.size(); index++) {
+            CardStatus status = assaults.get(index);
+            status.setIndex(index);
+        }
+
+        // Defending player's structure cards:
+        for (int index = 0; index < structures.size(); index++) {
+            CardStatus status = structures.get(index);
+            status.setIndex(index);
+        }
     }
 
     private static void resolveSkill(Field field) {
         // TODO: implement this
     }
 
-    private static void simulatePlayCardPhase(Field field) {
-        // TODO: implement this
+    private static void simulatePlayCardPhase(Field field, Card playedCard) {
+        boolean bgeMegamorphosis = field.getBGEffects(field.getTapi())[PassiveBGE.MEGAMORPHOSIS.ordinal()] != null;
+
+        int playedFactionMask = 0;
+        int sameFactionCardsCount = 0;
+
+        // Begin 'Play Card' phase action
+        field.prepareAction();
+
+        // Play selected card
+        CardStatus playedStatus = null;
+        switch (playedCard.getType()) {
+            case ASSAULT:
+                playedStatus = new PlayCard(playedCard, field, field.getTapi(), field.getTap().getCommander()).op();
+                break;
+            case STRUCTURE:
+                playedStatus = new PlayCard(playedCard, field, field.getTapi(), field.getTap().getCommander()).op();
+                break;
+            default:
+                throw new RuntimeException("Unknown card type: " + playedCard.getType());
+        }
+        resolveSkill(field); // resolve postponed skills recursively
+
+        // End 'Play Card' phase action
+        field.finalizeAction();
+
+        // 1. Evaluate skill Allegiance & count assaults with same faction (structures will be counted later)
+        // 2. Passive BGE Cold Sleep
+        for (CardStatus status : field.getTap().getAssaults()) {
+            if (status.equals(playedStatus)) { continue; } // Except itself
+
+            if (bgeMegamorphosis || (status.getCard().getFaction() == playedCard.getFaction())) {
+                sameFactionCardsCount++;
+                int allegianceValue = status.skill(Skill.ALLEGIANCE);
+                if (allegianceValue != 0) {
+                    if (!status.isSundered()) {
+                        status.addPermAttackBuff(allegianceValue);
+                    }
+                    status.extHP(allegianceValue);
+                }
+            }
+
+            if (field.getBGEffects(field.getTapi())[PassiveBGE.COLDSLEEP.ordinal()] != null) {
+                int bgeValue = (status.getProtectedByStasis() + 1) / 2;
+                status.addHP(bgeValue);
+            }
+        }
+
+        // TODO: finish this
+        
     }
 
     private static void evaluatePassiveBGEHeroismSkills(Field field) {
@@ -131,6 +231,18 @@ public class FieldSimulator {
     }
 
     private static void turnEndPhase(Field field) {
+        // TODO: implement this
+    }
+
+    private static void cooldownSkills(CardStatus card) {
+        // TODO: implement this
+    }
+
+    public static void checkAndPerformValor(Field field, CardStatus status) {
+        // TODO: implement this
+    }
+
+    private static void checkAndPerformSummon(Field field, CardStatus status) {
         // TODO: implement this
     }
 

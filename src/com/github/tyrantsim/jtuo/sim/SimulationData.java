@@ -74,7 +74,7 @@ public class SimulationData {
             Results result = FieldSimulator.play(fd);
             if (!TyrantOptimize.modeOpenTheDeck) {
                 // are there remaining (unopened) cards ?
-                if (fd.getPlayers()[1].deck.getShuffledCards().size() != 0) {
+                if (fd.getPlayer(1).getDeck().getShuffledCards().size() != 0) {
                     // apply min score (there are unopened cards, so mission failed)
                     result.points = Cards.MIN_POSSIBLE_SCORE[TyrantOptimize.optimizationMode.ordinal()];
                 }
