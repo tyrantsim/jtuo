@@ -1,5 +1,6 @@
 package com.github.tyrantsim.jtuo.decks;
 
+import com.github.tyrantsim.jtuo.Constants;
 import com.github.tyrantsim.jtuo.cards.Card;
 import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
@@ -132,6 +133,80 @@ public class Deck {
         shuffledCommander = cardsToUpgrade.get(0);
     }
 
+    public String hash() {
+
+        String s;
+        List<Card> deckAllCards = new ArrayList<Card>();
+
+        deckAllCards.add(commander);
+        if (alphaDominion != null) deckAllCards.add(alphaDominion);
+        deckAllCards.addAll(cards);
+
+        if (strategy == DeckStrategy.RANDOM) {
+            Collections.sort(deckAllCards.subList(deckAllCards.size() - cards.size(),
+                    deckAllCards.size()), Comparator.comparingInt(Card::getId));
+        }
+
+        return encodeDeck(deckAllCards);
+
+    }
+
+    public String encodeDeck(List<Card> cards) {
+
+        StringBuilder sb = new StringBuilder();
+
+        for (Card card: cards) {
+            int factor = card.getId();
+            while (factor >= 32) {
+                sb.append(Constants.BASE64_CHARS.toCharArray()[factor % 32]);
+            }
+            factor /= 32;
+            sb.append(Constants.BASE64_CHARS.toCharArray()[factor + 32]);
+        }
+
+        return sb.toString();
+
+    }
+
+    public static List<Integer> hashToIds(String hash) {
+        // TODO: NOT FINISHED!!
+        List<Integer> ids = new ArrayList<Integer>();
+
+        String chars = Constants.BASE64_CHARS;
+
+        int charat = 0;
+        char pc = hash.charAt(charat);
+
+        while (charat < hash.length()) {
+
+            System.out.println(pc);
+
+            int id = 0;
+            int factor = 1;
+            String p = chars.substring(chars.indexOf(pc));
+            int d = chars.length() - chars.indexOf(p);
+            System.out.println("id: " + id + ", pc: " + pc + ", p: " + p + ", d: " + d);
+
+            while (d < 32 && charat < hash.length()) {
+                System.out.println("INNER = id: " + id + ", pc: " + pc + ", p: " + p + ", d: " + d);
+                id += factor * d;
+                factor *= 32;
+                if (++charat < hash.length()) {
+                    pc = hash.charAt(++charat);
+                    p = chars.substring(chars.indexOf(pc));
+                    d = chars.length() - chars.indexOf(p);
+                }
+            }
+            id += factor * (d - 32);
+            if (++charat < hash.length())
+                pc = hash.charAt(++charat);
+            ids.add(id);
+        }
+
+        return ids;
+
+    }
+
     public String shortDescription() {
 
         String desc = Decks.getDeckTypeAsString(deckType);
@@ -143,7 +218,7 @@ public class Deck {
             desc += " \"" + name + "\"";
 
         if (deckString.isEmpty()) {
-            // TODO: Add hash to string
+            desc += ": " + hash();
         } else
             desc += ": " + deckString;
 
