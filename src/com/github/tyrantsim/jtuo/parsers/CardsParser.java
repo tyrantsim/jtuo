@@ -5,7 +5,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Hashtable;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -231,7 +230,7 @@ public class CardsParser {
                 }
                 card.setTopLevelCard(topLevelCard);
             }
-            System.out.println(baseCard);
+            //System.out.println(baseCard);
         }
 
         return cards;
@@ -386,26 +385,31 @@ public class CardsParser {
             NamedNodeMap skill = unitChild.getAttributes();
             String id = skill.getNamedItem("id") == null ? "" : skill.getNamedItem("id").getNodeValue();
             String x = skill.getNamedItem("x") == null ? "" : skill.getNamedItem("x").getNodeValue();
+            String y = skill.getNamedItem("y") == null ? "" : skill.getNamedItem("y").getNodeValue();
             String all = skill.getNamedItem("all") == null ? "" : skill.getNamedItem("all").getNodeValue();
             String c = skill.getNamedItem("c") == null ? "" : skill.getNamedItem("c").getNodeValue();
             String card_id = skill.getNamedItem("card_id") == null ? "" : skill.getNamedItem("card_id").getNodeValue();
             String trigger = skill.getNamedItem("trigger") == null ? "" : skill.getNamedItem("trigger").getNodeValue();
+            String n = skill.getNamedItem("n") == null ? "" : skill.getNamedItem("n").getNodeValue();
+            String s = skill.getNamedItem("s") == null ? "" : skill.getNamedItem("s").getNodeValue();
+            String s2 = skill.getNamedItem("s2") == null ? "" : skill.getNamedItem("s2").getNodeValue();
+
             
             // Integer.parseInt(level)
             ArrayList<SkillSpec> skillSpecs = card.getSkills();
             boolean skill_found = false;
             for (SkillSpec skillSpec : skillSpecs) {
                 if (skillSpec.getId().equals(id)) {
-                    setSkillSpec(x, all, c, card_id, trigger, skillSpec);
+                    setSkillSpec(x, y, all, c, card_id, trigger, skillSpec, n, s, s2);
                     skill_found = true;
                 }
             }
             if (!skill_found) {
                 SkillSpec new_skill = new SkillSpec();
-                System.out.println(id.toUpperCase());
+                //System.out.println(id.toUpperCase());
                 new_skill.setId(Skill.valueOf(id.toUpperCase()));
 
-                setSkillSpec(x, all, c, card_id, trigger, new_skill);
+                setSkillSpec(x, y, all, c, card_id, trigger, new_skill, n, s, s2);
                 skillSpecs.add(new_skill);
             }
 
@@ -415,11 +419,15 @@ public class CardsParser {
         }
     }
 
-    private static void setSkillSpec(String x, String all, String c, String card_id, String trigger, SkillSpec new_skill) {
+    private static void setSkillSpec(String x, String y, String all, String c, String card_id, String trigger, SkillSpec new_skill, String n, String s, String s2) {
         new_skill.setAll(all != null && all.equals("1"));
         if (!x.isEmpty()) {
             new_skill.setX(Float.parseFloat(x));
         }
+        if (!y.isEmpty()) {
+            new_skill.setY(Faction.values()[Integer.parseInt(y)]);
+        }
+
         if (!c.isEmpty()) {
             new_skill.setC(Integer.parseInt(c));
         }
