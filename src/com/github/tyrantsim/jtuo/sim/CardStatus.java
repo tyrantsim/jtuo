@@ -3,6 +3,8 @@ package com.github.tyrantsim.jtuo.sim;
 import com.github.tyrantsim.jtuo.cards.Card;
 import com.github.tyrantsim.jtuo.skills.Skill;
 
+import static com.github.tyrantsim.jtuo.util.Utils.safeMinus;
+
 public class CardStatus {
 
     private Card card;
@@ -80,6 +82,24 @@ public class CardStatus {
         return -1;
     }
 
+    int getMaxHP() {
+        return card.getHealth() + safeMinus(permHealthBuff, subdued);
+    }
+
+    int addHP(int value) {
+        hp = Math.min(hp + value, getMaxHP());
+        return hp;
+    }
+
+    int extHP(int value) {
+        permHealthBuff += value;
+        return addHP(value);
+    }
+
+    void addPermAttackBuff(int incBy) {
+        this.permAttackBuff += incBy;
+    }
+
     void addProtection(int protection) {
         this.protectedBy += protection;
     }
@@ -125,6 +145,78 @@ public class CardStatus {
 
     int getDelay() {
         return delay;
+    }
+
+    public int getCorrodedRate() {
+        return corrodedRate;
+    }
+
+    public int getCorrodedWeakened() {
+        return corrodedWeakened;
+    }
+
+    public int getSubdued() {
+        return subdued;
+    }
+
+    public int getEnfeebled() {
+        return enfeebled;
+    }
+
+    public int getEvaded() {
+        return evaded;
+    }
+
+    public int getInhibited() {
+        return inhibited;
+    }
+
+    public int getSabotaged() {
+        return sabotaged;
+    }
+
+    public int getPaybacked() {
+        return paybacked;
+    }
+
+    public int getTributed() {
+        return tributed;
+    }
+
+    public int getPoisoned() {
+        return poisoned;
+    }
+
+    public int getProtectedBy() {
+        return protectedBy;
+    }
+
+    public int getProtectedByStasis() {
+        return protectedByStasis;
+    }
+
+    public int getEnranged() {
+        return enranged;
+    }
+
+    public int getEntrapped() {
+        return entrapped;
+    }
+
+    public boolean isJammed() {
+        return jammed;
+    }
+
+    public boolean isOverloaded() {
+        return overloaded;
+    }
+
+    public boolean isRushAttempted() {
+        return rushAttempted;
+    }
+
+    public boolean isSundered() {
+        return sundered;
     }
 
 }

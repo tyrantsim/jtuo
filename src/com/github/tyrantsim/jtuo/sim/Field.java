@@ -78,6 +78,10 @@ public class Field {
         }
     }
 
+    void addSkillToQueue(CardStatus status, SkillSpec skillSpec) {
+        this.skillQueue.add(new Pair<>(status, skillSpec));
+    }
+
     public void nextTurn() {
         turn++;
     }
