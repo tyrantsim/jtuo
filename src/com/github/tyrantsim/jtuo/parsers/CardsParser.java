@@ -51,7 +51,7 @@ public class CardsParser {
                 try {
                     readCards("cards_section_" + i + ".xml");
                 } catch (FileNotFoundException e) {
-                    e.printStackTrace();
+                    // e.printStackTrace();
                     break;
                 }
             }
@@ -243,16 +243,6 @@ public class CardsParser {
     private static void recognizeCardType(Card baseCard) {
 
         int id = baseCard.getBaseId();
-        // fortresses
-        if (baseCard.getSet() == 8000) {
-            if (baseCard.getType() != CardType.STRUCTURE) {
-                System.err.println("WARNING: parsing card [" + id + "]: set 8000 supposes fortresses card that implies type Structure, but card has type " + baseCard.getType().name());
-            }
-            // assume all other fortresses as conquest towers
-            if (baseCard.getCategory() == CardCategory.NORMAL) {
-                baseCard.setCategory(CardCategory.FORTRESS_CONQUEST);
-            }
-        }
 
         switch (id / 1000) {
         case 0:
@@ -363,6 +353,18 @@ public class CardsParser {
             baseCard.setType(CardType.ASSAULT);
             break;
         }
+        
+        // fortresses
+        if (baseCard.getSet() == 8000) {
+            if (baseCard.getType() != CardType.STRUCTURE) {
+                System.err.println("WARNING: parsing card [" + id + "]: set 8000 supposes fortresses card that implies type Structure, but card has type " + baseCard.getType().name());
+            }
+            // assume all other fortresses as conquest towers
+            if (baseCard.getCategory() == CardCategory.NORMAL) {
+                baseCard.setCategory(CardCategory.FORTRESS_CONQUEST);
+            }
+        }
+
     }
 
     private static void updateSameCardAttributes(Node unitChild, Card card) {
