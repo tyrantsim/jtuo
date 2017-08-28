@@ -1,6 +1,7 @@
 package com.github.tyrantsim.jtuo.sim;
 
 import com.github.tyrantsim.jtuo.cards.Cards;
+import com.github.tyrantsim.jtuo.skills.Skill;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.util.Pair;
 
@@ -64,7 +65,17 @@ public class Field {
     }
 
     public void finalizeAction() {
-        // TODO: implement this
+        for (CardStatus dmgStatus : damagedUnitsToItems.keySet()) {
+            int dmg = damagedUnitsToItems.get(dmgStatus);
+
+            if (dmg == 0 || !dmgStatus.isAlive()) continue;
+
+            int barrierBase = dmgStatus.skill(Skill.BARRIER);
+            if (barrierBase != 0) {
+                int protectValue = barrierBase * dmg;
+                dmgStatus.addProtection(protectValue);
+            }
+        }
     }
 
     public void nextTurn() {

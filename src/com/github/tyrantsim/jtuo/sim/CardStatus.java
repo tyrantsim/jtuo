@@ -80,12 +80,34 @@ public class CardStatus {
         return -1;
     }
 
+    void addProtection(int protection) {
+        this.protectedBy += protection;
+    }
+
     void reduceDelay() {
         delay--;
     }
 
     boolean isAlive() {
         return hp > 0;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        CardStatus that = (CardStatus) o;
+
+        return index == that.index && player == that.player && card.equals(that.card);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = card.hashCode();
+        result = 31 * result + index;
+        result = 31 * result + player;
+        return result;
     }
 
     // Getters & Setters
