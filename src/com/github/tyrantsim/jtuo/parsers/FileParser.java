@@ -36,7 +36,7 @@ public class FileParser {
                 if (line.contains(":") && !line.substring(line.indexOf(":") + 1).trim().isEmpty()
                         && !line.substring(0, line.indexOf(":")).trim().isEmpty()) {
 
-                    if (Cards.cardsByName.containsKey(line.substring(0, line.indexOf(":")).trim())) {
+                    if (Cards.cardsByName.containsKey(Cards.simplifyName(line.substring(0, line.indexOf(":")).trim()))) {
                         System.err.println("Warning in card abbreviation file " + filename + " at line "
                                 + numLine + ": ignored because the name has been used by an existing card.");
                     } else {
