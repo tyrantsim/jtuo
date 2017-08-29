@@ -37,6 +37,10 @@ public class Card implements Cloneable {
     HashMap<Card, Integer> recipeCards = new HashMap<>();
     HashMap<Card, Integer> usedForCards = new HashMap<>();
 
+    public Card() {
+        super();
+    }
+    
     public Card(int id, String name) {
         super();
         this.id = id;

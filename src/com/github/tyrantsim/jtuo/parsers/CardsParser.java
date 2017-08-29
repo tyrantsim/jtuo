@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -57,7 +58,6 @@ public class CardsParser {
             }
         }
         initialized = true;
-        System.out.println(cards.size());
         Cards.allCards.addAll(cards.values());
         Cards.organize();
     }
@@ -115,7 +115,8 @@ public class CardsParser {
             String baseId = "";
             Integer baseIdInt = null;
             Integer idInt = null;
-            Card baseCard = null;
+            Card baseCard = new Card();
+            ArrayList<SkillSpec> skillSpecs = new ArrayList<>();
             Map<Integer, Card> upgrades = new TreeMap<>();
             for (int j = 0; j < unitChilds.getLength(); j++) {
                 Node unitChild = unitChilds.item(j);
@@ -125,7 +126,8 @@ public class CardsParser {
                         baseId = unitChild.getFirstChild().getNodeValue();
                         baseIdInt = Integer.parseInt(baseId);
                     }
-                    baseCard = new Card(baseIdInt, name);
+                    baseCard.setBaseId(baseIdInt);
+                    baseCard.setId(baseIdInt);
                 }
                 if (unitChild.getNodeName().equals("name")) {
                     if (unitChild.getFirstChild().getNodeValue() != null) {
@@ -166,7 +168,7 @@ public class CardsParser {
                     }
                 }
                 if (baseCard != null) {
-                    updateSameCardAttributes(unitChild, baseCard);
+                    updateSameCardAttributes(unitChild, baseCard, skillSpecs);
                 }
                 // attack
                 // health
@@ -182,10 +184,12 @@ public class CardsParser {
                     // System.out.println("" + name);
                     if (unitChild.getNodeName().equals("upgrade")) {
                         // Card card = (Card)baseCard.clone();
+                        ArrayList<SkillSpec> skillSpecsUpgraded = new ArrayList<>(); 
                         Card card = baseCard.clone();
                         NodeList upgradeChilds = unitChild.getChildNodes();
                         String level_prefix = "";
                         String id = "";
+                        card.setSkills(new ArrayList<SkillSpec>());
                         for (int l = 0; l < upgradeChilds.getLength(); l++) {
                             Node upgradeChild = upgradeChilds.item(l);
                             if (upgradeChild.getNodeName().equals("level")) {
@@ -206,7 +210,12 @@ public class CardsParser {
                                     card.setName(name);
                                 }
                             }
-                            updateSameCardAttributes(unitChild, card);
+                            updateSameCardAttributes(unitChild, card, skillSpecsUpgraded);
+                        }
+                        if (!skillSpecsUpgraded.isEmpty()) {
+                            card.setSkills(skillSpecsUpgraded);
+                            updateSkills(card, skillSpecsUpgraded);
+                            skillSpecs = skillSpecsUpgraded;
                         }
                         if (id != null) {
                             upgrades.put(card.getLevel(), card);
@@ -217,7 +226,7 @@ public class CardsParser {
                     }
                 }
             }
-            
+            updateSkills(baseCard, skillSpecs);
             recognizeCardType(baseCard);
             Card topLevelCard = baseCard;
             for (Card card : upgrades.values()) {
@@ -238,6 +247,29 @@ public class CardsParser {
         }
 
         return cards;
+    }
+
+    private static void updateSkills(Card card, ArrayList<SkillSpec> skillSpecs) throws AssertionError {
+        card.setSkills(skillSpecs);
+        card.setSkillsOnPlay(new ArrayList<>());
+        card.setSkillsOnDeath(new ArrayList<>());
+        for (SkillSpec skillSpec : skillSpecs) {
+            if (skillSpec.getTrigger() != null) {
+                // add a new one
+                switch (skillSpec.getTrigger()) {
+                case ACTIVATE:
+                    break;
+                case PLAY:
+                    card.getSkillsOnPlay().add(skillSpec);
+                    break;
+                case DEATH:
+                    card.getSkillsOnDeath().add(skillSpec);
+                    break;
+                default:
+                    throw new AssertionError("No storage for skill with trigger " + skillSpec.getTrigger());
+                }
+            }
+        }
     }
 
     private static void recognizeCardType(Card baseCard) {
@@ -367,7 +399,7 @@ public class CardsParser {
 
     }
 
-    private static void updateSameCardAttributes(Node unitChild, Card card) {
+    private static void updateSameCardAttributes(Node unitChild, Card card, List<SkillSpec> skillSpecs) {
         if (unitChild.getNodeName().equals("cost") && unitChild.getFirstChild() != null) {
             String cost = unitChild.getFirstChild().getNodeValue();
             card.setRecipeCost(Integer.parseInt(cost));
@@ -401,23 +433,10 @@ public class CardsParser {
             String s2 = skill.getNamedItem("s2") == null ? "" : skill.getNamedItem("s2").getNodeValue();
 
             
-            // Integer.parseInt(level)
-            ArrayList<SkillSpec> skillSpecs = card.getSkills();
-            boolean skill_found = false;
-            for (SkillSpec skillSpec : skillSpecs) {
-                if (skillSpec.getId().equals(id)) {
-                    setSkillSpec(x, y, all, c, card_id, trigger, skillSpec, n, s, s2);
-                    skill_found = true;
-                }
-            }
-            if (!skill_found) {
-                SkillSpec new_skill = new SkillSpec();
-                //System.out.println(id.toUpperCase());
-                new_skill.setId(Skill.valueOf(id.toUpperCase()));
-
-                setSkillSpec(x, y, all, c, card_id, trigger, new_skill, n, s, s2);
-                skillSpecs.add(new_skill);
-            }
+            SkillSpec new_skill = new SkillSpec();
+            new_skill.setId(Skill.valueOf(id.toUpperCase()));
+            setSkillSpec(card, x, y, all, c, card_id, trigger, new_skill, n, s, s2);
+            skillSpecs.add(new_skill);
 
             // <skill id="allegiance" x="2"/>
             // <skill all="1" id="enfeeble" x="4"/>
@@ -425,7 +444,7 @@ public class CardsParser {
         }
     }
 
-    private static void setSkillSpec(String x, String y, String all, String c, String card_id, String trigger, SkillSpec new_skill, String n, String s, String s2) {
+    private static void setSkillSpec(Card card, String x, String y, String all, String c, String card_id, String trigger, SkillSpec new_skill, String n, String s, String s2) {
         new_skill.setAll(all != null && all.equals("1"));
         if (!x.isEmpty()) {
             new_skill.setX(Float.parseFloat(x));

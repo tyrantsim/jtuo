@@ -96,4 +96,9 @@ public class SkillSpec {
     public void setTrigger(SkillTrigger trigger) {
         this.trigger = trigger;
     }
+    
+    @Override
+    public String toString() {
+        return id + " " + trigger + "-" + cardId;
+    }
 }
