@@ -96,7 +96,6 @@ public class SkillSpec implements Cloneable {
     public void setTrigger(SkillTrigger trigger) {
         this.trigger = trigger;
     }
-<<<<<<< HEAD
 
     public SkillSpec clone() {
         try {
