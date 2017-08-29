@@ -3,6 +3,7 @@ package com.github.tyrantsim.jtuo.sim;
 import com.github.tyrantsim.jtuo.cards.Card;
 import com.github.tyrantsim.jtuo.cards.CardCategory;
 import com.github.tyrantsim.jtuo.skills.Skill;
+import com.github.tyrantsim.jtuo.util.Utils;
 
 import static com.github.tyrantsim.jtuo.util.Utils.safeMinus;
 
@@ -16,6 +17,7 @@ public class CardStatus {
     private CardStep step;
     private int permHealthBuff;
     private int permAttackBuff;
+    private int tempAttackBuff;
 
     private int corrodedRate;
     private int corrodedWeakened;
@@ -97,6 +99,10 @@ public class CardStatus {
         return addHP(value);
     }
 
+    int getAttackPower() {
+        return safeMinus(card.getAttack() + safeMinus(permAttackBuff, subdued), corrodedWeakened) + tempAttackBuff;
+    }
+
     void addPermAttackBuff(int incBy) {
         this.permAttackBuff += incBy;
     }
@@ -111,6 +117,14 @@ public class CardStatus {
 
     boolean isAlive() {
         return hp > 0;
+    }
+
+    boolean canAct() {
+        return isAlive() && !isJammed();
+    }
+
+    boolean isActive() {
+        return canAct() && getDelay() == 0;
     }
 
     boolean isDominion() {
@@ -152,8 +166,20 @@ public class CardStatus {
         return delay;
     }
 
+    void setStep(CardStep step) {
+        this.step = step;
+    }
+
+    int getPermAttackBuff() {
+        return permAttackBuff;
+    }
+
     public int getCorrodedRate() {
         return corrodedRate;
+    }
+
+    public void setCorrodedWeakened(int corrodedWeakened) {
+        this.corrodedWeakened = corrodedWeakened;
     }
 
     public int getCorrodedWeakened() {

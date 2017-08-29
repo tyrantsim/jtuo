@@ -187,4 +187,19 @@ public class Field {
         }
     }
 
+    void setCurrentCI(int currentCI) {
+        this.currentCI = currentCI;
+    }
+
+    int getCurrentCI() {
+        return currentCI;
+    }
+
+    void setAssaultBloodlusted(boolean assaultBloodlusted) {
+        this.assaultBloodlusted = assaultBloodlusted;
+    }
+
+    void setBloodlustValue(int bloodlustValue) {
+        this.bloodlustValue = bloodlustValue;
+    }
 }

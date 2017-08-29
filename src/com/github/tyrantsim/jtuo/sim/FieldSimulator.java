@@ -366,15 +366,54 @@ public class FieldSimulator {
     }
 
     private static void evaluateCommander(Field field) {
-        // TODO: implement this
+        field.setCurrentPhase(FieldPhase.COMMANDER_PHASE);
+        evaluateSkills(field, field.getTap().getCommander(), field.getTap().getCommander().getCard().getSkills());
     }
 
     private static void evaluateStructures(Field field) {
-        // TODO: implement this
+        field.setCurrentPhase(FieldPhase.STRUCTURES_PHASE);
+        field.setCurrentCI(0);
+        for (int i = 0; !field.isEnd() && (field.getCurrentCI() < field.getTap().getStructures().size()); i++) {
+            field.setCurrentCI(i);
+            CardStatus currentStatus = field.getTap().getStructures().get(i);
+            if (currentStatus.isActive()) {
+                evaluateSkills(field, currentStatus, currentStatus.getCard().getSkills());
+            }
+        }
     }
 
     private static void evaluateAssaults(Field field) {
-        // TODO: implement this
+        field.setCurrentPhase(FieldPhase.ASSAULTS_PHASE);
+        field.setBloodlustValue(0);
+        for (int i = 0; !field.isEnd() && (field.getCurrentCI() < field.getTap().getAssaults().size()); i++) {
+            field.setCurrentCI(i);
+            CardStatus currentStatus = field.getTap().getAssaults().get(i);
+            Boolean attacked = false;
+
+            if (!currentStatus.isAlive()) {
+                // Passive BGE: Halted orders
+                // TODO: implement this
+            } else {
+                currentStatus.setProtectedByStasis(0);
+                field.setAssaultBloodlusted(false);
+                currentStatus.setStep(CardStep.ATTACKING);
+                evaluateSkills(field, currentStatus, currentStatus.getCard().getSkills(), attacked);
+                if (field.isEnd()) break;
+                if (!currentStatus.isAlive()) continue;
+            }
+
+            if (currentStatus.getCorrodedRate() != 0) {
+                if (attacked) {
+                    int v = Math.min(currentStatus.getCorrodedRate(), currentStatus.getAttackPower());
+                    int corrosion = Math.min(v,
+                            currentStatus.getCard().getAttack() + currentStatus.getPermAttackBuff() - currentStatus.getCorrodedWeakened()
+                    );
+                    currentStatus.setCorrodedWeakened(currentStatus.getCorrodedWeakened() + corrosion);
+                }
+            }
+
+            currentStatus.setStep(CardStep.ATTACKED);
+        }
     }
 
     private static int evaluateBrawlScore(Field field, int player) {
@@ -395,6 +434,14 @@ public class FieldSimulator {
     }
 
     private static void checkAndPerformSummon(Field field, CardStatus status) {
+        // TODO: implement this
+    }
+
+    private static void evaluateSkills(Field field, CardStatus card, List<SkillSpec> skills) {
+        evaluateSkills(field, card, skills, null);
+    }
+
+    private static void evaluateSkills(Field field, CardStatus card, List<SkillSpec> skills, Boolean attacked) {
         // TODO: implement this
     }
 
