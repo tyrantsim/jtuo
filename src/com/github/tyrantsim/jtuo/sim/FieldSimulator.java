@@ -119,8 +119,17 @@ public class FieldSimulator {
                     int minScore = Cards.MIN_POSSIBLE_SCORE[OptimizationMode.BRAWL_DEFENSE.ordinal()];
                     return new Results(1, 0, 0, maxScore - minScore);
                 case CAMPAIGN:
-                    // TODO: implement this
-                    return new Results(1, 0, 0, 0);
+                    int totalDominionsDestroyed = 0;
+                    if (field.getPlayer(0).getDeck().getAlphaDominion() != null) {
+                        totalDominionsDestroyed = 1;
+                    }
+                    for (CardStatus structure : field.getPlayer(0).getStructures()) {
+                        if (structure.isDominion()) {
+                            totalDominionsDestroyed--;
+                        }
+                    }
+                    int campaignScore = 100 - 10 * (field.getPlayer(0).getTotalCardsDestroyed() - totalDominionsDestroyed);
+                    return new Results(1, 0, 0, campaignScore);
                 default: return new Results(1, 0, 0, 100);
             }
         }

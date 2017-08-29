@@ -1,6 +1,7 @@
 package com.github.tyrantsim.jtuo.sim;
 
 import com.github.tyrantsim.jtuo.cards.Card;
+import com.github.tyrantsim.jtuo.cards.CardCategory;
 import com.github.tyrantsim.jtuo.skills.Skill;
 
 import static com.github.tyrantsim.jtuo.util.Utils.safeMinus;
@@ -110,6 +111,10 @@ public class CardStatus {
 
     boolean isAlive() {
         return hp > 0;
+    }
+
+    boolean isDominion() {
+        return getCard().getCategory() == CardCategory.DOMINION_ALPHA;
     }
 
     @Override
