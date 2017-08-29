@@ -96,6 +96,7 @@ public class SkillSpec implements Cloneable {
     public void setTrigger(SkillTrigger trigger) {
         this.trigger = trigger;
     }
+<<<<<<< HEAD
 
     public SkillSpec clone() {
         try {
@@ -105,5 +106,11 @@ public class SkillSpec implements Cloneable {
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();
         }
+=======
+    
+    @Override
+    public String toString() {
+        return id + " " + trigger + "-" + cardId;
+>>>>>>> 4ad7cdc894bdcfd1c99693358b474cffc38894ab
     }
 }
