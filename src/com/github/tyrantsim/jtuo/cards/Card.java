@@ -22,9 +22,9 @@ public class Card implements Cloneable {
     int fusionLevel;
     int set;
 
-    int attack;
-    int health;
-    int delay;
+    private int attack;
+    private int health;
+    private int delay;
 
     ArrayList<SkillSpec> skills = new ArrayList<>();
     ArrayList<SkillSpec> skillsOnPlay = new ArrayList<>();
@@ -382,5 +382,7 @@ public class Card implements Cloneable {
     public void setFaction(Faction faction) {
         this.faction = faction;
     }
+
+
 
 }

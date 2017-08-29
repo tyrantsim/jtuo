@@ -219,4 +219,6 @@ public class CardStatus {
         return sundered;
     }
 
+    public int getHP() { return hp; }
+
 }

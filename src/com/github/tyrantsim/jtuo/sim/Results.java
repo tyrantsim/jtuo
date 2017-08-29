@@ -7,6 +7,15 @@ public class Results {
     long losses;
     long points;
 
+    public Results() {}
+
+    public Results(long wins, long draws, long losses, long points) {
+        this.wins = wins;
+        this.draws = draws;
+        this.losses = losses;
+        this.points = points;
+    }
+
     Results add(final Results other) {
         wins += other.wins;
         draws += other.draws;

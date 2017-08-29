@@ -466,4 +466,6 @@ public class Deck implements Cloneable {
 
     public int getId() { return id; }
 
+    public Card getAlphaDominion() { return alphaDominion; }
+
 }

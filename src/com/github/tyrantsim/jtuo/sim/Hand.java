@@ -52,4 +52,5 @@ public class Hand {
         return structures;
     }
 
+    public int getTotalCardsDestroyed() { return totalCardsDestroyed; }
 }

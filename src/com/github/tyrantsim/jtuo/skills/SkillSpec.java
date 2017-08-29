@@ -2,7 +2,7 @@ package com.github.tyrantsim.jtuo.skills;
 
 import com.github.tyrantsim.jtuo.cards.Faction;
 
-public class SkillSpec {
+public class SkillSpec implements Cloneable {
 
     Skill id;
     float x;
@@ -95,5 +95,15 @@ public class SkillSpec {
 
     public void setTrigger(SkillTrigger trigger) {
         this.trigger = trigger;
+    }
+
+    public SkillSpec clone() {
+        try {
+            SkillSpec copy = (SkillSpec) super.clone();
+            // TODO: implement this
+            return copy;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
     }
 }

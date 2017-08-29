@@ -1,9 +1,13 @@
 package com.github.tyrantsim.jtuo.sim;
 
 import com.github.tyrantsim.jtuo.cards.Card;
+import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.skills.Skill;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
+import com.github.tyrantsim.jtuo.skills.SkillTrigger;
+import com.github.tyrantsim.jtuo.util.Pair;
 
+import java.util.Deque;
 import java.util.List;
 
 public class FieldSimulator {
@@ -49,8 +53,13 @@ public class FieldSimulator {
 
             // Evaluate activation BGE skills
             for (SkillSpec bgSkill : field.getBGSkills(field.getTapi())) {
-                // TODO: implement this
+                field.prepareAction();
+                // TODO: Maybe new instance of field.tap.getCommander is required
+                field.skillQueue.addLast(new Pair<CardStatus, SkillSpec>(field.tap.getCommander(), bgSkill));
+                resolveSkill(field);
+                field.finalizeAction();
             }
+
             if (field.isEnd()) {
                 break;
             }
@@ -79,22 +88,55 @@ public class FieldSimulator {
             field.nextTurn();
         }
 
-        Hand[] players = field.getPlayers();
         int raidDamage = 0;
         switch (field.getOptimizationMode()) {
-            // TODO: implement this
+            case RAID:
+                raidDamage = 15 + (field.getDefender().getTotalCardsDestroyed())
+                        - (10 * field.getDefender().getCommander().getHP() / field.getDefender().getCommander().getMaxHP());
+                break;
+            default: break;
         }
 
+        // You lose
         if (!field.getAttacker().getCommander().isAlive()) {
-            // TODO: implement this
+            switch (field.getOptimizationMode()) {
+                case RAID: return new Results(0, 0, 1, raidDamage);
+                case BRAWL: return new Results(0, 0, 1, 5);
+                case BRAWL_DEFENSE:
+                    int enemyBrawlScore = evaluateBrawlScore(field, 1);
+                    int maxScore = Cards.MAX_POSSIBLE_SCORE[OptimizationMode.BRAWL_DEFENSE.ordinal()];
+                    return new Results(0, 0, 1, maxScore - enemyBrawlScore);
+                default: return new Results(0, 0, 1, 0);
+            }
         }
 
+        // You win
         if (!field.getDefender().getCommander().isAlive()) {
-            // TODO: implement this
+            switch (field.getOptimizationMode()) {
+                case BRAWL: return new Results(1, 0, 0, evaluateBrawlScore(field, 0));
+                case BRAWL_DEFENSE:
+                    int maxScore = Cards.MAX_POSSIBLE_SCORE[OptimizationMode.BRAWL_DEFENSE.ordinal()];
+                    int minScore = Cards.MIN_POSSIBLE_SCORE[OptimizationMode.BRAWL_DEFENSE.ordinal()];
+                    return new Results(1, 0, 0, maxScore - minScore);
+                case CAMPAIGN:
+                    // TODO: implement this
+                    return new Results(1, 0, 0, 0);
+                default: return new Results(1, 0, 0, 100);
+            }
         }
 
+        // Draw
         if (field.getTurn() > turnLimit) {
-            // TODO: implement this
+            switch (field.getOptimizationMode()) {
+                case DEFENSE: return new Results(0, 1, 0, 100);
+                case RAID: return new Results(0, 1, 0, raidDamage);
+                case BRAWL: return new Results(0, 1, 0, 5);
+                case BRAWL_DEFENSE:
+                    int maxScore = Cards.MAX_POSSIBLE_SCORE[OptimizationMode.BRAWL_DEFENSE.ordinal()];
+                    int minScore = Cards.MIN_POSSIBLE_SCORE[OptimizationMode.BRAWL_DEFENSE.ordinal()];
+                    return new Results(1, 0, 0, maxScore - minScore);
+                default: return new Results(0, 1, 0, 0);
+            }
         }
 
         // Huh? How did we get here?
@@ -159,7 +201,41 @@ public class FieldSimulator {
     }
 
     private static void resolveSkill(Field field) {
-        // TODO: implement this
+        while (!field.skillQueue.isEmpty()) {
+
+            Pair<CardStatus, SkillSpec> skillInstance = field.skillQueue.pop();
+            CardStatus status = skillInstance.getFirst();
+            SkillSpec ss = skillInstance.getSecond();
+
+            if (status.getCard().getSkillTrigger()[ss.getId().ordinal()] == SkillTrigger.ACTIVATE) {
+                if (!status.isAlive() || status.isJammed())
+                    continue;
+            }
+
+            // Is summon? (non-activation skill)
+            if (ss.getId() == Skill.SUMMON) {
+                checkAndPerformSummon(field, status);
+                continue;
+            }
+
+            SkillSpec modifiedSkill = ss.clone();
+
+            // Apply evolve
+            // TODO: implement this
+
+
+            // Apply sabotage (only for X-based activation skills)
+            // TODO: implement this
+
+
+            // Apply enhance
+            // TODO: implement this
+
+
+            // Perform skill (if it is still applicable)
+            // TODO: implement this
+
+        }
     }
 
     private static void simulatePlayCardPhase(Field field, Card playedCard) {
@@ -228,6 +304,11 @@ public class FieldSimulator {
 
     private static void evaluateAssaults(Field field) {
         // TODO: implement this
+    }
+
+    private static int evaluateBrawlScore(Field field, int player) {
+        // TODO: implement this
+        return -1;
     }
 
     private static void turnEndPhase(Field field) {
