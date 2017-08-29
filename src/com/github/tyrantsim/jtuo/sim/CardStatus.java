@@ -3,6 +3,7 @@ package com.github.tyrantsim.jtuo.sim;
 import com.github.tyrantsim.jtuo.cards.Card;
 import com.github.tyrantsim.jtuo.cards.CardCategory;
 import com.github.tyrantsim.jtuo.skills.Skill;
+import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.util.Utils;
 
 import static com.github.tyrantsim.jtuo.util.Utils.safeMinus;
@@ -131,6 +132,20 @@ public class CardStatus {
         return getCard().getCategory() == CardCategory.DOMINION_ALPHA;
     }
 
+    int skillBaseValue(Skill skillId) {
+        return card.getSkillValue()[skillId.ordinal() + primarySkillOffset[skillId.ordinal()]]
+                + (skillId == Skill.BERSERK ? enranged : 0)
+                + (skillId == Skill.COUNTER ? entrapped : 0);
+    }
+
+    boolean hasSkill(Skill skillId) {
+        return skillBaseValue(skillId) != 0;
+    }
+
+    int getEvolvedSkillOffset(Skill skillId) {
+        return evolvedSkillOffset[skillId.ordinal()];
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -255,5 +270,13 @@ public class CardStatus {
     }
 
     public int getHP() { return hp; }
+
+    void setSkillCd(Skill skill, int cd) {
+        skillCd[skill.ordinal()] = cd;
+    }
+
+    int getSkillCd(Skill skill) {
+        return skillCd[skill.ordinal()];
+    }
 
 }

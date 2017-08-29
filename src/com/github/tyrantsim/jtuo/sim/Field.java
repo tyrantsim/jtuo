@@ -187,6 +187,10 @@ public class Field {
         }
     }
 
+    Deque<Pair<CardStatus, SkillSpec>> getSkillQueue() {
+        return skillQueue;
+    }
+
     void setCurrentCI(int currentCI) {
         this.currentCI = currentCI;
     }

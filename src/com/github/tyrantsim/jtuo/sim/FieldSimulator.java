@@ -7,6 +7,7 @@ import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.skills.Skill;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.skills.SkillTrigger;
+import com.github.tyrantsim.jtuo.skills.SkillUtils;
 import com.github.tyrantsim.jtuo.util.Pair;
 
 import java.util.Deque;
@@ -397,7 +398,7 @@ public class FieldSimulator {
                 currentStatus.setProtectedByStasis(0);
                 field.setAssaultBloodlusted(false);
                 currentStatus.setStep(CardStep.ATTACKING);
-                evaluateSkills(field, currentStatus, currentStatus.getCard().getSkills(), attacked);
+                attacked = evaluateSkills(field, currentStatus, currentStatus.getCard().getSkills(), attacked);
                 if (field.isEnd()) break;
                 if (!currentStatus.isAlive()) continue;
             }
@@ -441,8 +442,52 @@ public class FieldSimulator {
         evaluateSkills(field, card, skills, null);
     }
 
-    private static void evaluateSkills(Field field, CardStatus card, List<SkillSpec> skills, Boolean attacked) {
+    /**
+     * @return if card has attacked
+     */
+    private static boolean evaluateSkills(Field field, CardStatus status, List<SkillSpec> skills, Boolean attacked) {
+        int numActions = 1;
+        for (int actionIndex = 0; actionIndex < numActions; actionIndex++) {
+            field.prepareAction();
+
+            for (SkillSpec ss : skills) {
+                if (!SkillUtils.isActivationSkill(ss.getId())) continue;
+                if (status.getSkillCd(ss.getId()) > 0) continue;
+                field.getSkillQueue().add(new Pair<>(status, ss));
+                resolveSkill(field);
+            }
+
+            if (status.getCard().getType() == CardType.ASSAULT) {
+                if (status.canAct()) {
+                    if (attackPhase(field)) {
+                        attacked = true;
+                        if (field.isEnd()) {
+                            return attacked;
+                        }
+                    }
+                }
+            }
+            field.finalizeAction();
+
+            // Flurry
+            if (status.canAct() && status.hasSkill(Skill.FLURRY) && status.getSkillCd(Skill.FLURRY) == 0) {
+                numActions += status.skillBaseValue(Skill.FLURRY);
+                for (SkillSpec ss : skills) {
+                    Skill evolvedSkillId = Skill.values()[ss.getId().ordinal() + status.getEvolvedSkillOffset(ss.getId())];
+                    if (evolvedSkillId == Skill.FLURRY) {
+                        status.setSkillCd(ss.getId(), ss.getC());
+                    }
+                }
+            }
+
+        }
+
+        return attacked;
+    }
+
+    private static boolean attackPhase(Field field) {
         // TODO: implement this
+        return false;
     }
 
 }
