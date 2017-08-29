@@ -485,9 +485,33 @@ public class FieldSimulator {
         return attacked;
     }
 
+    /**
+     * @return true if actually attacks
+     */
     private static boolean attackPhase(Field field) {
-        // TODO: implement this
+        CardStatus attStatus = field.getTap().getAssaults().get(field.getCurrentCI()); // attacking card
+        List<CardStatus> defAssaults = field.getTip().getAssaults();
+
+        if (attStatus.getAttackPower() == 0) {
+            return false;
+        }
+
+        int attDmg = 0;
+        if (field.getCurrentCI() < defAssaults.size() && defAssaults.get(field.getCurrentCI()).isAlive()) {
+            CardStatus defStatus = defAssaults.get(field.getCurrentCI());
+            attDmg = performAttack(field, attStatus, defStatus);
+            int swipeValue = attStatus.skill(Skill.SWIPE);
+            int drawinValue = attStatus.skill(Skill.DRAIN);
+            if (swipeValue != 0 || drawinValue != 0) {
+                // TODO: do this
+            }
+        }
+        // TODO: finish implementing this
         return false;
+    }
+
+    private static int performAttack(Field field, CardStatus attacker, CardStatus defender) {
+        // TODO: implement this
     }
 
 }
