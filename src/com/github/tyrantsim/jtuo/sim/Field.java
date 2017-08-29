@@ -29,7 +29,7 @@ public class Field {
     List<SkillSpec> yourBGSkills, enemyBGSkills;
     // With the introduction of on death skills, a single skill can trigger arbitrary many skills.
     // They are stored in this, and cleared after all have been performed.
-    Deque<Pair<CardStatus, SkillSpec>> skillQueue;
+    Deque<Pair<CardStatus, SkillSpec>> skillQueue = new LinkedList<>();
     List<CardStatus> killedUnits;
     Map<CardStatus, Integer> damagedUnitsToItems = new HashMap<>();
 
@@ -84,6 +84,10 @@ public class Field {
 
     public void nextTurn() {
         turn++;
+    }
+
+    public boolean hasBGEffect(int playerIndex, PassiveBGE effect) {
+        return getBGEffects(playerIndex)[effect.ordinal()] != null;
     }
 
     // Getters & Setters

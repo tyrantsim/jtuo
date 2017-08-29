@@ -1,6 +1,8 @@
 package com.github.tyrantsim.jtuo.sim;
 
 import com.github.tyrantsim.jtuo.cards.Card;
+import com.github.tyrantsim.jtuo.cards.CardCategory;
+import com.github.tyrantsim.jtuo.cards.CardType;
 import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.skills.Skill;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
@@ -295,8 +297,68 @@ public class FieldSimulator {
             }
         }
 
-        // TODO: finish this
-        
+        // Setup faction marks (bitmap) for stasis (skill Statis / Passive BGE TemporalBacklash)
+        // unless Passive BGE Megamorphosis is enabled
+        if (!bgeMegamorphosis) {
+            playedFactionMask = (1 << playedCard.getFaction().ordinal());
+            boolean temporalBacklash = field.hasBGEffect(field.getTapi(), PassiveBGE.TEMPORALBACKLASH);
+            if (playedStatus.skill(Skill.STASIS) != 0 || (temporalBacklash && playedStatus.skill(Skill.COUNTER) == 0)) {
+                field.getTap().updateStasisFactions(playedFactionMask);
+            }
+        }
+
+        // Evaluate Passive BGE Oath-of-Loyalty
+        int allegianceValue;
+        if (field.hasBGEffect(field.getTapi(), PassiveBGE.OATH_OF_LOYALTY) && playedStatus.skill(Skill.ALLEGIANCE) > 0) {
+            allegianceValue = playedStatus.skill(Skill.ALLEGIANCE);
+            // count structures with same faction (except fortresses, dominions and other non-normal structures)
+            for (CardStatus status : field.getTap().getStructures()) {
+                boolean sameFaction = status.getCard().getFaction() == playedCard.getFaction();
+                if (status.getCard().getCategory() == CardCategory.NORMAL && (bgeMegamorphosis || sameFaction)) {
+                    sameFactionCardsCount++;
+                }
+            }
+
+            // apply Passive BGE Oath-of-Loyalty when multiplier isn't zero
+            if (sameFactionCardsCount != 0) {
+                int bgeValue = allegianceValue * sameFactionCardsCount;
+                playedStatus.addPermAttackBuff(bgeValue);
+                playedStatus.extHP(bgeValue);
+            }
+        }
+
+        // Summarize stasis when
+        // 1. Passive BGE Megamorphosis is enabled
+        // 2. current faction is marked for it
+        boolean factionApply = (field.getTap().getStasisFactionBitmap() & playedFactionMask) != 0;
+        if (playedCard.getDelay() > 0 && playedCard.getType() == CardType.ASSAULT && (bgeMegamorphosis || factionApply)) {
+            int stackedStasis = 0;
+            if (bgeMegamorphosis || field.getTap().getCommander().getCard().getFaction() == playedCard.getFaction()) {
+                stackedStasis = field.getTap().getCommander().skill(Skill.STASIS);
+            }
+
+            for (CardStatus status : field.getTap().getStructures()) {
+                if (bgeMegamorphosis || status.getCard().getFaction() == playedCard.getFaction()) {
+                    stackedStasis += status.skill(Skill.STASIS);
+                }
+            }
+
+            for (CardStatus status : field.getTap().getAssaults()) {
+                if (bgeMegamorphosis || status.getCard().getFaction() == playedCard.getFaction()) {
+                    stackedStasis += status.skill(Skill.STASIS);
+                }
+
+                if(field.hasBGEffect(field.getTapi(), PassiveBGE.TEMPORALBACKLASH) && status.skill(Skill.COUNTER) != 0) {
+                    stackedStasis += (status.skill(Skill.COUNTER) + 1) / 2;
+                }
+            }
+
+            playedStatus.setProtectedByStasis(stackedStasis);
+
+            if (!bgeMegamorphosis && stackedStasis == 0) {
+                field.getTap().setStasisFactionBitmap(field.getTap().getStasisFactionBitmap() & playedFactionMask);
+            }
+        }
     }
 
     private static void evaluatePassiveBGEHeroismSkills(Field field) {

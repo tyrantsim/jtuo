@@ -31,6 +31,10 @@ public class Hand {
         }
     }
 
+    public void updateStasisFactions(int playedFactionMask) {
+        this.stasisFactionBitmap |= playedFactionMask;
+    }
+
     // Getters & Setters
     public void setDeck(Deck deck) {
         this.deck = deck;
@@ -52,5 +56,16 @@ public class Hand {
         return structures;
     }
 
-    public int getTotalCardsDestroyed() { return totalCardsDestroyed; }
+    void setStasisFactionBitmap(int stasisFactionBitmap) {
+        this.stasisFactionBitmap = stasisFactionBitmap;
+    }
+
+    int getStasisFactionBitmap() {
+        return stasisFactionBitmap;
+    }
+
+    int getTotalCardsDestroyed() {
+        return totalCardsDestroyed;
+    }
+
 }

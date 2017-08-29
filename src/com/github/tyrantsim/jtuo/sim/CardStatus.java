@@ -196,6 +196,10 @@ public class CardStatus {
         return protectedBy;
     }
 
+    public void setProtectedByStasis(int protectedByStasis) {
+        this.protectedByStasis = protectedByStasis;
+    }
+
     public int getProtectedByStasis() {
         return protectedByStasis;
     }
