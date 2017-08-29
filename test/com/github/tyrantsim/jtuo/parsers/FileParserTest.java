@@ -4,6 +4,7 @@ import com.github.tyrantsim.jtuo.decks.Deck;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -17,7 +18,9 @@ public class FileParserTest {
 
     @Test
     public void testCards() throws Exception {
-        List<Integer> ids = new Deck().hashToIds("LU4EBRhbHDhTeEhbZKhBLOh");
+        ArrayList<Integer> ids = new ArrayList<>();
+
+        new Deck().hashToIds("LU4EBRhbHDhTeEhbZKhBLOh", ids);
         assertEquals((Integer) 25227, ids.get(0));
         assertEquals((Integer) 50212, ids.get(1));
         assertEquals((Integer) 36091, ids.get(2));
