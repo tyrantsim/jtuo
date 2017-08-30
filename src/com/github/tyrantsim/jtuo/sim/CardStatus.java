@@ -104,6 +104,10 @@ public class CardStatus {
         return safeMinus(card.getAttack() + safeMinus(permAttackBuff, subdued), corrodedWeakened) + tempAttackBuff;
     }
 
+    int protectedValue() {
+        return protectedBy + protectedByStasis;
+    }
+
     void addPermAttackBuff(int incBy) {
         this.permAttackBuff += incBy;
     }
@@ -171,6 +175,10 @@ public class CardStatus {
 
     void setIndex(int index) {
         this.index = index;
+    }
+
+    int getIndex() {
+        return index;
     }
 
     void setPlayer(int player) {

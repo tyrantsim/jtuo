@@ -90,6 +90,10 @@ public class Field {
         return getBGEffects(playerIndex)[effect.ordinal()] != null;
     }
 
+    void addBloodlust(int value) {
+        this.bloodlustValue += value;
+    }
+
     // Getters & Setters
     public Hand[] getPlayers() {
         return players;
@@ -201,6 +205,10 @@ public class Field {
 
     void setAssaultBloodlusted(boolean assaultBloodlusted) {
         this.assaultBloodlusted = assaultBloodlusted;
+    }
+
+    boolean isAssaultBloodlusted() {
+        return assaultBloodlusted;
     }
 
     void setBloodlustValue(int bloodlustValue) {

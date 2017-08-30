@@ -13,6 +13,8 @@ import com.github.tyrantsim.jtuo.util.Pair;
 import java.util.Deque;
 import java.util.List;
 
+import static com.github.tyrantsim.jtuo.util.Utils.safeMinus;
+
 public class FieldSimulator {
 
     public static int turnLimit = Integer.MAX_VALUE;
@@ -501,17 +503,64 @@ public class FieldSimulator {
             CardStatus defStatus = defAssaults.get(field.getCurrentCI());
             attDmg = performAttack(field, attStatus, defStatus);
             int swipeValue = attStatus.skill(Skill.SWIPE);
-            int drawinValue = attStatus.skill(Skill.DRAIN);
-            if (swipeValue != 0 || drawinValue != 0) {
-                // TODO: do this
+            int drainValue = attStatus.skill(Skill.DRAIN);
+            if (swipeValue != 0 || drainValue != 0) {
+                boolean criticalReach = field.hasBGEffect(field.getTapi(), PassiveBGE.CRITICALREACH);
+                int drainTotalDmg = attDmg;
+                int adjSize = 1 + (criticalReach ? 1 : 0);
+                int hostIdx = defStatus.getIndex();
+                int fromIdx = safeMinus(hostIdx, adjSize);
+                int tillIdx = Math.min(hostIdx + adjSize, safeMinus(defAssaults.size(), 1));
+
+                for (; fromIdx <= tillIdx; fromIdx++) {
+                    if (fromIdx == hostIdx) continue;
+                    CardStatus adjStatus = defAssaults.get(fromIdx);
+                    if (!adjStatus.isAlive()) continue;
+                    int swipeDmg = safeMinus(swipeValue + drainValue + defStatus.getEnfeebled(), defStatus.protectedValue());
+                    removeHP(field, adjStatus, swipeDmg);
+                    drainTotalDmg += swipeDmg;
+                }
+
+                if (drainValue != 0 && skillCheck(field, Skill.DRAIN, attStatus, null)) {
+                    attStatus.addHP(drainTotalDmg);
+                }
+                prependOnDeath(field);
+                resolveSkill(field);
             }
+        } else {
+            // might be blocked by walls
+            attDmg = attackCommander(field, attStatus);
         }
-        // TODO: finish implementing this
-        return false;
+
+        // Passive BGE: Bloodlust
+        if (field.hasBGEffect(field.getTapi(), PassiveBGE.BLOODLUST) && !field.isAssaultBloodlusted() && attDmg > 0) {
+            field.addBloodlust(field.getBGEffects(field.getTapi())[PassiveBGE.BLOODLUST.ordinal()] != null ? 1 : 0);
+            field.setAssaultBloodlusted(true);
+        }
+
+        return true;
     }
 
     private static int performAttack(Field field, CardStatus attacker, CardStatus defender) {
         // TODO: implement this
+        return 0;
+    }
+
+    private static void removeHP(Field field, CardStatus adjStatus, int swipeDmg) {
+        // TODO: implement this
+    }
+
+    private static boolean skillCheck(Field field, Skill skill, CardStatus c, CardStatus ref) {
+        return SkillUtils.isDefensiveSkill(skill) || c.isAlive();
+    }
+
+    private static void prependOnDeath(Field field) {
+        // TODO: implement this
+    }
+
+    private static int attackCommander(Field field, CardStatus attStatus) {
+        // TODO: implement this
+        return 0;
     }
 
 }
