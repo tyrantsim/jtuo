@@ -3,7 +3,6 @@ package com.github.tyrantsim.jtuo.sim;
 import com.github.tyrantsim.jtuo.cards.Card;
 import com.github.tyrantsim.jtuo.cards.CardCategory;
 import com.github.tyrantsim.jtuo.skills.Skill;
-import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.skills.SkillUtils;
 import com.github.tyrantsim.jtuo.util.Utils;
 
@@ -11,7 +10,7 @@ import java.util.Arrays;
 
 import static com.github.tyrantsim.jtuo.util.Utils.safeMinus;
 
-public class CardStatus {
+public class CardStatus implements Cloneable {
 
     private Card card;
     private int index;
@@ -353,14 +352,106 @@ public class CardStatus {
         this.hp = hp;
     }
 
-    public int getHP() { return hp; }
+    public int getHP() {
+        return hp;
+    }
 
-    void setSkillCd(Skill skill, int cd) {
+    public void setSkillCd(Skill skill, int cd) {
         skillCd[skill.ordinal()] = cd;
     }
 
+    public void setSkillCd(int[] skillCd) { this.skillCd = skillCd; }
+
     int getSkillCd(Skill skill) {
         return skillCd[skill.ordinal()];
+    }
+
+    public int getEnhanced(Skill skillId) {
+        return enhancedValue[skillId.ordinal() + primarySkillOffset[skillId.ordinal()]];
+    }
+
+    public void setDelay(int delay) {
+        this.delay = delay;
+    }
+
+    public void setPermHealthBuff(int permHealthBuff) {
+        this.permHealthBuff = permHealthBuff;
+    }
+
+    public void setPermAttackBuff(int permAttackBuff) {
+        this.permAttackBuff = permAttackBuff;
+    }
+
+    public void setCorrodedRate(int corrodedRate) {
+        this.corrodedRate = corrodedRate;
+    }
+
+    public void setSubdued(int subdued) {
+        this.subdued = subdued;
+    }
+
+    public void setPoisoned(int poisoned) {
+        this.poisoned = poisoned;
+    }
+
+    public void setPrimarySkillOffset(int[] primarySkillOffset) {
+        this.primarySkillOffset = primarySkillOffset;
+    }
+
+    public void setEvolvedSkillOffset(int[] evolvedSkillOffset) {
+        this.evolvedSkillOffset = evolvedSkillOffset;
+    }
+
+    public void setEnhancedValue(int[] enhancedValue) {
+        this.enhancedValue = enhancedValue;
+    }
+
+
+    public void setRushAttempted(boolean rushAttempted) {
+        this.rushAttempted = rushAttempted;
+    }
+
+    public CardStatus clone() {
+        try {
+            CardStatus copy = (CardStatus) super.clone();
+            copy.set(card);
+            copy.setIndex(index);
+            copy.setPlayer(player);
+            copy.setDelay(delay);
+            copy.setHP(hp);
+            copy.setStep(step);
+            copy.setPermHealthBuff(permHealthBuff);
+            copy.setPermAttackBuff(permAttackBuff);
+            copy.setTempAttackBuff(tempAttackBuff);
+            copy.setCorrodedRate(corrodedRate);
+            copy.setCorrodedWeakened(corrodedWeakened);
+            copy.setSubdued(subdued);
+            copy.setEnfeebled(enfeebled);
+            copy.setEvaded(evaded);
+            copy.setInhibited(inhibited);
+            copy.setSabotaged(sabotaged);
+            copy.setPaybacked(paybacked);
+            copy.setTributed(tributed);
+            copy.setPoisoned(poisoned);
+            copy.setProtectedBy(protectedBy);
+            copy.setProtectedByStasis(protectedByStasis);
+            copy.setEnranged(enranged);
+            copy.setEntrapped(entrapped);
+
+            copy.setPrimarySkillOffset(Utils.cloneArray(primarySkillOffset));
+            copy.setEvolvedSkillOffset(Utils.cloneArray(evolvedSkillOffset));
+            copy.setEnhancedValue(Utils.cloneArray(enhancedValue));
+            copy.setSkillCd(Utils.cloneArray(skillCd));
+
+            copy.setJammed(jammed);
+            copy.setOverloaded(overloaded);
+            copy.setRushAttempted(rushAttempted);
+            copy.setSundered(sundered);
+
+            return copy;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
     }
 
 }
