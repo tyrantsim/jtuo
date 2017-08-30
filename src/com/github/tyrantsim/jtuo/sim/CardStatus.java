@@ -6,6 +6,8 @@ import com.github.tyrantsim.jtuo.skills.Skill;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.util.Utils;
 
+import java.util.Arrays;
+
 import static com.github.tyrantsim.jtuo.util.Utils.safeMinus;
 
 public class CardStatus {
@@ -150,6 +152,18 @@ public class CardStatus {
         return evolvedSkillOffset[skillId.ordinal()];
     }
 
+    void clearPrimarySkillOffset() {
+        Arrays.fill(primarySkillOffset, 0);
+    }
+
+    void clearEvolvedSkillOffset() {
+        Arrays.fill(evolvedSkillOffset, 0);
+    }
+
+    void clearEnhancedValue() {
+        Arrays.fill(enhancedValue, 0);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -201,6 +215,10 @@ public class CardStatus {
         return permAttackBuff;
     }
 
+    void setTempAttackBuff(int tempAttackBuff) {
+        this.tempAttackBuff = tempAttackBuff;
+    }
+
     public int getCorrodedRate() {
         return corrodedRate;
     }
@@ -217,24 +235,48 @@ public class CardStatus {
         return subdued;
     }
 
+    public void setEnfeebled(int enfeebled) {
+        this.enfeebled = enfeebled;
+    }
+
     public int getEnfeebled() {
         return enfeebled;
+    }
+
+    public void setEvaded(int evaded) {
+        this.evaded = evaded;
     }
 
     public int getEvaded() {
         return evaded;
     }
 
+    public void setInhibited(int inhibited) {
+        this.inhibited = inhibited;
+    }
+
     public int getInhibited() {
         return inhibited;
+    }
+
+    public void setSabotaged(int sabotaged) {
+        this.sabotaged = sabotaged;
     }
 
     public int getSabotaged() {
         return sabotaged;
     }
 
+    public void setPaybacked(int paybacked) {
+        this.paybacked = paybacked;
+    }
+
     public int getPaybacked() {
         return paybacked;
+    }
+
+    public void setTributed(int tributed) {
+        this.tributed = tributed;
     }
 
     public int getTributed() {
@@ -243,6 +285,10 @@ public class CardStatus {
 
     public int getPoisoned() {
         return poisoned;
+    }
+
+    public void setProtectedBy(int protectedBy) {
+        this.protectedBy = protectedBy;
     }
 
     public int getProtectedBy() {
@@ -257,16 +303,32 @@ public class CardStatus {
         return protectedByStasis;
     }
 
+    public void setEnranged(int enranged) {
+        this.enranged = enranged;
+    }
+
     public int getEnranged() {
         return enranged;
+    }
+
+    public void setEntrapped(int entrapped) {
+        this.entrapped = entrapped;
     }
 
     public int getEntrapped() {
         return entrapped;
     }
 
+    public void setJammed(boolean jammed) {
+        this.jammed = jammed;
+    }
+
     public boolean isJammed() {
         return jammed;
+    }
+
+    public void setOverloaded(boolean overloaded) {
+        this.overloaded = overloaded;
     }
 
     public boolean isOverloaded() {
@@ -275,6 +337,10 @@ public class CardStatus {
 
     public boolean isRushAttempted() {
         return rushAttempted;
+    }
+
+    public void setSundered(boolean sundered) {
+        this.sundered = sundered;
     }
 
     public boolean isSundered() {
