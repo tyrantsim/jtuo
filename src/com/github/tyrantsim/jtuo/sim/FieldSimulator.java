@@ -59,8 +59,7 @@ public class FieldSimulator {
             // Evaluate activation BGE skills
             for (SkillSpec bgSkill : field.getBGSkills(field.getTapi())) {
                 field.prepareAction();
-                // TODO: Maybe new instance of field.tap.getCommander is required
-                field.skillQueue.addLast(new Pair<CardStatus, SkillSpec>(field.tap.getCommander(), bgSkill));
+                field.skillQueue.addLast(new Pair<CardStatus, SkillSpec>(field.tap.getCommander().clone(), bgSkill.clone()));
                 resolveSkill(field);
                 field.finalizeAction();
             }
