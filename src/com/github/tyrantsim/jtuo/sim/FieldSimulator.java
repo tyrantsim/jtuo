@@ -173,7 +173,7 @@ public class FieldSimulator {
             field.setTipi(field.getTapi());
             field.setTapi(tmp);
 
-            Hand tmpHand = field.getTip();
+            Hand tmpHand = field.getTip().clone();
             field.setTip(field.getTap());
             field.setTap(tmpHand);
 
