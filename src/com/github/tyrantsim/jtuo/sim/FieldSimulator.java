@@ -86,10 +86,16 @@ public class FieldSimulator {
             if(field.isEnd()) {
                 break;
             }
+
             int oldTapi = field.getTapi();
             int oldTipi = field.getTipi();
             field.setTapi(oldTipi);
             field.setTipi(oldTapi);
+
+            Hand tmpHand = field.getTip();
+            field.setTip(field.getTap());
+            field.setTap(tmpHand);
+
             field.nextTurn();
         }
 
@@ -173,7 +179,7 @@ public class FieldSimulator {
             field.setTipi(field.getTapi());
             field.setTapi(tmp);
 
-            Hand tmpHand = field.getTip().clone();
+            Hand tmpHand = field.getTip();
             field.setTip(field.getTap());
             field.setTap(tmpHand);
 
