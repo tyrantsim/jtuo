@@ -351,7 +351,9 @@ public class CardStatus {
         this.hp = hp;
     }
 
-    public int getHP() { return hp; }
+    public int getHP() {
+        return hp;
+    }
 
     void setSkillCd(Skill skill, int cd) {
         skillCd[skill.ordinal()] = cd;
