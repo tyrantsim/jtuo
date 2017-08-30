@@ -168,6 +168,10 @@ public class Field {
         return optimizationMode;
     }
 
+    public List<CardStatus> getKilledUnits() {
+        return killedUnits;
+    }
+
     public void setCurrentPhase(FieldPhase phase) {
         this.currentPhase = phase;
     }

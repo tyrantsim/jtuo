@@ -621,7 +621,30 @@ public class FieldSimulator {
     }
 
     private static void prependOnDeath(Field field) {
-        // TODO: implement this
+        if (field.getKilledUnits().isEmpty()) return;
+
+        List<CardStatus> assaults = field.getPlayer(field.getKilledUnits().get(0).getPlayer()).getAssaults();
+        int stackedPoisonValue = 0;
+        int lastIndex = 99999;
+        CardStatus leftVirulenceVictim = null;
+        for (CardStatus status : field.getKilledUnits()) {
+            if (status.getCard().getType() == CardType.ASSAULT) {
+                // Skill: Avenge
+                // TODO: implement this
+
+                // Passive BGE: Virulence
+                // TODO: implement this
+            }
+
+            // Passive BGE: revenge
+            // TODO: implement this
+
+            // resolve On-Death skills
+            for (SkillSpec ss : status.getCard().getSkillsOnDeath()) {
+                field.addSkillToQueue(status, ss);
+            }
+        }
+        field.getKilledUnits().clear();
     }
 
     private static int attackCommander(Field field, CardStatus attStatus) {
