@@ -452,6 +452,8 @@ public class Deck implements Cloneable {
         return shuffledCards;
     }
 
+    public List<Card> getShuffledForts() { return shuffledForts; }
+
     public Card getShuffledCommander() {
         return shuffledCommander;
     }

@@ -87,8 +87,7 @@ public class SkillSpec implements Cloneable {
     public void setCardId(int cardId) {
         this.cardId = cardId;
     }
-    
-    
+
     public SkillTrigger getTrigger() {
         return trigger;
     }
@@ -100,7 +99,16 @@ public class SkillSpec implements Cloneable {
     public SkillSpec clone() {
         try {
             SkillSpec copy = (SkillSpec) super.clone();
-            // TODO: implement this
+            copy.setId(id);
+            copy.setX(x);
+            copy.setY(y);
+            copy.setN(n);
+            copy.setC(c);
+            copy.setS(s);
+            copy.setS2(s2);
+            copy.setAll(all);
+            copy.setCardId(cardId);
+            copy.setTrigger(trigger);
             return copy;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();
@@ -111,4 +119,5 @@ public class SkillSpec implements Cloneable {
     public String toString() {
         return id + " " + trigger + "-" + cardId;
     }
+
 }

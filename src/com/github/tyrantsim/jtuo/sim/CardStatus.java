@@ -295,4 +295,8 @@ public class CardStatus {
         return skillCd[skill.ordinal()];
     }
 
+    public int getEnhanced(Skill skillId) {
+        return enhancedValue[skillId.ordinal() + primarySkillOffset[skillId.ordinal()]];
+    }
+
 }

@@ -158,7 +158,27 @@ public class FieldSimulator {
     }
 
     private static void playDominionAndFortresses(Field field) {
-        // TODO: implement this
+
+        for (int i = 0, ai = field.getTapi(); i < 2; i++) {
+
+            if (field.getPlayer(ai).getDeck().getAlphaDominion() != null)
+                new PlayCard(field.getPlayer(ai).getDeck().getAlphaDominion(), field, ai,
+                        field.getPlayer(ai).getCommander()).op();
+
+            for (Card playedCard: field.getPlayer(ai).getDeck().getShuffledForts())
+                new PlayCard(playedCard, field, ai, field.getPlayer(ai).getCommander()).op();
+
+            // Swap
+            int tmp = field.getTipi();
+            field.setTipi(field.getTapi());
+            field.setTapi(tmp);
+
+            Hand tmpHand = field.getTip();
+            field.setTip(field.getTap());
+            field.setTap(tmpHand);
+
+            ai = opponent(ai);
+        }
     }
 
     private static void turnStartPhase(Field field) {
@@ -235,19 +255,23 @@ public class FieldSimulator {
             SkillSpec modifiedSkill = ss.clone();
 
             // Apply evolve
-            // TODO: implement this
-
+            int evolvedOffset = status.getEvolvedSkillOffset(modifiedSkill.getId());
+            if (evolvedOffset != 0)
+                modifiedSkill.setId(Skill.values()[ss.getId().ordinal() + evolvedOffset]);
 
             // Apply sabotage (only for X-based activation skills)
-            // TODO: implement this
-
+            int sabotagedValue = status.getSabotaged();
+            if (sabotagedValue > 0 && SkillUtils.isActivationSkillWithX(modifiedSkill.getId()))
+                modifiedSkill.setX(modifiedSkill.getX() - Math.min(modifiedSkill.getX(), sabotagedValue));
 
             // Apply enhance
-            // TODO: implement this
-
+            int enhancedValue = status.getEnhanced(modifiedSkill.getId());
+            if (enhancedValue > 0)
+                modifiedSkill.setX(modifiedSkill.getX() + enhancedValue);
 
             // Perform skill (if it is still applicable)
-            // TODO: implement this
+            if (!(SkillUtils.isActivationSkillWithX(modifiedSkill.getId()) && modifiedSkill.getX() == 0))
+            {}//TODO: WTF is skill_table??? from original code: void(*skill_table[Skill::num_skills])(Field*, CardStatus* src, const SkillSpec&);
 
         }
     }
@@ -640,6 +664,16 @@ public class FieldSimulator {
             }
         }
         return null;
+    }
+
+    private static int opponent(int player) {
+        return ((player + 1) % 2);
+    }
+
+    private static void fillSkillTable() {
+
+        // TODO: implement this
+
     }
 
 }
