@@ -33,4 +33,17 @@ public class Decks {
         }
     }
 
+    public static Deck findDeck(String deckName) {
+        Deck deck = findDeckByName(deckName);
+        if (deck != null) {
+            deck.resolve();
+            return deck;
+        }
+        deck = new Deck();
+        decks.add(deck);
+        deck.set(deckName);
+        deck.resolve();
+        return deck;
+    }
+
 }

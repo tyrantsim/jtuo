@@ -1,5 +1,6 @@
 package com.github.tyrantsim.jtuo.sim;
 
+import com.github.tyrantsim.jtuo.Constants;
 import com.github.tyrantsim.jtuo.cards.Card;
 import com.github.tyrantsim.jtuo.cards.CardCategory;
 import com.github.tyrantsim.jtuo.cards.CardType;
@@ -18,7 +19,7 @@ import static com.github.tyrantsim.jtuo.util.Utils.safeMinus;
 
 public class FieldSimulator {
 
-    public static int turnLimit = Integer.MAX_VALUE;
+    public static int turnLimit = Constants.DEFAULT_TURN_LIMIT;
 
     public static Results play(Field field) {
         field.getPlayer(0).getCommander().setPlayer(0);

@@ -71,7 +71,11 @@ public class Deck implements Cloneable {
     }
 
     public Deck() {
-        this(null, 0, null);
+        this(DeckType.DECK, 0, "");
+    }
+
+    public void set(String deckString) {
+        this.deckString = deckString;
     }
 
     public void set(List<Integer> ids, Map<Integer, Boolean> marks) {
@@ -264,7 +268,6 @@ public class Deck implements Cloneable {
     }
 
     public String shortDescription() {
-
         String desc = Decks.getDeckTypeAsString(deckType);
 
         if (id > 0)
@@ -457,7 +460,7 @@ public class Deck implements Cloneable {
         this.upgradePoints = upgradePoints;
     }
 
-    void setDeckStrategy(DeckStrategy strategy) {
+    public void setDeckStrategy(DeckStrategy strategy) {
         this.strategy = strategy;
     }
 

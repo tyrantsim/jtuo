@@ -16,7 +16,7 @@ public class Results {
         this.points = points;
     }
 
-    Results add(final Results other) {
+    public Results add(final Results other) {
         wins += other.wins;
         draws += other.draws;
         losses += other.losses;
