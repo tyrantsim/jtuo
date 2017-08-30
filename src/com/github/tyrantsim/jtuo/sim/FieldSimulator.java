@@ -447,7 +447,7 @@ public class FieldSimulator {
     /**
      * @return if card has attacked
      */
-    private static boolean evaluateSkills(Field field, CardStatus status, List<SkillSpec> skills, Boolean attacked) {
+    private static Boolean evaluateSkills(Field field, CardStatus status, List<SkillSpec> skills, Boolean attacked) {
         int numActions = 1;
         for (int actionIndex = 0; actionIndex < numActions; actionIndex++) {
             field.prepareAction();
