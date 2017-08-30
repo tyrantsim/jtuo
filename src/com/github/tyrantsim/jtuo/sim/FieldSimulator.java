@@ -425,7 +425,67 @@ public class FieldSimulator {
     }
 
     private static void turnEndPhase(Field field) {
-        // TODO: implement this
+        // Inactive player's assault cards:
+        List<CardStatus> assaults = field.getTip().getAssaults();
+        for (CardStatus status : assaults) {
+            if (status.getHP() <= 0) continue;
+            status.setEnfeebled(0);
+            status.setProtectedBy(0);
+            status.clearPrimarySkillOffset();
+            status.clearEvolvedSkillOffset();
+            status.clearEnhancedValue();
+            status.setEvaded(0); // so far only useful in Inactive turn
+            status.setPaybacked(0); // ditto
+            status.setEntrapped(0);
+        }
+
+        // Inactive player's structure card
+        List<CardStatus> structures = field.getTip().getStructures();
+        for (CardStatus status : structures) {
+            if (status.getHP() <= 0) continue;
+            status.setEvaded(0); // so far only useful in Inactive turn
+        }
+
+        // Active player's assault cards:
+        assaults = field.getTap().getAssaults();
+        for (CardStatus status : assaults) {
+            if (status.getHP() <= 0) continue;
+
+            int refreshValue = status.skill(Skill.REFRESH);
+            if (refreshValue != 0 && skillCheck(field, Skill.REFRESH, status, null)) {
+                status.addHP(refreshValue);
+            }
+            if (status.getPoisoned() > 0) {
+                int poisonDmg = safeMinus(status.getPoisoned() + status.getEnfeebled(), status.protectedValue());
+                if (poisonDmg > 0) {
+                    removeHP(field, status, poisonDmg);
+                }
+            }
+            // end of the opponent's next turn for enemy units
+            status.setTempAttackBuff(0);
+            status.setJammed(false);
+            status.setEnranged(0);
+            status.setSundered(false);
+            status.setInhibited(0);
+            status.setSabotaged(0);
+            status.setTributed(0);
+            status.setOverloaded(false);
+            status.setStep(CardStep.NONE);
+        }
+
+        // Active player's structure cards:
+        // nothing so far
+
+        prependOnDeath(field); // poison
+        resolveSkill(field);
+        removeDead(field.getTap().getAssaults());
+        removeDead(field.getTap().getStructures());
+        removeDead(field.getTip().getAssaults());
+        removeDead(field.getTip().getStructures());
+    }
+
+    private static void removeDead(List<CardStatus> cards) {
+        cards.removeIf(card -> !card.isAlive());
     }
 
     private static void cooldownSkills(CardStatus card) {

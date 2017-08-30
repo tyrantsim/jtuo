@@ -30,7 +30,7 @@ public class Field {
     // With the introduction of on death skills, a single skill can trigger arbitrary many skills.
     // They are stored in this, and cleared after all have been performed.
     Deque<Pair<CardStatus, SkillSpec>> skillQueue = new LinkedList<>();
-    List<CardStatus> killedUnits;
+    List<CardStatus> killedUnits = new ArrayList<>();
     Map<CardStatus, Integer> damagedUnitsToItems = new HashMap<>();
 
     // the current phase of the turn: starts with PLAYCARD_PHASE, then COMMANDER_PHASE, STRUCTURES_PHASE, and ASSAULTS_PHASE
