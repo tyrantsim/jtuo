@@ -35,6 +35,10 @@ public class Hand {
         this.stasisFactionBitmap |= playedFactionMask;
     }
 
+    public void incTotalCardsDestroyed() {
+        totalCardsDestroyed++;
+    }
+
     // Getters & Setters
     public void setDeck(Deck deck) {
         this.deck = deck;

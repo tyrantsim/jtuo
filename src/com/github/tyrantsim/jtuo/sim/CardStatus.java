@@ -185,6 +185,10 @@ public class CardStatus {
         this.player = player;
     }
 
+    public int getPlayer() {
+        return player;
+    }
+
     int getDelay() {
         return delay;
     }
@@ -275,6 +279,10 @@ public class CardStatus {
 
     public boolean isSundered() {
         return sundered;
+    }
+
+    public void setHP(int hp) {
+        this.hp = hp;
     }
 
     public int getHP() { return hp; }

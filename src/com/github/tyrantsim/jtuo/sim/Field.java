@@ -94,6 +94,11 @@ public class Field {
         this.bloodlustValue += value;
     }
 
+    void incDamagedUnitsToTimes(CardStatus status) {
+        int dmg = damagedUnitsToItems.getOrDefault(status, 0) + 1;
+        damagedUnitsToItems.put(status, dmg);
+    }
+
     // Getters & Setters
     public Hand[] getPlayers() {
         return players;

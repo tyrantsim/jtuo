@@ -501,7 +501,7 @@ public class FieldSimulator {
         int attDmg = 0;
         if (field.getCurrentCI() < defAssaults.size() && defAssaults.get(field.getCurrentCI()).isAlive()) {
             CardStatus defStatus = defAssaults.get(field.getCurrentCI());
-            attDmg = performAttack(field, attStatus, defStatus);
+            attDmg = performAttack(field, CardType.ASSAULT, attStatus, defStatus);
             int swipeValue = attStatus.skill(Skill.SWIPE);
             int drainValue = attStatus.skill(Skill.DRAIN);
             if (swipeValue != 0 || drainValue != 0) {
@@ -541,13 +541,79 @@ public class FieldSimulator {
         return true;
     }
 
-    private static int performAttack(Field field, CardStatus attacker, CardStatus defender) {
-        // TODO: implement this
+    private static int performAttack(Field field, CardType cardType, CardStatus attStatus, CardStatus defStatus) {
+        int preModifierDmg = attStatus.getAttackPower();
+
+        // Evaluation order:
+        // modify damage
+        // deal damage
+        // assaults only: (poison)
+        // counter, berserk
+        // assaults only: (leech if still alive)
+
+        int attDmg = modifyAttackDamage(field, cardType, attStatus, defStatus, preModifierDmg);
+
+        if (attDmg == 0) {
+            return 0;
+        }
+
+        attackDamage(field, cardType, attStatus, defStatus, attDmg);
+        if (field.isEnd()) {
+            return attDmg;
+        }
+        damageDependantPreOA(field, cardType, attStatus, defStatus);
+
+        // TODO: implement skills
+
         return 0;
     }
 
-    private static void removeHP(Field field, CardStatus adjStatus, int swipeDmg) {
+    private static int modifyAttackDamage(Field field, CardType cardType, CardStatus attStatus, CardStatus defStatus, int preModifierDmg) {
+        int attDmg = preModifierDmg;
+
+        if (attDmg == 0) return attDmg;
+
         // TODO: implement this
+
+        return attDmg;
+    }
+
+    private static void attackDamage(Field field, CardType cardType, CardStatus attStatus, CardStatus defStatus, int attDmg) {
+        removeHP(field, defStatus, attDmg);
+        prependOnDeath(field);
+        resolveSkill(field);
+    }
+
+    private static void damageDependantPreOA(Field field, CardType cardType, CardStatus attStatus, CardStatus defStatus) {
+        switch (cardType) {
+            // TODO: implement this
+        }
+    }
+
+    private static void removeHP(Field field, CardStatus status, int dmg) {
+        if (dmg == 0) return;
+        status.setHP(safeMinus(status.getHP(), dmg));
+        if (field.getCurrentPhase().ordinal() < FieldPhase.END_PHASE.ordinal() && status.hasSkill(Skill.BARRIER)) {
+            field.incDamagedUnitsToTimes(status);
+        }
+        if (status.getHP() == 0) {
+            field.killedUnits.add(status);
+            field.players[status.getPlayer()].incTotalCardsDestroyed();
+            if (status.getPlayer() == 0) {
+                boolean isVip = false;
+                for (Integer card : field.getPlayer(0).getDeck().getVipCards()) {
+                    if (card == status.getCard().getId()) {
+                        isVip = true;
+                        break;
+                    }
+                }
+
+                if(isVip) {
+                    field.getPlayers()[0].getCommander().setHP(0);
+                    field.setEnd(true);
+                }
+            }
+        }
     }
 
     private static boolean skillCheck(Field field, Skill skill, CardStatus c, CardStatus ref) {
@@ -559,8 +625,21 @@ public class FieldSimulator {
     }
 
     private static int attackCommander(Field field, CardStatus attStatus) {
-        // TODO: implement this
-        return 0;
+        CardStatus defStatus = selectFirstEnemyWall(field);
+        if (defStatus != null) {
+            return performAttack(field, CardType.STRUCTURE, attStatus, defStatus);
+        } else {
+            return performAttack(field, CardType.COMMANDER, attStatus, field.getTip().getCommander());
+        }
+    }
+
+    private static CardStatus selectFirstEnemyWall(Field field) {
+        for (CardStatus c : field.getTip().getStructures()) {
+            if (c.hasSkill(Skill.WALL) && c.isAlive()) {
+                return c;
+            }
+        }
+        return null;
     }
 
 }
