@@ -4,6 +4,7 @@ import com.github.tyrantsim.jtuo.cards.Card;
 import com.github.tyrantsim.jtuo.cards.CardCategory;
 import com.github.tyrantsim.jtuo.skills.Skill;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
+import com.github.tyrantsim.jtuo.skills.SkillUtils;
 import com.github.tyrantsim.jtuo.util.Utils;
 
 import java.util.Arrays;
@@ -83,9 +84,10 @@ public class CardStatus {
         skillCd = new int[Skill.values().length];
     }
 
-    final int skill(Skill skillId) {
-        // TODO: implement this
-        return -1;
+    int skill(Skill skillId) {
+        return SkillUtils.isActivationSkillWithX(skillId)
+                ? safeMinus(skillBaseValue(skillId), sabotaged)
+                : skillBaseValue(skillId);
     }
 
     int getMaxHP() {

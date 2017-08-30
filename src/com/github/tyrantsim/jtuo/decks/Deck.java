@@ -404,8 +404,31 @@ public class Deck implements Cloneable {
     }
 
     public Card next() {
-        // TODO: implement this
-        return null;
+        if (shuffledCards.isEmpty()) {
+            return null;
+        } else if (strategy == DeckStrategy.RANDOM || strategy == DeckStrategy.EXACT_ORDERED) {
+            return  shuffledCards.remove(0);
+        } else if (strategy == DeckStrategy.ORDERED) {
+            shuffledCards.sort((card1, card2) -> {
+                List<Integer> card1Order = order.get(card1.getId());
+                if (card1Order.isEmpty()) {
+                    return 0;
+                }
+                List<Integer> card2Order = order.get(card2.getId());
+                if (card2Order.isEmpty()) {
+                    return 1;
+                }
+                return card1Order.get(0) < card2Order.get(0) ? 1 : 0;
+            });
+            Card card = shuffledCards.remove(0);
+            List<Integer> cardOrder = order.get(card);
+            if (!cardOrder.isEmpty()) {
+                cardOrder.remove(0);
+            }
+            return card;
+        } else {
+            throw new RuntimeException("Unknown strategy for deck: " + strategy);
+        }
     }
 
     @Override

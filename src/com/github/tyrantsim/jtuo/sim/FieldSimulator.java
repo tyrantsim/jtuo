@@ -4,6 +4,7 @@ import com.github.tyrantsim.jtuo.cards.Card;
 import com.github.tyrantsim.jtuo.cards.CardCategory;
 import com.github.tyrantsim.jtuo.cards.CardType;
 import com.github.tyrantsim.jtuo.cards.Cards;
+import com.github.tyrantsim.jtuo.parsers.CardsParser;
 import com.github.tyrantsim.jtuo.skills.Skill;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.skills.SkillTrigger;
@@ -388,7 +389,7 @@ public class FieldSimulator {
     private static void evaluateAssaults(Field field) {
         field.setCurrentPhase(FieldPhase.ASSAULTS_PHASE);
         field.setBloodlustValue(0);
-        for (int i = 0; !field.isEnd() && (field.getCurrentCI() < field.getTap().getAssaults().size()); i++) {
+        for (int i = 0; !field.isEnd() && (i < field.getTap().getAssaults().size()); i++) {
             field.setCurrentCI(i);
             CardStatus currentStatus = field.getTap().getAssaults().get(i);
             Boolean attacked = false;
@@ -625,7 +626,7 @@ public class FieldSimulator {
 
         // TODO: implement skills
 
-        return 0;
+        return attDmg;
     }
 
     private static int modifyAttackDamage(Field field, CardType cardType, CardStatus attStatus, CardStatus defStatus, int preModifierDmg) {

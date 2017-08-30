@@ -40,7 +40,7 @@ public class SimulationDataTest {
         assertEquals(1, result.getWins());
         assertEquals(0, result.getLosses());
         assertEquals(0, result.getDraws());
-        assertEquals(0, result.getPoints());
+        assertEquals(100, result.getPoints());
     }
 
 }

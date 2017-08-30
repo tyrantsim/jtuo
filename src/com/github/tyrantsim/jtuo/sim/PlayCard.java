@@ -1,9 +1,11 @@
 package com.github.tyrantsim.jtuo.sim;
 
 import com.github.tyrantsim.jtuo.cards.Card;
+import com.github.tyrantsim.jtuo.cards.CardType;
 import com.github.tyrantsim.jtuo.optimizer.TyrantOptimize;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class PlayCard {
@@ -25,7 +27,7 @@ public class PlayCard {
     }
 
     CardStatus op() {
-        setStorage();
+        setStorage(card.getType());
         placeCard();
 
         // resolve On-Play skills
@@ -36,12 +38,23 @@ public class PlayCard {
         return status;
     }
 
-    void setStorage() {
+    private void setStorage(CardType cardType) {
+        switch (cardType) {
+            case ASSAULT:
+                storage = field.getPlayer(actorIndex).getAssaults();
+                break;
+            case STRUCTURE:
+                storage = field.getPlayer(actorIndex).getAssaults();
+                break;
+            default:
+                throw new RuntimeException("Unexpected card type: " + cardType);
+        }
     }
 
     void placeCard() {
         status = new CardStatus();
         storage.add(status);
+        status.set(card);
         status.setIndex(storage.size() - 1);
         status.setPlayer(actorIndex);
 
