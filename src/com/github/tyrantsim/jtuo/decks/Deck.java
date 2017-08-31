@@ -22,6 +22,10 @@ public class Deck implements Cloneable {
     private int upgradeOpportunities;
     private DeckStrategy strategy = DeckStrategy.RANDOM;
 
+    public DeckStrategy getStrategy() {
+        return strategy;
+    }
+
     private Card commander;
     private Card alphaDominion;
     private int commanderMaxLevel;
@@ -467,7 +471,11 @@ public class Deck implements Cloneable {
     public void setCommander(Card commander) {
         this.commander = commander;
     }
-
+    
+    public Card getCommander() {
+        return commander;
+    }
+    
     public void setCards(List<Card> cards) {
         this.cards = cards;
     }
@@ -495,7 +503,10 @@ public class Deck implements Cloneable {
     public int getId() { return id; }
 
     public Card getAlphaDominion() { return alphaDominion; }
-
+    public void setAlphaDominion(Card alphaDominion) {
+        this.alphaDominion = alphaDominion;
+    }
+    
     public Set<Integer> getVipCards() {
         return vipCards;
     }

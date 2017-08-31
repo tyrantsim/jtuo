@@ -153,7 +153,7 @@ public class Card implements Cloneable {
         return equals(topLevelCard);
     }
 
-    boolean isLowLevelCard() {
+    public boolean isLowLevelCard() {
         return id == baseId;
     }
 
