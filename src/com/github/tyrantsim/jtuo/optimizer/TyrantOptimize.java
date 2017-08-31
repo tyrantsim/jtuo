@@ -1,13 +1,21 @@
 package com.github.tyrantsim.jtuo.optimizer;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.TreeMap;
+
 import org.apache.commons.math3.distribution.BinomialDistribution;
 
+import com.github.tyrantsim.jtuo.cards.Card;
 import com.github.tyrantsim.jtuo.control.EvaluatedResults;
 import com.github.tyrantsim.jtuo.sim.OptimizationMode;
 import com.github.tyrantsim.jtuo.sim.Results;
+import com.github.tyrantsim.jtuo.util.Utils;
 
 public class TyrantOptimize {
 
+    public static boolean DEBUG = false;
+    
     public static boolean modeOpenTheDeck = false;
     public static OptimizationMode optimizationMode = OptimizationMode.NOT_SET;
     public static double confidenceLevel = 0.99;
@@ -23,7 +31,24 @@ public class TyrantOptimize {
        // #endif
         };
     
+    public HashMap<Integer, Integer> owned_cards = new HashMap<>();
+        
     
+    public void claimCards(ArrayList<Card> card_list) {
+            TreeMap<Card, Integer> num_cards = new TreeMap<>(); //::map<const Card *, unsigned> num_cards;
+            //get_required_cards_before_upgrade(card_list, num_cards);
+            num_cards.forEach((card, num)->{
+                Integer num_to_claim = Utils.safeMinus(num, owned_cards.get(card.getId()));
+                if (num_to_claim > 0) {
+                    owned_cards.put(card.getId(), owned_cards.get(card.getId()) + num_to_claim);
+                    if (DEBUG) {
+                        System.out.println("WARNING: Need extra " + num_to_claim  + " " + card.getName() + " to build your initial deck: adding to owned card list.\n");
+                    }
+                }
+            });
+        }
+    
+        
     public Results computeScore(EvaluatedResults results, double[] factors)
     {
         Results last = new Results(0l, 0l, 0l, 0l); //, 0, 0, 0, 0, 0, results.second};
