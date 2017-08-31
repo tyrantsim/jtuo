@@ -170,15 +170,8 @@ public class CardsParser {
                 if (baseCard != null) {
                     updateSameCardAttributes(unitChild, baseCard, skillSpecs);
                 }
-                // attack
-                // health
-                // cost
-                // rarity
-                // skill
                 
                 if (baseIdInt != null && name != null && !name.isEmpty()) {
-                    // card = new Card(baseIdInt, name);
-
                     cards.put(baseIdInt, baseCard);
 
                     // System.out.println("" + name);
@@ -187,7 +180,6 @@ public class CardsParser {
                         ArrayList<SkillSpec> skillSpecsUpgraded = new ArrayList<>(); 
                         Card card = baseCard.clone();
                         NodeList upgradeChilds = unitChild.getChildNodes();
-                        String level_prefix = "";
                         String id = "";
                         card.setSkills(new ArrayList<SkillSpec>());
                         for (int l = 0; l < upgradeChilds.getLength(); l++) {
@@ -195,7 +187,6 @@ public class CardsParser {
                             if (upgradeChild.getNodeName().equals("level")) {
                                 String level = upgradeChild.getFirstChild().getNodeValue();
                                 if (level != null) {
-                                    level_prefix = "-" + level;
                                     card.setLevel(Integer.parseInt(level));
                                 }
                             }
@@ -220,7 +211,7 @@ public class CardsParser {
                         if (id != null) {
                             upgrades.put(card.getLevel(), card);
                             card.setId(idInt);
-                            cards.put(idInt, card); // name + level_prefix
+                            cards.put(idInt, card);
                         }
 
                     }
@@ -437,10 +428,6 @@ public class CardsParser {
             new_skill.setId(Skill.valueOf(id.toUpperCase()));
             setSkillSpec(card, x, y, all, c, card_id, trigger, new_skill, n, s, s2);
             skillSpecs.add(new_skill);
-
-            // <skill id="allegiance" x="2"/>
-            // <skill all="1" id="enfeeble" x="4"/>
-            // <skill id="legion" x="4"/>
         }
     }
 
