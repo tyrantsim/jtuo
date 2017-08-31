@@ -2,10 +2,12 @@ package com.github.tyrantsim.jtuo.sim;
 
 public class Results {
 
-    long wins;
-    long draws;
-    long losses;
-    long points;
+    public long wins;
+    public long draws;
+    public long losses;
+    public long points;
+    public double points_lower_bound;
+    public double points_upper_bound;
 
     public Results() {}
 
