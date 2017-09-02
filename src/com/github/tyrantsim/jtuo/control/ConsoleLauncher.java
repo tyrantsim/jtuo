@@ -7,6 +7,7 @@ import com.github.tyrantsim.jtuo.decks.DeckStrategy;
 import com.github.tyrantsim.jtuo.decks.Decks;
 import com.github.tyrantsim.jtuo.parsers.CardsParser;
 import com.github.tyrantsim.jtuo.parsers.DeckParser;
+import com.github.tyrantsim.jtuo.sim.FieldSimulator;
 import com.github.tyrantsim.jtuo.sim.Results;
 
 import java.util.ArrayList;
@@ -90,7 +91,6 @@ public class ConsoleLauncher {
         int optNumThreads = Constants.DEFAULT_THREAD_NUMBER;
         DeckStrategy optYourDeckStrategy = DeckStrategy.RANDOM;
         DeckStrategy optEnemyStrategy = DeckStrategy.RANDOM;
-        int turnLimit = Constants.DEFAULT_TURN_LIMIT;
 
         List<Todo> optTodo = new ArrayList();
 
@@ -100,7 +100,7 @@ public class ConsoleLauncher {
                 optNumThreads = Integer.parseInt(args[argIndex + 1]);
                 argIndex += 1;
             } else if (arg.equals("turnlimit")) {
-                turnLimit = Integer.parseInt(args[argIndex + 1]);
+                FieldSimulator.turnLimit = Integer.parseInt(args[argIndex + 1]);
                 argIndex += 1;
             } else if (arg.equals("sim")) {
                 Todo todo = new Todo();
