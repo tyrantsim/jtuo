@@ -25,7 +25,7 @@ public class DeckTest {
 
     @Test
     public void testShuffle() {
-        Card commander = CardsParser.cards.get(1000).clone();
+        Card commander = CardsParser.getCardCopy(1000);
 
         Deck deck = new Deck();
         deck.setDeckStrategy(DeckStrategy.RANDOM);
