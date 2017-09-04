@@ -2,13 +2,16 @@ package com.github.tyrantsim.jtuo.optimizer;
 
 import java.awt.PageAttributes;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Stack;
 import java.util.TreeMap;
+import java.util.Vector;
 
 import org.apache.commons.math3.stat.interval.ClopperPearsonInterval;
 import org.apache.commons.math3.stat.interval.ConfidenceInterval;
@@ -24,31 +27,45 @@ import com.github.tyrantsim.jtuo.decks.Decks;
 import com.github.tyrantsim.jtuo.sim.OptimizationMode;
 import com.github.tyrantsim.jtuo.sim.Results;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
+import com.github.tyrantsim.jtuo.util.Pair;
 import com.github.tyrantsim.jtuo.util.Utils;
 
 public class TyrantOptimize {
 
     public static boolean DEBUG = false;
     
+    OptimizationMode optimization_mode = OptimizationMode.NOT_SET;
+    
     public static boolean modeOpenTheDeck = false;
     public static OptimizationMode optimizationMode = OptimizationMode.NOT_SET;
+    final Card owned_alpha_dominion = null;
+    boolean use_owned_cards = true;
+    
+    public int min_deck_len = 1;
+    public int max_deck_len = 10;
+    public int freezed_cards = 0;
+
     
     public static int fund = 0;
+    public double target_score = 100;
+    public double min_increment_of_score = 0;
+    
     public static boolean use_top_level_card = true;
     public static boolean use_top_level_commander = true;
 
+    private static class Requirement {
+        public Map<Card, Integer> num_cards = new HashMap<>();
+    };
+    
+    Requirement requirement;
+    
     public static double confidenceLevel = 0.99;
+    
+    boolean show_ci = false;
+    
     public static boolean useHarmonicMean = false;
-    int min_possible_score[] = {0, 0, 0, 10, 5, 5, 5, 0
-//        #ifndef NQUEST
-        , 0
-//        #endif
-        };
-        int  max_possible_score[] = {100, 100, 100, 100, 65, 65, 100, 100
-        //#ifndef NQUEST
-        , 100
-       // #endif
-        };
+    int min_possible_score[] = {0, 0, 0, 10, 5, 5, 5, 0};
+    int  max_possible_score[] = {100, 100, 100, 100, 65, 65, 100, 100};
     
     public HashMap<Integer, Integer> owned_cards = new HashMap<>();
     
@@ -71,56 +88,69 @@ public class TyrantOptimize {
     int getRequiredCardsBeforeUpgrade(HashMap<Integer, Integer> owned_cards, List<Card> card_list, Map<Card, Integer> num_cards) {
         // TODO: to implement
         int deck_cost = 0;
-        Set<Card> unresolvedCards = new HashSet<>();
+        Stack<Card> unresolvedCards = new Stack<>();
         for (Card card : card_list) {
             num_cards.put(card, num_cards.get(card).intValue() + 1);
             unresolvedCards.add(card);
         }
-//        // un-upgrade according to type/category
-//        // * use fund for normal cards
-//        // * use only top-level cards for initial (basic) dominion (Alpha Dominion) and dominion material (Dominion Shard)
-//        while (!unresolved_cards.empty())
-//        {
-//            // pop next unresolved card
-//            auto card_it = unresolved_cards.end();
-//            auto card = *(--card_it);
-//            unresolved_cards.erase(card_it);
-//
-//            // assume unlimited common/rare level-1 cards (standard set)
-//            if ((card->m_set == 1000) && (card->m_rarity <= 2) && (card->is_low_level_card()))
-//            { continue; }
-//
-//            // keep un-defused (top-level) basic dominion & its material
-//            if ((card->m_id == 50002) || (card->m_category == CardCategory::dominion_material))
-//            { continue; }
-//
-//            // defuse if inventory lacks required cards and recipe is not empty
-//            if ((fund || (card->m_category != CardCategory::normal))
-//                && (owned_cards[card->m_id] < num_cards[card]) && !card->m_recipe_cards.empty())
-//            {
-//                unsigned num_under = num_cards[card] - owned_cards[card->m_id];
-//                num_cards[card] = owned_cards[card->m_id];
-//
-//                // do count cost (in SP) only for normal cards
-//                if (card->m_category == CardCategory::normal)
-//                {
-//                    deck_cost += num_under * card->m_recipe_cost;
-//                }
-//
-//                // enqueue recipe cards as unresolved
-//                for (auto recipe_it : card->m_recipe_cards)
-//                {
-//                    num_cards[recipe_it.first] += num_under * recipe_it.second;
-//                    unresolved_cards.insert(recipe_it.first);
-//                }
-//            }
-//        }
+        // un-upgrade according to type/category
+        // * use fund for normal cards
+        // * use only top-level cards for initial (basic) dominion (Alpha Dominion) and dominion material (Dominion Shard)
+        while (!unresolvedCards.isEmpty()) {
+            // pop next unresolved card
+            Card card = unresolvedCards.pop();
+
+            // assume unlimited common/rare level-1 cards (standard set)
+            if ((card.getSet() == 1000) && (card.getRarity() <= 2) && (card.isLowLevelCard())) continue;
+
+            // keep un-defused (top-level) basic dominion & its material
+            if ((card.getId() == 50002) || (card.getCategory() == CardCategory.DOMINION_MATERIAL)) continue;
+
+            // defuse if inventory lacks required cards and recipe is not empty
+            if ((fund > 0 || (card.getCategory() != CardCategory.NORMAL)) && (owned_cards.get(card.getId()) < num_cards.get(card) && !card.getRecipeCards().isEmpty())) {
+                int num_under = num_cards.get(card) - owned_cards.get(card.getId());
+                num_cards.put(card, owned_cards.get(card.getId()));
+
+                // do count cost (in SP) only for normal cards
+                if (card.getCategory() == CardCategory.NORMAL) {
+                    deck_cost += num_under * card.getRecipeCost();
+                }
+
+                // enqueue recipe cards as unresolved
+                for (Entry<Card, Integer> recipe_card : card.getRecipeCards().entrySet()) {
+                    int new_cost = num_cards.get(recipe_card.getKey()) + num_under * recipe_card.getValue();
+                    num_cards.put(recipe_card.getKey(), new_cost);
+                    unresolvedCards.push(recipe_card.getKey());
+                }
+            }
+        }
+        return deck_cost;
+    }
+
+    Integer getRequiredCardsBeforeUpgrade(List<Card> card_list, Map<Card, Integer> num_cards) {
+        return getRequiredCardsBeforeUpgrade(owned_cards, card_list, num_cards);
+    }
+    
+    public int get_deck_cost(Deck deck){
+        if (!use_owned_cards) { return 0; }
+        Map<Card, Integer> num_in_deck = new HashMap<>();
+        int deck_cost = 0;
+        if (deck.getCommander() != null) { 
+            deck_cost += getRequiredCardsBeforeUpgrade(Arrays.asList(new Card[] {deck.getCommander()}), num_in_deck); // {deck.getCommander()}, num_in_deck); 
+        }
+        deck_cost += getRequiredCardsBeforeUpgrade(deck.getCards(), num_in_deck);
+        for (Entry<Card, Integer> it: num_in_deck.entrySet())
+        {
+            Integer card_id = it.getKey().getId();
+            if (it.getValue() > owned_cards.get(card_id));
+            { return Integer.MAX_VALUE; }
+        }
         return deck_cost;
     }
     
  // insert card at to_slot into deck limited by fund; store deck_cost
  // return true if affordable
-    boolean adjustDeck(Deck deck, int from_slot, int to_slot, final Card card, int fund, Object rndGenerator, int deck_cost, List<Entry<Integer, Card>> cards_out, List<Entry<Integer, Card>> cards_in) {
+    boolean adjustDeck(Deck deck, int from_slot, int to_slot, final Card card, int fund, Object rndGenerator, int deck_cost, List<Pair<Integer, Card>> cards_out, List<Pair<Integer, Card>> cards_in) {
      boolean is_random = deck.getStrategy() == DeckStrategy.RANDOM;
      cards_out.clear();
      cards_in.clear();
@@ -128,23 +158,23 @@ public class TyrantOptimize {
      {
          if (card.getCategory() == CardCategory.DOMINION_ALPHA){ 
              // change alpha dominion
-             cards_out.emplace_back(-1, deck->alpha_dominion);
+             cards_out.add(new Pair<>(-1, deck.getAlphaDominion()));
              deck.setAlphaDominion(card);
-             cards_in.emplace_back(-1, deck->alpha_dominion);
+             cards_in.add(new Pair<>(-1, deck.getAlphaDominion()));
              deck_cost = get_deck_cost(deck);
              return true;
          }
 
          // change commander
-         cards_out.emplace_back(-1, deck->commander);
+         cards_out.add(new Pair<>(-1, deck.getCommander()));
          deck.setCommander(card);
-         cards_in.emplace_back(-1, deck->commander);
+         cards_in.add(new Pair<>(-1, deck.getCommander()));
          deck_cost = get_deck_cost(deck);
          return (deck_cost <= fund);
      }
      if (from_slot < deck.getCards().size()) {
          // remove card from the deck
-         cards_out.emplace_back(is_random ? -1 : from_slot, deck->cards[from_slot]);
+         cards_out.add(new Pair<>(is_random ? -1 : from_slot, deck.getCards().get(from_slot))); // cards_out.emplace_back(is_random ? -1 : from_slot, deck->cards[from_slot]); // 
          deck.getCards().remove(from_slot);
      }
      if (card == null) { // remove card (no new replacement for removed card)
@@ -164,15 +194,14 @@ public class TyrantOptimize {
          //deck->cards.emplace_back(card);
          deck_cost = get_deck_cost(deck);
          if (!use_top_level_card && (deck_cost > fund)) {
-             while ((deck_cost > fund) && !candidate_card->is_low_level_card())
-             {
-                 candidate_card = candidate_card->downgraded();
+             while ((deck_cost > fund) && !candidate_card.isLowLevelCard()) {
+                 candidate_card = candidate_card.downgraded();
                  deck.getCards().set(0, candidate_card);
                  deck_cost = get_deck_cost(deck);
              }
          }
          if (deck_cost > fund) return false;
-         cards_in.emplace_back(is_random ? -1 : to_slot, deck->cards[0]);
+         cards_in.add(new Pair<>(is_random ? -1 : to_slot, deck.getCards().get(0)));
      }
 
      // try to add commander into the deck, downgrade it if necessary
@@ -182,9 +211,8 @@ public class TyrantOptimize {
          deck_cost = get_deck_cost(deck);
          if (!use_top_level_commander && (deck_cost > fund))
          {
-             while ((deck_cost > fund) && !candidate_card->is_low_level_card())
-             {
-                 candidate_card = candidate_card->downgraded();
+             while ((deck_cost > fund) && !candidate_card.isLowLevelCard()) {
+                 candidate_card = candidate_card.downgraded();
                  deck.setCommander(candidate_card);
                  deck_cost = get_deck_cost(deck);
              }
@@ -201,95 +229,44 @@ public class TyrantOptimize {
      for (int i = 0; i < cards.size(); ++i) {
          // try to add cards[i] into the deck, downgrade it if necessary
          Card candidate_card = cards.get(i);
-         Card in_it = deck.getCards().get(deck.getCards().size() - i); //  ??? ->cards.end() - (i < to_slot); // (before/after according to slot index)
-         in_it = deck.getCards().set(in_it, candidate_card);
+         //Card in_it = deck.getCards().get(deck.getCards().size() - (i < to_slot ? 1 : 0)); //  ??? ->cards.end() - (i < to_slot); // (before/after according to slot index)
+         if (i < to_slot) {
+             deck.getCards().add(deck.getCards().size() - 1, candidate_card);
+         } else {
+             deck.getCards().add(candidate_card);             
+         }
+
          deck_cost = get_deck_cost(deck);
          if (!use_top_level_card && (deck_cost > fund)) {
              while ((deck_cost > fund) && !candidate_card.isLowLevelCard()) {
                  candidate_card = candidate_card.downgraded();
-                 in_it = candidate_card;
+                 //in_it = candidate_card;
                  deck_cost = get_deck_cost(deck);
              }
          }
          if (deck_cost > fund) return false;
-         if (in_it != cards[i]) {
+         if (candidate_card != cards.get(i)) {
              // TODO: replace C++ code
              //append_unless_remove(cards_out, cards_in, {is_random ? -1 : i + (i >= from_slot), cards[i]});
              //append_unless_remove(cards_in, cards_out, {is_random ? -1 : i + (i >= to_slot), *in_it});
          }
      }
-     return !cards_in.empty() || !cards_out.empty();
+     return !cards_in.isEmpty() || !cards_out.isEmpty();
  }
 
- int check_requirement(Deck deck, Requirement requirement, Quest... quest) {
-     int gap = safe_minus(min_deck_len, deck->cards.size());
-     if (!requirement.num_cards.empty())
-     {
-         Map<Card, Integer> num_cards;
-         num_cards[deck->commander] = 1;
-         for (auto card: deck->cards)
+ int check_requirement(Deck deck, Requirement requirement) {
+     int gap = Utils.safeMinus(min_deck_len, deck.getCards().size());
+     if (!requirement.num_cards.isEmpty()) {
+         Map<Card, Integer> num_cards = new HashMap<>();
+         num_cards.put(deck.getCommander(), 1);
+         for (Card card: deck.getCards())
          {
-             ++ num_cards[card];
+             num_cards.put(card, num_cards.get(card) + 1);
          }
-         for (auto it: requirement.num_cards)
-         {
-             gap += safe_minus(it.second, num_cards[it.first]);
+         for (Entry<Card, Integer> entry: requirement.num_cards.entrySet()) {
+             gap += Utils.safeMinus(entry.getValue(), num_cards.get(entry.getKey()));
          }
      }
- if (quest.lengt > 0) {
-     if (quest.quest_type != QuestType::none)
-     {
-         int potential_value = 0;
-         switch (quest.quest_type)
-         {
-             case QuestType::skill_use:
-             case QuestType::skill_damage:
-                 for (const auto & ss: deck->commander->m_skills)
-                 {
-                     if (quest.quest_key == ss.id)
-                     {
-                         potential_value = quest.quest_value;
-                         break;
-                     }
-                 }
-                 break;
-             case QuestType::faction_assault_card_kill:
-             case QuestType::type_card_kill:
-                 potential_value = quest.quest_value;
-                 break;
-             default:
-                 break;
-         }
-         for (Card card: deck->cards)
-         {
-             switch (quest.quest_type)
-             {
-                 case QuestType::skill_use:
-                 case QuestType::skill_damage:
-                     for (SkillSpec ss: card.getSkills()) {
-                         if (quest.quest_key == ss.id) {
-                             potential_value = quest.quest_value;
-                             break;
-                         }
-                     }
-                     break;
-                 case QuestType::faction_assault_card_use:
-                     potential_value += (quest.quest_key == card->m_faction);
-                     break;
-                 case QuestType::type_card_use:
-                     potential_value += (quest.quest_key == card->m_type);
-                     break;
-                 default:
-                     break;
-             }
-             if (potential_value >= (quest.must_fulfill ? quest.quest_value : 1))
-             {
-                 break;
-             }
-         }
-         gap += safe_minus(quest.must_fulfill ? quest.quest_value : 1, potential_value);
-     }
- }
      return gap;
  }
     
@@ -308,35 +285,34 @@ public class TyrantOptimize {
         }
     
         
-    public Results computeScore(EvaluatedResults results, double[] factors)
-    {
+    public Results computeScore(EvaluatedResults results, List<Double> factors) {
         Results last = new Results(0l, 0l, 0l, 0l); //, 0, 0, 0, 0, 0, results.second};
         double max_possible = max_possible_score[optimizationMode.ordinal()];
         for (int index = 0; index < results.getResults().size(); ++index) {
-            last.wins += results.getResults().get(index).wins * factors[index];
-            last.draws += results.getResults().get(index).draws * factors[index];
-            last.losses += results.getResults().get(index).losses * factors[index];
-            //results.second, results.first[index].points / max_possible, 1 - confidence_level
+            last.wins += results.getResults().get(index).wins * factors.get(index);
+            last.draws += results.getResults().get(index).draws * factors.get(index);
+            last.losses += results.getResults().get(index).losses * factors.get(index);
+            //results.second, results.first.get(index).points / max_possible, 1 - confidence_level
             ConfidenceInterval confidenceInterval = new ClopperPearsonInterval().createInterval(results.getTotalBattles(), (int)Math.round(results.getResults().get(index).points / max_possible), confidenceLevel); //new BinomialDistribution(results.getTotalBattles(), 1 - confidenceLevel);
             // results.getResults().get(index).points / max_possible
             double lower_bound = confidenceInterval.getLowerBound() * max_possible; // find_lower_bound_on_p() * max_possible;
             double upper_bound = confidenceInterval.getUpperBound() * max_possible; //new BinomialDistribution(results.getTotalBattles(), results.getResults().get(index).points / max_possible, 1 - confidenceLevel).getSupportUpperBound() * max_possible;
             if (useHarmonicMean)
             {
-                last.points += factors[index] / results.getResults().get(index).points;
-                last.points_lower_bound += factors[index] / lower_bound;
-                last.points_upper_bound += factors[index] / upper_bound;
+                last.points += factors.get(index) / results.getResults().get(index).points;
+                last.points_lower_bound += factors.get(index) / lower_bound;
+                last.points_upper_bound += factors.get(index) / upper_bound;
             }
             else
             {
-                last.points += results.getResults().get(index).points * factors[index];
-                last.points_lower_bound += lower_bound * factors[index];
-                last.points_upper_bound += upper_bound * factors[index];
+                last.points += results.getResults().get(index).points * factors.get(index);
+                last.points_lower_bound += lower_bound * factors.get(index);
+                last.points_upper_bound += upper_bound * factors.get(index);
             }
         }
         double factorSum = 0;
-        for (int i = 0; i < factors.length; i++) {
-            factorSum += factors[i]; 
+        for (int i = 0; i < factors.size(); i++) {
+            factorSum += factors.get(i); 
         }
 
         last.wins /= factorSum * ( double)results.getTotalBattles();
@@ -378,11 +354,7 @@ public class TyrantOptimize {
         { return false; }
 
         // check gap
-        int new_gap = check_requirement(d1, requirement
-    //#ifndef NQUEST
-            , quest
-    //#endif
-        );
+        int new_gap = check_requirement(d1, requirement);
         if ((new_gap > 0) && (new_gap >= best_gap))
         { return false; }
 
@@ -397,7 +369,7 @@ public class TyrantOptimize {
 
         // Evaluate new deck
         EvaluatedResults compare_results = proc.compare(best_score.n_sims, prev_results, best_score);
-        EvaluatedResults current_score = computeScore(compare_results, proc.factors);
+        EvaluatedResults current_score = computeScore(compare_results, proc.getFactors());
 
         // Is it better ?
         if (new_gap < best_gap || current_score.points > best_score.points + min_increment_of_score)
@@ -407,10 +379,10 @@ public class TyrantOptimize {
             best_gap = new_gap;
             best_score = current_score;
             best_deck = cur_deck;
-            best_commander = d1->commander;
-            best_alpha_dominion = d1->alpha_dominion;
-            best_cards = d1->cards;
-            print_score_info(compare_results, proc.factors);
+            best_commander = d1.getCommander();
+            best_alpha_dominion = d1.getAlphaDominion();
+            best_cards = d1.getCards();
+            print_score_info(compare_results, proc.getFactors());
             print_deck_inline(deck_cost, best_score, d1);
             return true;
         }
@@ -465,10 +437,10 @@ public class TyrantOptimize {
 //            { continue; }
 //
 //            // try to skip a card unless it's allowed
-//            if (!allowed_candidates.count(card->m_id))
+//            if (!allowed_candidates.count(card.getId()))
 //            {
 //                // skip disallowed always
-//                if (disallowed_candidates.count(card->m_id))
+//                if (disallowed_candidates.count(card.getId()))
 //                { continue; }
 //
 //                // handle dominions
@@ -480,7 +452,7 @@ public class TyrantOptimize {
 //                    { continue; }
 //
 //                    // skip basic dominions
-//                    if ((card->m_id == 50001) || (card->m_id == 50002))
+//                    if ((card.getId() == 50001) || (card.getId() == 50002))
 //                    { continue; }
 //                }
 //
@@ -489,7 +461,7 @@ public class TyrantOptimize {
 //                {
 //                    // skip non-top-level cards (adjust_deck() will try to downgrade them if necessary)
 //                    boolean use_top_level = (card->m_type == CardType::commander) ? use_top_level_commander : use_top_level_card;
-//                    if (!card->is_top_level_card() and (fund || use_top_level || !owned_cards[card->m_id]))
+//                    if (!card->is_top_level_card() and (fund || use_top_level || !owned_cards[card.getId()]))
 //                    { continue; }
 //
 //                    // skip lowest fusion levels
@@ -668,4 +640,29 @@ public class TyrantOptimize {
 //        std::cout << "Optimized Deck: ";
 //        print_deck_inline(get_deck_cost(d1), best_score, d1);
 //    }
+
+  //------------------------------------------------------------------------------
+    public void print_score_info(EvaluatedResults results, List<Double> factors) {
+        Results finalResults = computeScore(results, factors);
+        System.out.print(finalResults.getPoints() + " (");
+        if (show_ci) {
+            System.out.print(finalResults.points_lower_bound + "-" + finalResults.points_upper_bound +  ", ");
+        }
+        for (Results val: results.getResults()) {
+            switch(optimization_mode)
+            {
+                case RAID:
+                case CAMPAIGN:
+                case BRAWL:
+                case BRAWL_DEFENSE:
+                case WAR:
+                    System.out.print(val.points + " ");
+                    break;
+                default:
+                    System.out.print(val.points / 100 + " ");
+                    break;
+            }
+        }
+        System.out.println("/ " + results.getTotalBattles() + ")");
+    }
 }
