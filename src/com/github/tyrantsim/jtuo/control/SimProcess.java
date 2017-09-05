@@ -46,22 +46,22 @@ public class SimProcess {
         return enemyDeckFactors;
     }
    
-    public EvaluatedResults compare(int  num_iterations, EvaluatedResults evaluated_results, Results best_results) {
+    public EvaluatedResults compare(long  num_iterations, EvaluatedResults evaluated_results, Results best_results) {
         if (num_iterations <= evaluated_results.getTotalBattles()) {
             return evaluated_results;
         }
         
         // TODO: Replace C++ code
         
-//        thread_num_iterations = num_iterations - evaluated_results.getTotalBattles();
-//        thread_results = evaluated_results;
-//        thread_best_results = best_results;
-//        thread_compare = true;
-//        thread_compare_stop = false;
-//        // unlock all the threads
-//        main_barrier.wait();
+        long thread_num_iterations = num_iterations - evaluated_results.getTotalBattles();
+        EvaluatedResults thread_results = evaluated_results;
+        Results thread_best_results = best_results;
+        boolean thread_compare = true;
+        boolean thread_compare_stop = false;
+        // unlock all the threads
+        //main_barrier.wait();
 //        // wait for the threads
-//        main_barrier.wait();
+        //main_barrier.wait();
         return evaluated_results;
     }
 }

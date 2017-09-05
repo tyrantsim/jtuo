@@ -3,8 +3,12 @@ package com.github.tyrantsim.jtuo.optimizer;
 import java.awt.PageAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -69,6 +73,31 @@ public class TyrantOptimize {
     
     public HashMap<Integer, Integer> owned_cards = new HashMap<>();
     
+    private String card_id_name(Card card) {
+        StringBuilder ios = new StringBuilder(30);
+        if (card != null) {
+            ios.append("[" + card.getId() + "] " + card.getName());
+        } else {
+            ios.append("-void-");
+        }
+        return ios.toString();
+    }
+    
+    String card_slot_id_names(List<Pair<Integer, Card>> card_list) {
+        if (card_list.isEmpty()) {
+            return "-void-";
+        }
+        StringBuilder ios = new StringBuilder(200);
+        String separator = "";
+        for (Pair<Integer, Card> card_it : card_list) {
+            ios.append(separator);
+            separator = ", ";
+            if (card_it.getFirst() >= 0) ios.append(card_it.getFirst() + " ");
+            ios.append("[" + card_it.getSecond().getId() + "] " + card_it.getSecond().getName());
+        }
+        return ios.toString();
+    }
+    
     public Deck findDeck(Decks decks, Cards allCards, String deckName)
     {
         Deck deck = Decks.findDeckByName(deckName);
@@ -79,7 +108,7 @@ public class TyrantOptimize {
         // TODO ???
         //deck  decks.decks.emplace_back(Deck{all_cards});
         deck = Decks.decks.get(0);
-        //deck.gde->set(deck_name);
+        //deck.gde.getset(deck_name);
         deck.resolve();
         return(deck);
     }
@@ -174,7 +203,7 @@ public class TyrantOptimize {
      }
      if (from_slot < deck.getCards().size()) {
          // remove card from the deck
-         cards_out.add(new Pair<>(is_random ? -1 : from_slot, deck.getCards().get(from_slot))); // cards_out.emplace_back(is_random ? -1 : from_slot, deck->cards[from_slot]); // 
+         cards_out.add(new Pair<>(is_random ? -1 : from_slot, deck.getCards().get(from_slot))); // cards_out.emplace_back(is_random ? -1 : from_slot, deck.getcards[from_slot]); // 
          deck.getCards().remove(from_slot);
      }
      if (card == null) { // remove card (no new replacement for removed card)
@@ -191,7 +220,7 @@ public class TyrantOptimize {
          Card candidate_card = card;
          deck.setCommander(null);
          deck.getCards().clear();
-         //deck->cards.emplace_back(card);
+         //deck.getcards.emplace_back(card);
          deck_cost = get_deck_cost(deck);
          if (!use_top_level_card && (deck_cost > fund)) {
              while ((deck_cost > fund) && !candidate_card.isLowLevelCard()) {
@@ -229,7 +258,7 @@ public class TyrantOptimize {
      for (int i = 0; i < cards.size(); ++i) {
          // try to add cards[i] into the deck, downgrade it if necessary
          Card candidate_card = cards.get(i);
-         //Card in_it = deck.getCards().get(deck.getCards().size() - (i < to_slot ? 1 : 0)); //  ??? ->cards.end() - (i < to_slot); // (before/after according to slot index)
+         //Card in_it = deck.getCards().get(deck.getCards().size() - (i < to_slot ? 1 : 0)); //  ??? .getcards.end() - (i < to_slot); // (before/after according to slot index)
          if (i < to_slot) {
              deck.getCards().add(deck.getCards().size() - 1, candidate_card);
          } else {
@@ -271,17 +300,18 @@ public class TyrantOptimize {
  }
     
     public void claimCards(ArrayList<Card> card_list) {
-            TreeMap<Card, Integer> num_cards = new TreeMap<>(); //::map<Card, int> num_cards;
-            //get_required_cards_before_upgrade(card_list, num_cards);
-            num_cards.forEach((card, num)->{
-                Integer num_to_claim = Utils.safeMinus(num, owned_cards.get(card.getId()));
+            TreeMap<Card, Integer> num_cards = new TreeMap<>();
+            getRequiredCardsBeforeUpgrade(card_list, num_cards);
+            for (Entry<Card, Integer> pair : num_cards.entrySet()) {
+                Card card = pair.getKey();
+                Integer num_to_claim = Utils.safeMinus(pair.getValue(), owned_cards.get(card.getId()));
                 if (num_to_claim > 0) {
                     owned_cards.put(card.getId(), owned_cards.get(card.getId()) + num_to_claim);
                     if (DEBUG) {
                         System.out.println("WARNING: Need extra " + num_to_claim  + " " + card.getName() + " to build your initial deck: adding to owned card list.\n");
                     }
                 }
-            });
+            }
         }
     
         
@@ -341,16 +371,17 @@ public class TyrantOptimize {
             Map<String, EvaluatedResults> evaluated_decks, EvaluatedResults zero_results,
             long skipped_simulations, SimProcess proc) {
         int deck_cost = 0;
-        List<Entry<Integer, Card>> cards_out, cards_in;
-        //std::mt19937& re = proc.threads_data[0]->re;
+        List<Pair<Integer, Card>> cards_out = new ArrayList<>(), cards_in = new ArrayList<>();
+        //std.mt19937& re = proc.threads_data[0].getre;
 
         // setup best deck
         d1.setCommander(best_commander);
         d1.setAlphaDominion(best_alpha_dominion);
         d1.setCards(best_cards);
 
+        Object re = null;
         // try to adjust the deck
-        if (!adjust_deck(d1, from_slot, to_slot, card_candidate, fund, re, deck_cost, cards_out, cards_in))
+        if (!adjustDeck(d1, from_slot, to_slot, card_candidate, fund, re, deck_cost, cards_out, cards_in))
         { return false; }
 
         // check gap
@@ -360,22 +391,24 @@ public class TyrantOptimize {
 
         // check previous simulations
         String cur_deck = d1.hash();
-        // emplace_rv = evaluated_decks.insert({cur_deck, zero_results});
-        //auto & prev_results = emplace_rv.first->second;
-        if (!emplace_rv.second)
-        {
-            skipped_simulations += prev_results.second;
+        EvaluatedResults prev_results = null;
+        if (evaluated_decks.get(cur_deck) == null) {
+            evaluated_decks.put(cur_deck, zero_results);
+            prev_results = zero_results;
+        } else {
+            prev_results = evaluated_decks.get(cur_deck);
+            skipped_simulations += prev_results.getTotalBattles();
         }
 
         // Evaluate new deck
         EvaluatedResults compare_results = proc.compare(best_score.n_sims, prev_results, best_score);
-        EvaluatedResults current_score = computeScore(compare_results, proc.getFactors());
+        Results current_score = computeScore(compare_results, proc.getFactors());
 
         // Is it better ?
         if (new_gap < best_gap || current_score.points > best_score.points + min_increment_of_score)
         {
             // Then update best score/slot, print stuff
-            System.out.println("Deck improved: " + d1.hash() + ": " + card_slot_id_names(cards_out) + " -> " + card_slot_id_names(cards_in) + ": ");
+            System.out.println("Deck improved: " + d1.hash() + ": " + card_slot_id_names(cards_out) + " .get " + card_slot_id_names(cards_in) + ": ");
             best_gap = new_gap;
             best_score = current_score;
             best_deck = cur_deck;
@@ -396,30 +429,30 @@ public class TyrantOptimize {
 //    #endif
 //    )
 //    {
-//        EvaluatedResults zero_results = { EvaluatedResults::first_type(proc.enemy_decks.size()), 0 };
-//        std::string best_deck = d1->hash();
-//        std::unordered_map<std::string, EvaluatedResults> evaluated_decks{{best_deck, zero_results}};
-//        EvaluatedResults& results = proc.evaluate(num_min_iterations, evaluated_decks.begin()->second);
+//        EvaluatedResults zero_results = { EvaluatedResults.first_type(proc.enemy_decks.size()), 0 };
+//        std.string best_deck = d1.gethash();
+//        std.unordered_map<std.string, EvaluatedResults> evaluated_decks{{best_deck, zero_results}};
+//        EvaluatedResults& results = proc.evaluate(num_min_iterations, evaluated_decks.begin().getsecond);
 //        print_score_info(results, proc.factors);
 //        FinalResults<long double> best_score = compute_score(results, proc.factors);
-//        const Card* best_commander = d1->commander;
-//        const Card* best_alpha_dominion = d1->alpha_dominion;
-//        std::vector<const Card*> best_cards = d1->cards;
+//        const Card* best_commander = d1.getcommander;
+//        const Card* best_alpha_dominion = d1.getalpha_dominion;
+//        std.vector<const Card*> best_cards = d1.getcards;
 //        int deck_cost = get_deck_cost(d1);
-//        fund = std::max(fund, deck_cost);
+//        fund = std.max(fund, deck_cost);
 //        print_deck_inline(deck_cost, best_score, d1);
-//        std::mt19937& re = proc.threads_data[0]->re;
+//        std.mt19937& re = proc.threads_data[0].getre;
 //        int best_gap = check_requirement(d1, requirement
 //    #ifndef NQUEST
 //            , quest
 //    #endif
 //        );
-//        boolean is_random = d1->strategy == DeckStrategy::random;
+//        boolean is_random = d1.getstrategy == DeckStrategy.random;
 //        boolean deck_has_been_improved = true;
 //        int long skipped_simulations = 0;
-//        std::vector<const Card*> commander_candidates;
-//        std::vector<const Card*> alpha_dominion_candidates;
-//        std::vector<const Card*> card_candidates;
+//        std.vector<const Card*> commander_candidates;
+//        std.vector<const Card*> alpha_dominion_candidates;
+//        std.vector<const Card*> card_candidates;
 //
 //        // resolve available to player cards
 //        auto player_assaults_and_structures = proc.cards.player_commanders;
@@ -428,12 +461,12 @@ public class TyrantOptimize {
 //        for (const Card* card: player_assaults_and_structures)
 //        {
 //            // skip illegal
-//            if ((card->m_category != CardCategory::dominion_alpha)
-//                && (card->m_category != CardCategory::normal))
+//            if ((card.getm_category != CardCategory.dominion_alpha)
+//                && (card.getm_category != CardCategory.normal))
 //            { continue; }
 //
 //            // skip dominions when their climbing is disabled
-//            if ((card->m_category == CardCategory::dominion_alpha) && (!use_dominion_climbing))
+//            if ((card.getm_category == CardCategory.dominion_alpha) && (!use_dominion_climbing))
 //            { continue; }
 //
 //            // try to skip a card unless it's allowed
@@ -444,11 +477,11 @@ public class TyrantOptimize {
 //                { continue; }
 //
 //                // handle dominions
-//                if (card->m_category == CardCategory::dominion_alpha)
+//                if (card.getm_category == CardCategory.dominion_alpha)
 //                {
 //                    // skip non-top-level dominions anyway
 //                    // (will check it later and downgrade if necessary according to amount of material (shards))
-//                    if (!card->is_top_level_card())
+//                    if (!card.getis_top_level_card())
 //                    { continue; }
 //
 //                    // skip basic dominions
@@ -460,30 +493,30 @@ public class TyrantOptimize {
 //                else
 //                {
 //                    // skip non-top-level cards (adjust_deck() will try to downgrade them if necessary)
-//                    boolean use_top_level = (card->m_type == CardType::commander) ? use_top_level_commander : use_top_level_card;
-//                    if (!card->is_top_level_card() and (fund || use_top_level || !owned_cards[card.getId()]))
+//                    boolean use_top_level = (card.getm_type == CardType.commander) ? use_top_level_commander : use_top_level_card;
+//                    if (!card.getis_top_level_card() and (fund || use_top_level || !owned_cards[card.getId()]))
 //                    { continue; }
 //
 //                    // skip lowest fusion levels
-//                    int use_fused_level = (card->m_type == CardType::commander) ? use_fused_commander_level : use_fused_card_level;
-//                    if (card->m_fusion_level < use_fused_level)
+//                    int use_fused_level = (card.getm_type == CardType.commander) ? use_fused_commander_level : use_fused_card_level;
+//                    if (card.getm_fusion_level < use_fused_level)
 //                    { continue; }
 //                }
 //            }
 //
 //            // skip sub-dominion cards anyway
-//            if ((card->m_category == CardCategory::dominion_alpha) && is_in_recipe(owned_alpha_dominion, card))
+//            if ((card.getm_category == CardCategory.dominion_alpha) && is_in_recipe(owned_alpha_dominion, card))
 //            { continue; }
 //
 //            // skip unavailable cards anyway when ownedcards is used
 //            if (use_owned_cards && !is_owned_or_can_be_fused(card))
 //            {
 //                boolean success = false;
-//                if (card->m_category == CardCategory::dominion_alpha)
+//                if (card.getm_category == CardCategory.dominion_alpha)
 //                {
-//                    while (!card->is_low_level_card() && !success)
+//                    while (!card.getis_low_level_card() && !success)
 //                    {
-//                        card = card->downgraded();
+//                        card = card.getdowngraded();
 //                        if (is_in_recipe(owned_alpha_dominion, card)) { break; }
 //                        success = is_owned_or_can_be_fused(card);
 //                    }
@@ -493,15 +526,15 @@ public class TyrantOptimize {
 //            }
 //
 //            // enqueue candidate according to category & type
-//            if (card->m_type == CardType::commander)
+//            if (card.getm_type == CardType.commander)
 //            {
 //                commander_candidates.emplace_back(card);
 //            }
-//            else if (card->m_category == CardCategory::dominion_alpha)
+//            else if (card.getm_category == CardCategory.dominion_alpha)
 //            {
 //                alpha_dominion_candidates.emplace_back(card);
 //            }
-//            else if (card->m_category == CardCategory::normal)
+//            else if (card.getm_category == CardCategory.normal)
 //            {
 //                card_candidates.emplace_back(card);
 //            }
@@ -515,33 +548,33 @@ public class TyrantOptimize {
 //        {
 //            if (best_alpha_dominion)
 //            {
-//                if (!std::count(alpha_dominion_candidates.begin(), alpha_dominion_candidates.end(), best_alpha_dominion))
+//                if (!std.count(alpha_dominion_candidates.begin(), alpha_dominion_candidates.end(), best_alpha_dominion))
 //                {
 //                    alpha_dominion_candidates.emplace_back(best_alpha_dominion);
 //                }
 //            }
 //            else if (!alpha_dominion_candidates.empty())
 //            {
-//                best_alpha_dominion = d1->alpha_dominion = alpha_dominion_candidates[0];
+//                best_alpha_dominion = d1.getalpha_dominion = alpha_dominion_candidates[0];
 //            }
 //            if (debug_print > 0)
 //            {
 //                for (const Card* dom_card : alpha_dominion_candidates)
 //                {
-//                    std::cout << " ** next Alpha Dominion candidate: " << dom_card->m_name
-//                        << " ($: " << alpha_dominion_cost(dom_card) << ")" << std::endl;
+//                    System.out.print(" ** next Alpha Dominion candidate: " + dom_card.getm_name
+//                        + " ($: " + alpha_dominion_cost(dom_card) + ")" + std.endl;
 //                }
 //            }
 //        }
 //        if (!best_alpha_dominion && owned_alpha_dominion)
 //        {
 //            best_alpha_dominion = owned_alpha_dominion;
-//            std::cout << "Setting up owned Alpha Dominion into a deck: " << best_alpha_dominion->m_name << std::endl;
+//            System.out.print("Setting up owned Alpha Dominion into a deck: " + best_alpha_dominion.getm_name + std.endl;
 //        }
 //
-//        // << main climbing loop >>
+//        // + main climbing loop >>
 //        for (int from_slot(freezed_cards), dead_slot(freezed_cards); ;
-//                from_slot = std::max(freezed_cards, (from_slot + 1) % std::min<int>(max_deck_len, best_cards.size() + 1)))
+//                from_slot = std.max(freezed_cards, (from_slot + 1) % std.min<int>(max_deck_len, best_cards.size() + 1)))
 //        {
 //            if (deck_has_been_improved)
 //            {
@@ -555,12 +588,12 @@ public class TyrantOptimize {
 //                auto & prev_results = evaluated_decks[best_deck];
 //                skipped_simulations += prev_results.second;
 //                // Re-evaluate the best deck
-//                d1->commander = best_commander;
-//                d1->alpha_dominion = best_alpha_dominion;
-//                d1->cards = best_cards;
-//                auto evaluate_result = proc.evaluate(std::min(prev_results.second * iterations_multiplier, num_iterations), prev_results);
+//                d1.getcommander = best_commander;
+//                d1.getalpha_dominion = best_alpha_dominion;
+//                d1.getcards = best_cards;
+//                auto evaluate_result = proc.evaluate(std.min(prev_results.second * iterations_multiplier, num_iterations), prev_results);
 //                best_score = compute_score(evaluate_result, proc.factors);
-//                std::cout << "Results refined: ";
+//                System.out.print("Results refined: ";
 //                print_score_info(evaluate_result, proc.factors);
 //                dead_slot = from_slot;
 //            }
@@ -570,7 +603,7 @@ public class TyrantOptimize {
 //            // commander
 //            if (requirement.num_cards.count(best_commander) == 0)
 //            {
-//                // << commander candidate loop >>
+//                // + commander candidate loop >>
 //                for (const Card* commander_candidate: commander_candidates)
 //                {
 //                    if (best_score.points - target_score > -1e-9)
@@ -582,15 +615,15 @@ public class TyrantOptimize {
 //                        evaluated_decks, zero_results, skipped_simulations, proc);
 //                }
 //                // Now that all commanders are evaluated, take the best one
-//                d1->commander = best_commander;
-//                d1->alpha_dominion = best_alpha_dominion;
-//                d1->cards = best_cards;
+//                d1.getcommander = best_commander;
+//                d1.getalpha_dominion = best_alpha_dominion;
+//                d1.getcards = best_cards;
 //            }
 //
 //            // alpha dominion
 //            if (use_dominion_climbing && !alpha_dominion_candidates.empty())
 //            {
-//                // << alpha dominion candidate loop >>
+//                // + alpha dominion candidate loop >>
 //                for (const Card* alpha_dominion_candidate: alpha_dominion_candidates)
 //                {
 //                    if (best_score.points - target_score > -1e-9)
@@ -602,15 +635,15 @@ public class TyrantOptimize {
 //                        evaluated_decks, zero_results, skipped_simulations, proc);
 //                }
 //                // Now that all alpha dominions are evaluated, take the best one
-//                d1->commander = best_commander;
-//                d1->alpha_dominion = best_alpha_dominion;
-//                d1->cards = best_cards;
+//                d1.getcommander = best_commander;
+//                d1.getalpha_dominion = best_alpha_dominion;
+//                d1.getcards = best_cards;
 //            }
 //
 //            // shuffle candidates
-//            std::shuffle(card_candidates.begin(), card_candidates.end(), re);
+//            std.shuffle(card_candidates.begin(), card_candidates.end(), re);
 //
-//            // << card candidate loop >>
+//            // + card candidate loop >>
 //            for (const Card* card_candidate: card_candidates)
 //            {
 //                for (int to_slot(is_random ? from_slot : card_candidate ? freezed_cards : (best_cards.size() - 1));
@@ -618,9 +651,9 @@ public class TyrantOptimize {
 //                        ++ to_slot)
 //                {
 //                    if (card_candidate ?
-//                            (from_slot < best_cards.size() && (from_slot == to_slot && card_candidate == best_cards[to_slot])) // 2 Omega -> 2 Omega
+//                            (from_slot < best_cards.size() && (from_slot == to_slot && card_candidate == best_cards[to_slot])) // 2 Omega .get 2 Omega
 //                            :
-//                            (from_slot == best_cards.size())) // void -> void
+//                            (from_slot == best_cards.size())) // void .get void
 //                    { continue; }
 //                    deck_has_been_improved |= try_improve_deck(d1, from_slot, to_slot, card_candidate,
 //                        best_commander, best_alpha_dominion, best_cards, best_score, best_gap, best_deck,
@@ -630,14 +663,14 @@ public class TyrantOptimize {
 //                { break; }
 //            }
 //        }
-//        d1->commander = best_commander;
-//        d1->alpha_dominion = best_alpha_dominion;
-//        d1->cards = best_cards;
+//        d1.getcommander = best_commander;
+//        d1.getalpha_dominion = best_alpha_dominion;
+//        d1.getcards = best_cards;
 //        int simulations = 0;
 //        for (auto evaluation: evaluated_decks)
 //        { simulations += evaluation.second.second; }
-//        std::cout << "Evaluated " << evaluated_decks.size() << " decks (" << simulations << " + " << skipped_simulations << " simulations)." << std::endl;
-//        std::cout << "Optimized Deck: ";
+//        System.out.print("Evaluated " + evaluated_decks.size() + " decks (" + simulations + " + " + skipped_simulations + " simulations)." + std.endl;
+//        System.out.print("Optimized Deck: ";
 //        print_deck_inline(get_deck_cost(d1), best_score, d1);
 //    }
 
@@ -664,5 +697,84 @@ public class TyrantOptimize {
             }
         }
         System.out.println("/ " + results.getTotalBattles() + ")");
+    }
+    
+    void print_deck_inline(int deck_cost, Results score, Deck deck) {
+        // print units count
+        System.out.print(deck.getCards().size() + " units: ");
+        
+        // print deck cost (if fund is enabled)
+        if (fund > 0){
+            System.out.print("$" + deck_cost + " ");
+        }
+
+        // print optimization result details
+        switch(optimization_mode)
+        {
+            case RAID:
+            case CAMPAIGN:
+            case BRAWL:
+            case BRAWL_DEFENSE:
+            case WAR:
+                System.out.println("(" + score.wins * 100 + "% win");
+                if (show_ci)
+                {
+                    System.out.print(", " + score.points_lower_bound + "-" + score.points_upper_bound);
+                }
+                System.out.print(") ");
+                break;
+            case DEFENSE:
+                System.out.print("(" + score.draws * 100.0 + "% stall) ");
+                break;
+            default:
+                break;
+        }
+        System.out.print(score.points);
+        int min_score = min_possible_score[optimization_mode.ordinal()];
+        int max_score = max_possible_score[optimization_mode.ordinal()];
+        if (optimization_mode == OptimizationMode.BRAWL)
+        {
+            double win_points = score.getWins() > 0 ? ((score.getPoints() - min_score * (1.0 - score.getWins())) / score.getWins()) : score.getPoints();
+            System.out.print(" [" + win_points + " per win]");
+        }
+        else if (optimization_mode == OptimizationMode.BRAWL_DEFENSE)
+        {
+            double opp_win_points = score.getLosses() > 0 ? max_score - ((score.points - (max_score - min_score) * (1.0 - score.losses)) / score.losses) : score.points;
+            System.out.print(" [" + opp_win_points + " per opp win]");
+        }
+
+        // print commander
+        System.out.print(": " + deck.getCommander().getName());
+
+        // print dominions
+        if (deck.getAlphaDominion() != null) { System.out.print(", " + deck.getAlphaDominion().getName()); }
+
+        // print deck cards
+        if (deck.getStrategy() == DeckStrategy.RANDOM) {
+            Collections.sort(deck.getCards(), new Comparator<Card>() {
+                @Override
+                public int compare(Card a, Card b) {
+                    return a.getId() - b.getId();
+                }
+            });
+        }
+        String last_name = "";
+        int num_repeat = 0;
+        for (Card card : deck.getCards()) {
+            if (card.getName().equals(last_name)) {
+                ++num_repeat;
+            } else {
+                if (num_repeat > 1) {
+                    System.out.print(" #" + num_repeat);
+                }
+                System.out.print(", " + card.getName());
+                last_name = card.getName();
+                num_repeat = 1;
+            }
+        }
+        if (num_repeat > 1) {
+            System.out.print(" #" + num_repeat);
+        }
+        System.out.println();
     }
 }

@@ -8,7 +8,8 @@ public class Results {
     public long points;
     public double points_lower_bound;
     public double points_upper_bound;
-
+    public long n_sims;
+    
     public Results() {}
 
     public Results(long wins, long draws, long losses, long points) {
