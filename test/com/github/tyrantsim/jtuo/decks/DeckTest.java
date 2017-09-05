@@ -93,4 +93,14 @@ public class DeckTest {
         }
     }
 
+    @Test
+    public void testHashDeck() {
+        CardsParser.initialize();
+        Deck deck = new Deck();
+        deck.setCommander(CardsParser.getCardCopy(1000));
+        deck.setCards(Arrays.asList(CardsParser.getCardCopy(1), CardsParser.getCardCopy(2)));
+
+        assertEquals("I/hi", deck.hash());
+    }
+
 }

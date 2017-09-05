@@ -233,8 +233,8 @@ public class Deck implements Cloneable {
             int factor = card.getId();
             while (factor >= 32) {
                 sb.append(Constants.BASE64_CHARS.toCharArray()[factor % 32]);
+                factor /= 32;
             }
-            factor /= 32;
             sb.append(Constants.BASE64_CHARS.toCharArray()[factor + 32]);
         }
 
