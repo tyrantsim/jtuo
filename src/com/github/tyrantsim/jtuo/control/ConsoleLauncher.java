@@ -165,12 +165,12 @@ public class ConsoleLauncher {
             enemyDeckFactors.add(value);
         }
 
-        System.out.println("Your Deck: ");
+        System.out.println("Your Deck: " + yourDeck.hash());
         System.out.println(yourDeckName);
         List<String> deckNames = new ArrayList<>();
         deckNames.addAll(deckListParsed.keySet());
         for (int i = 0; i < enemyDecks.size(); i++) {
-            System.out.println("Enemy's Deck " + (i + 1) + ": ");
+            System.out.println("Enemy's Deck " + (i + 1) + ": " + enemyDecks.get(i).hash());
             System.out.println(deckNames.get(i));
         }
 
