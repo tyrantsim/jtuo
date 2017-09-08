@@ -22,8 +22,15 @@ public class DeckParserTest {
     @Test
     public void testGetCommanderSpec() throws Exception {
         CardsParser.initialize();
+
         int halcyonId = DeckParser.parseCardSpec("Halcyon-1").getCardId();
         assertTrue(CardsParser.getCardCopy(halcyonId).getType() == CardType.COMMANDER);
+
+        int barracusId = DeckParser.parseCardSpec("Barracus-1").getCardId();
+        assertTrue(CardsParser.getCardCopy(barracusId).getType() == CardType.COMMANDER);
+
+        int barracusUpgradedId = DeckParser.parseCardSpec("Barracus").getCardId();
+        assertTrue(CardsParser.getCardCopy(barracusUpgradedId).getType() == CardType.COMMANDER);
     }
 
 }
