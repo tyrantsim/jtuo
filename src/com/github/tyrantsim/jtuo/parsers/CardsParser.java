@@ -223,6 +223,7 @@ public class CardsParser {
             for (Card card : upgrades.values()) {
                 if (card.getLevel() > topLevelCard.getLevel()) {
                     topLevelCard = card;
+                    card.setType(baseCard.getType());
                 }
             }
             baseCard.setTopLevelCard(topLevelCard);

@@ -5,6 +5,7 @@ import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.decks.Deck;
 import com.github.tyrantsim.jtuo.decks.DeckStrategy;
 import com.github.tyrantsim.jtuo.decks.Decks;
+import com.github.tyrantsim.jtuo.optimizer.TyrantOptimize;
 import com.github.tyrantsim.jtuo.parsers.CardsParser;
 import com.github.tyrantsim.jtuo.parsers.DeckParser;
 import com.github.tyrantsim.jtuo.sim.FieldSimulator;

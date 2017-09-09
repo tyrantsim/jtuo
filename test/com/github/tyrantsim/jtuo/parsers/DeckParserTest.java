@@ -30,6 +30,7 @@ public class DeckParserTest {
         assertTrue(CardsParser.getCardCopy(barracusId).getType() == CardType.COMMANDER);
 
         int barracusUpgradedId = DeckParser.parseCardSpec("Barracus").getCardId();
+        assertEquals(barracusUpgradedId, CardsParser.getCardCopy(barracusId).getTopLevelCard().getId());
         assertTrue(CardsParser.getCardCopy(barracusUpgradedId).getType() == CardType.COMMANDER);
     }
 
