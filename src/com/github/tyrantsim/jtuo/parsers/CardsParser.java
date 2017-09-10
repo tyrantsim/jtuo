@@ -235,9 +235,7 @@ public class CardsParser {
                 }
                 card.setTopLevelCard(topLevelCard);
             }
-            //System.out.println(baseCard);
         }
-
         return cards;
     }
 

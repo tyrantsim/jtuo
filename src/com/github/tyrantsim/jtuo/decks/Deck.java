@@ -77,11 +77,24 @@ public class Deck implements Cloneable {
     public Deck() {
         this(DeckType.DECK, 0, "");
     }
+    
+    public Deck(String name, Cards allCards) {
+        this(DeckType.DECK, 0, name);
+        this.allCards = allCards;
+    }
 
     public void set(String deckString) {
         this.deckString = deckString;
     }
 
+    public Cards getAllCards() {
+        return allCards;
+    }
+
+    public void setAllCards(Cards allCards) {
+        this.allCards = allCards;
+    }
+    
     public void set(List<Integer> ids, Map<Integer, Boolean> marks) {
 
         commander = null;
@@ -239,7 +252,6 @@ public class Deck implements Cloneable {
         }
 
         return sb.toString();
-
     }
 
     public static void hashToIds(String hash, List<Integer> ids) {
