@@ -24,14 +24,14 @@ public class DeckParserTest {
         CardsParser.initialize();
 
         int halcyonId = DeckParser.parseCardSpec("Halcyon-1").getCardId();
-        assertTrue(CardsParser.getCardCopy(halcyonId).getType() == CardType.COMMANDER);
+        assertEquals(CardType.COMMANDER, CardsParser.getCardCopy(halcyonId).getType());
 
         int barracusId = DeckParser.parseCardSpec("Barracus-1").getCardId();
-        assertTrue(CardsParser.getCardCopy(barracusId).getType() == CardType.COMMANDER);
+        assertEquals(CardType.COMMANDER, CardsParser.getCardCopy(barracusId).getType());
 
         int barracusUpgradedId = DeckParser.parseCardSpec("Barracus").getCardId();
         assertEquals(barracusUpgradedId, CardsParser.getCardCopy(barracusId).getTopLevelCard().getId());
-        assertTrue(CardsParser.getCardCopy(barracusUpgradedId).getType() == CardType.COMMANDER);
+        assertEquals(CardType.COMMANDER, CardsParser.getCardCopy(barracusUpgradedId).getType());
     }
 
 }
