@@ -13,3 +13,4 @@
 *.iws
 
 out
+data/cards_section_*.xml
