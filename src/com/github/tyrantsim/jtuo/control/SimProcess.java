@@ -1,6 +1,9 @@
 package com.github.tyrantsim.jtuo.control;
 
+import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.decks.Deck;
+import com.github.tyrantsim.jtuo.decks.Decks;
+import com.github.tyrantsim.jtuo.optimizer.TyrantOptimize;
 import com.github.tyrantsim.jtuo.sim.Results;
 import com.github.tyrantsim.jtuo.sim.SimulationData;
 
@@ -10,12 +13,16 @@ import java.util.Random;
 public class SimProcess {
 
     private Random random = new Random();
+    public Random getRandom() {
+        return random;
+    }
+
     private int numThreads;
     private Deck yourDeck;
     private List<Deck> enemyDecks;
     private List<Double> enemyDeckFactors;
 
-    private EvaluatedResults evaluatedResults = null;
+    //private EvaluatedResults evaluatedResults = null;
 
     public SimProcess(int optNumThreads, Deck yourDeck, List<Deck> enemyDecks, List<Double> enemyDeckFactors) {
         this.numThreads = optNumThreads;
@@ -24,8 +31,32 @@ public class SimProcess {
         this.enemyDeckFactors = enemyDeckFactors;
     }
 
+    public List<Deck> getEnemyDecks() {
+        return enemyDecks;
+    }
+
+    public void setEnemyDecks(List<Deck> enemyDecks) {
+        this.enemyDecks = enemyDecks;
+    }
+
+    public EvaluatedResults evaluate(int iterations, EvaluatedResults evaluatedResults) {
+        if (iterations <= evaluatedResults.getTotalBattles())
+        {
+            return evaluatedResults;
+        }
+//        TyrantOptimize.thread_iterations = iterations - evaluatedResults.getTotalBattles();
+//        EvaluatedResults thread_results = evaluatedResults;
+//        thread_compare = false;
+//        // unlock all the threads
+//        main_barrier.wait();
+//        // wait for the threads
+//        main_barrier.wait();
+        return evaluatedResults;
+    }
+
+    
     public EvaluatedResults evaluate(int iterations) {
-        evaluatedResults = new EvaluatedResults();
+        EvaluatedResults evaluatedResults = new EvaluatedResults();
         evaluatedResults.totalBattles = iterations;
 
         // TODO: implement normal multithreading

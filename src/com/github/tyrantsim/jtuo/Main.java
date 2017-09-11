@@ -3,7 +3,7 @@ package com.github.tyrantsim.jtuo;
 import com.github.tyrantsim.jtuo.control.ConsoleLauncher;
 
 public class Main {
-
+    public static int debug_print = 0;
     public static void main(String[] args) {
         if (args.length == 1 && args[0].equals("-version")) {
             ConsoleLauncher.printVersion();

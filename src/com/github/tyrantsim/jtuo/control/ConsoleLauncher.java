@@ -1,57 +1,40 @@
 package com.github.tyrantsim.jtuo.control;
 
+import static com.github.tyrantsim.jtuo.Constants.VERSION;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import com.github.tyrantsim.jtuo.Constants;
-import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.decks.Deck;
 import com.github.tyrantsim.jtuo.decks.DeckStrategy;
 import com.github.tyrantsim.jtuo.decks.Decks;
+import com.github.tyrantsim.jtuo.optimizer.Requirement;
 import com.github.tyrantsim.jtuo.optimizer.TyrantOptimize;
 import com.github.tyrantsim.jtuo.parsers.CardsParser;
 import com.github.tyrantsim.jtuo.parsers.DeckParser;
 import com.github.tyrantsim.jtuo.sim.FieldSimulator;
+import com.github.tyrantsim.jtuo.sim.GameMode;
+import com.github.tyrantsim.jtuo.sim.OptimizationMode;
+import com.github.tyrantsim.jtuo.sim.PassiveBGE;
 import com.github.tyrantsim.jtuo.sim.Results;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
-import static com.github.tyrantsim.jtuo.Constants.VERSION;
 
 public class ConsoleLauncher {
 
-    private static final String USAGE = "usage: ./tuo.exe Your_Deck Enemy_Deck [Flags] [Operations]\n" +
-            "\n" +
-            "Your_Deck:\n" +
-            "  the name/hash/cards of a custom deck.\n" +
-            "\n" +
-            "Enemy_Deck:\n" +
-            "  semicolon separated list of defense decks, syntax:\n" +
-            "  deck1[:factor1];deck2[:factor2];...\n" +
-            "  where deck is the name/hash/cards of a mission, raid, quest or custom deck, and factor is optional. The default factor is 1.\n" +
-            "  example: 'fear:0.2;slowroll:0.8' means fear is the defense deck 20% of the time, while slowroll is the defense deck 80% of the time.\n" +
-            "\n" +
-            "Flags:\n" +
-            "  -e \"<effect>\": set the battleground effect; you may use -e multiple times.\n" +
-            "  -r: the attack deck is played in order instead of randomly (respects the 3 cards drawn limit).\n" +
-            "  -s: use surge (default is fight).\n" +
-            "  -t <num>: set the number of threads, default is 4.\n" +
-            "  win:     simulate/optimize for win rate. default for non-raids.\n" +
-            "  defense: simulate/optimize for win rate + stall rate. can be used for defending deck or win rate oriented raid simulations.\n" +
-            "  raid:    simulate/optimize for average raid damage (ARD). default for raids.\n" +
-            "Flags for climb:\n" +
-            "  -c: don't try to optimize the commander.\n" +
-            "  -L <min> <max>: restrict deck size between <min> and <max>.\n" +
-            "  -o: restrict to the owned cards listed in \"data/ownedcards.txt\".\n" +
-            "  -o=<filename>: restrict to the owned cards listed in <filename>.\n" +
-            "  fund <num>: invest <num> SP to upgrade cards.\n" +
-            "  target <num>: stop as soon as the score reaches <num>.\n" +
-            "\n" +
-            "Operations:\n" +
-            "  sim <num>: simulate <num> battles to evaluate a deck.\n" +
-            "  climb <num>: perform hill-climbing starting from the given attack deck, using up to <num> battles to evaluate a deck.\n" +
-            "  reorder <num>: optimize the order for given attack deck, using up to <num> battles to evaluate an order.";
+    private static final String USAGE = "usage: ./tuo.exe Your_Deck Enemy_Deck [Flags] [Operations]\n" + "\n" + "Your_Deck:\n" + "  the name/hash/cards of a custom deck.\n" + "\n" + "Enemy_Deck:\n"
+            + "  semicolon separated list of defense decks, syntax:\n" + "  deck1[:factor1];deck2[:factor2];...\n" + "  where deck is the name/hash/cards of a mission, raid, quest or custom deck, and factor is optional. The default factor is 1.\n"
+            + "  example: 'fear:0.2;slowroll:0.8' means fear is the defense deck 20% of the time, while slowroll is the defense deck 80% of the time.\n" + "\n" + "Flags:\n"
+            + "  -e \"<effect>\": set the battleground effect; you may use -e multiple times.\n" + "  -r: the attack deck is played in order instead of randomly (respects the 3 cards drawn limit).\n" + "  -s: use surge (default is fight).\n"
+            + "  -t <num>: set the number of threads, default is 4.\n" + "  win:     simulate/optimize for win rate. default for non-raids.\n"
+            + "  defense: simulate/optimize for win rate + stall rate. can be used for defending deck or win rate oriented raid simulations.\n" + "  raid:    simulate/optimize for average raid damage (ARD). default for raids.\n"
+            + "Flags for climb:\n" + "  -c: don't try to optimize the commander.\n" + "  -L <min> <max>: restrict deck size between <min> and <max>.\n" + "  -o: restrict to the owned cards listed in \"data/ownedcards.txt\".\n"
+            + "  -o=<filename>: restrict to the owned cards listed in <filename>.\n" + "  fund <num>: invest <num> SP to upgrade cards.\n" + "  target <num>: stop as soon as the score reaches <num>.\n" + "\n" + "Operations:\n"
+            + "  sim <num>: simulate <num> battles to evaluate a deck.\n" + "  climb <num>: perform hill-climbing starting from the given attack deck, using up to <num> battles to evaluate a deck.\n"
+            + "  reorder <num>: optimize the order for given attack deck, using up to <num> battles to evaluate an order.";
 
+    // "Nexor the Farseer, Alpha Replicant, Windstorm Successor, Airspace Regulators, Windstorm Successor, Airspace Regulators, Slendatomic, Inquisitor's Domain, Wolf Weaponized, Loathe Abysswing #2, Airspace Regulators" "BRAWL_GT_MYTH" raid random -e "BLOOD_VENGEANCE" endgame 2 fund 0 -o=inv\Brikikeks.txt -L 5 10 climbex 10 200
+    
     static class Todo {
         Operation operation;
         int iterations;
@@ -93,7 +76,9 @@ public class ConsoleLauncher {
         DeckStrategy optYourDeckStrategy = DeckStrategy.RANDOM;
         DeckStrategy optEnemyStrategy = DeckStrategy.RANDOM;
 
-        List<Todo> optTodo = new ArrayList();
+        List<Todo> optTodo = new ArrayList<>();
+
+        PassiveBGE bge = null;
 
         for (int argIndex = 2; argIndex < args.length; argIndex++) {
             String arg = args[argIndex];
@@ -113,9 +98,24 @@ public class ConsoleLauncher {
                 if (optTodo.size() < 10) {
                     optNumThreads = 1;
                 }
+            } else if (arg.equals("raid")) {
+                OptimizationMode optimizationMode = OptimizationMode.RAID;
+                GameMode mode = GameMode.FIGHT;
+                Todo todo = new Todo();
+                todo.operation = Operation.CLIMB;
+                todo.iterations = 5000; // Integer.parseInt(args[argIndex + 1]);
+                optTodo.add(todo);
+                argIndex += 1;
+
+                if (optTodo.size() < 10) {
+                    optNumThreads = 1;
+                }
+            } else if (arg.equals("-e")) {
+                bge = PassiveBGE.valueOf(args[argIndex + 1]);
+                argIndex += 1;
             } else {
-                System.err.println("Error: Unknown option " + arg);
-                return;
+                // System.err.println("Error: Unknown option " + arg);
+                // return;
             }
         }
 
@@ -131,7 +131,7 @@ public class ConsoleLauncher {
 
         try {
             yourDeck = Decks.findDeck(yourDeckName).clone();
-        } catch(RuntimeException e) {
+        } catch (RuntimeException e) {
             e.printStackTrace();
             System.err.println("Error: Deck " + yourDeckName + ": " + e.getMessage());
             return;
@@ -178,11 +178,19 @@ public class ConsoleLauncher {
         SimProcess p = new SimProcess(optNumThreads, yourDeck, enemyDecks, enemyDeckFactors);
 
         for (Todo op : optTodo) {
-            switch(op.operation) {
-                case SIMULATE:
-                    EvaluatedResults results = p.evaluate(op.iterations);
-                    printResults(results, p.getFactors());
-                    break;
+            switch (op.operation) {
+            case SIMULATE:
+                // EvaluatedResults evaluatedResults = new EvaluatedResults();
+                EvaluatedResults results = p.evaluate(op.iterations);
+                printResults(results, p.getFactors());
+                break;
+            case CLIMB:
+                // EvaluatedResults evaluatedResults = new EvaluatedResults();
+                // EvaluatedResults results = p.evaluate(op.iterations);
+                Requirement requirement = new Requirement();
+                int min_iterations = 10;
+                new TyrantOptimize().hillClimbing(min_iterations, op.iterations, yourDeck, p, requirement);
+                break;
             }
         }
     }
