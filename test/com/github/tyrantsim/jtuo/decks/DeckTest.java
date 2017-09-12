@@ -1,7 +1,9 @@
 package com.github.tyrantsim.jtuo.decks;
 
 import com.github.tyrantsim.jtuo.cards.Card;
+import com.github.tyrantsim.jtuo.cards.CardType;
 import com.github.tyrantsim.jtuo.parsers.CardsParser;
+import com.github.tyrantsim.jtuo.parsers.DeckParser;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -101,6 +103,19 @@ public class DeckTest {
         deck.setCards(Arrays.asList(CardsParser.getCardCopy(1), CardsParser.getCardCopy(2)));
 
         assertEquals("I/hi", deck.hash());
+    }
+
+    @Test
+    public void testResolve() {
+        CardsParser.initialize();
+        Deck deck = new Deck();
+        deck.set("Barracus-1, Infantry-1");
+        deck.resolve();
+
+        assertEquals(1001, deck.getCards().get(0).getId());
+        assertEquals("Barracus-1", deck.getCards().get(0).getName());
+        assertEquals(CardType.COMMANDER, deck.getCards().get(0).getType());
+        assertEquals(1, deck.getCards().get(1).getId());
     }
 
 }
