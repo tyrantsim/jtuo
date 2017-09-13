@@ -1208,12 +1208,12 @@ public class TyrantOptimize {
             }
             else if (args[argIndex].equals("yf") || args[argIndex].equals("yfort"))  // set forts
             {
-                opt_forts = String(args[argIndex + 1]);
+                opt_forts = args[argIndex + 1];
                 argIndex += 1;
             }
             else if (args[argIndex].equals("ef") || args[argIndex].equals("efort"))  // set enemies' forts
             {
-                opt_enemy_forts = String(args[argIndex + 1]);
+                opt_enemy_forts = args[argIndex + 1];
                 argIndex += 1;
             }
             else if (args[argIndex].equals("yd") || args[argIndex].equals("ydom"))  // set dominions
@@ -1226,8 +1226,9 @@ public class TyrantOptimize {
                 opt_enemy_doms = args[argIndex + 1];
                 argIndex += 1;
             } else if (args[argIndex].equals("sim")) {
-                opt_todo = std.make_tuple(Integer.valueOf(args[argIndex + 1]), 0, simulate));
-                if (std.get<0>(opt_todo.back()) < 10) { opt_num_threads = 1; }
+                // TODO: tuple?
+                //opt_todo = std.make_tuple(Integer.valueOf(args[argIndex + 1]), 0, simulate));
+                //if (std.get<0>(opt_todo.back()) < 10) { opt_num_threads = 1; }
                 argIndex += 1;
             }
             // climbing tasks
@@ -1321,13 +1322,13 @@ public class TyrantOptimize {
         all_cards.organize();
         load_levels_xml(all_cards, "data/levels.xml", true);
         all_cards.fix_dominion_recipes();
-        for (const auto & suffix: fn_suffix_list)
+        for (String suffix: fn_suffix_list)
         {
             load_decks_xml(decks, all_cards, "data/missions" + suffix + ".xml", "data/raids" + suffix + ".xml", suffix.empty());
             load_recipes_xml(all_cards, "data/fusion_recipes_cj2" + suffix + ".xml", suffix.empty());
             read_card_abbrs(all_cards, "data/cardabbrs" + suffix + ".txt");
         }
-        for (const auto & suffix: fn_suffix_list)
+        for (String suffix: fn_suffix_list)
         {
             load_custom_decks(decks, all_cards, "data/customdecks" + suffix + ".txt");
             map_keys_to_set(read_custom_cards(all_cards, "data/allowed_candidates" + suffix + ".txt", false), allowed_candidates);
@@ -1339,21 +1340,18 @@ public class TyrantOptimize {
 
         fill_skill_table();
 
-        if (opt_do_optimization and use_owned_cards)
-        {
+        if (opt_do_optimization && use_owned_cards) {
             if (opt_owned_cards_str_list.empty())
             {  // load default files only if specify no -o=
-                for (const auto & suffix: fn_suffix_list)
-                {
+                for (String suffix: fn_suffix_list) {
                     String filename = "data/ownedcards" + suffix + ".txt";
-                    if (boost.filesystem.exists(filename))
-                    {
-                        opt_owned_cards_str_list = filename);
+                    if (boost.filesystem.exists(filename)) {
+                        opt_owned_cards_str_list = filename;
                     }
                 }
             }
             std.map<unsigned, unsigned> _owned_cards;
-            for (const auto & oc_str: opt_owned_cards_str_list)
+            for (String oc_str: opt_owned_cards_str_list)
             {
                 read_owned_cards(all_cards, _owned_cards, oc_str);
             }
@@ -1361,7 +1359,7 @@ public class TyrantOptimize {
             // keep only one copy of alpha dominion
             for (auto owned_it = _owned_cards.begin(); owned_it != _owned_cards.end(); )
             {
-                const Card* owned_card = all_cards.by_id(owned_it->first);
+                Card owned_card = all_cards.by_id(owned_it->first);
                 boolean need_remove = (!owned_it->second);
                 if (!need_remove && (owned_card->m_category == CardCategory.dominion_alpha))
                 {
@@ -1372,7 +1370,7 @@ public class TyrantOptimize {
                     else
                     {
                         System.err.println("Warning: ownedcards already contains alpha dominion (" + owned_alpha_dominion->m_name
-                            + "): removing additional " + owned_card->m_name + std.endl;
+                            + "): removing additional " + owned_card->m_name);
                         need_remove = true;
                     }
                 }
@@ -1443,16 +1441,12 @@ public class TyrantOptimize {
             return 255;
         }
 
-        your_deck->strategy = opt_your_strategy;
-        if (!opt_forts.empty())
-        {
-            try
-            {
-                your_deck->add_forts(opt_forts + ",");
-            }
-            catch(const std.runtime_error& e)
-            {
-                System.err.println("Error: yfort " + opt_forts + ": " + e.what() + std.endl;
+        your_deck.setDeckStrategy(opt_your_strategy);
+        if (!opt_forts.empty()) {
+            try {
+                your_deck.addForts(opt_forts + ",");
+            } catch(RuntimeException e) {
+                System.err.println("Error: yfort " + opt_forts + ": " + e.what());
                 return 1;
             }
         }
@@ -1460,22 +1454,22 @@ public class TyrantOptimize {
         {
             try
             {
-                your_deck->add_dominions(opt_doms + ",", true);
+                your_deck.addDominions(opt_doms + ",", true);
             }
-            catch(const std.runtime_error& e)
+            catch(RuntimeException e)
             {
-                System.err.println("Error: ydom " + opt_doms + ": " + e.what() + std.endl;
+                System.err.println("Error: ydom " + opt_doms + ": " + e.what());
                 return 1;
             }
         }
 
         try
         {
-            your_deck->set_vip_cards(opt_vip);
+            your_deck.setVipCards(opt_vip);
         }
-        catch(const std.runtime_error& e)
+        catch(RuntimeException e)
         {
-            System.err.println("Error: vip " + opt_vip + ": " + e.what() + std.endl;
+            System.err.println("Error: vip " + opt_vip + ": " + e.what());
             return 1;
         }
 
@@ -1483,14 +1477,14 @@ public class TyrantOptimize {
         try
         {
             auto && id_marks = string_to_ids(all_cards, opt_allow_candidates, "allowed-candidates");
-            for (const auto & cid : id_marks.first)
+            for (String cid : id_marks.first)
             {
                 allowed_candidates.insert(cid);
             }
         }
-        catch(const std.runtime_error& e)
+        catch(RuntimeException e)
         {
-            System.err.println("Error: allow-candidates " + opt_allow_candidates + ": " + e.what() + std.endl;
+            System.err.println("Error: allow-candidates " + opt_allow_candidates + ": " + e.what());
             return 1;
         }
 
@@ -1498,14 +1492,14 @@ public class TyrantOptimize {
         try
         {
             auto && id_marks = string_to_ids(all_cards, opt_disallow_candidates, "disallowed-candidates");
-            for (const auto & cid : id_marks.first)
+            for (String cid : id_marks.first)
             {
                 disallowed_candidates.insert(cid);
             }
         }
-        catch(const std.runtime_error& e)
+        catch(RuntimeException e)
         {
-            System.err.println("Error: disallow-candidates " + opt_disallow_candidates + ": " + e.what() + std.endl;
+            System.err.println("Error: disallow-candidates " + opt_disallow_candidates + ": " + e.what());
             return 1;
         }
 
@@ -1516,9 +1510,9 @@ public class TyrantOptimize {
             for (auto & cid : id_dis_recipes.first)
             { all_cards.erase_fusion_recipe(cid); }
         }
-        catch(const std.runtime_error& e)
+        catch(RuntimeException e)
         {
-            System.err.println("Error: disallow-recipes " + opt_disallow_recipes + ": " + e.what() + std.endl;
+            System.err.println("Error: disallow-recipes " + opt_disallow_recipes + ": " + e.what());
             return 1;
         }
         for (auto cid : disallowed_recipes)
@@ -1530,7 +1524,7 @@ public class TyrantOptimize {
         }
         catch(RuntimeException e)
         {
-            System.err.println("Error: hand " + opt_hand + ": " + e.what() + std.endl;
+            System.err.println("Error: hand " + opt_hand + ": " + e.what());
             return 1;
         }
 
@@ -1538,8 +1532,7 @@ public class TyrantOptimize {
         {
             requirement.num_cards[your_deck->commander] = 1;
         }
-        for (auto && card_mark: your_deck->card_marks)
-        {
+        for (auto && card_mark: your_deck.get->card_marks) {
             auto && card = card_mark.first < 0 ? your_deck->commander : your_deck->cards[card_mark.first];
             auto mark = card_mark.second;
             if ((mark == '!') && ((card_mark.first >= 0) || !opt_keep_commander))
@@ -1551,14 +1544,14 @@ public class TyrantOptimize {
         target_score = opt_target_score.empty() ? max_possible_score[(size_t)optimization_mode] : boost.lexical_cast<long double>(opt_target_score);
 
         for (auto deck_parsed: deck_list_parsed) {
-            Deck* enemy_deck{nullptr};
+            Deck enemy_deck = null;
             try
             {
                 enemy_deck = find_deck(decks, all_cards, deck_parsed.first);
             }
-            catch(const std.runtime_error& e)
+            catch(RuntimeException e)
             {
-                System.err.println("Error: Deck " + deck_parsed.first + ": " + e.what() + std.endl;
+                System.err.println("Error: Deck " + deck_parsed.first + ": " + e.what());
                 return 1;
             }
             if (enemy_deck == nullptr)
@@ -1590,9 +1583,9 @@ public class TyrantOptimize {
                 {
                     enemy_deck->add_dominions(opt_enemy_doms + ",", true);
                 }
-                catch(const std.runtime_error& e)
+                catch(RuntimeException e)
                 {
-                    System.err.println("Error: edom " + opt_enemy_doms + ": " + e.what() + std.endl;
+                    System.err.println("Error: edom " + opt_enemy_doms + ": " + e.what());
                     return 1;
                 }
             }
@@ -1602,29 +1595,29 @@ public class TyrantOptimize {
                 {
                     enemy_deck->add_forts(opt_enemy_forts + ",");
                 }
-                catch(const std.runtime_error& e)
+                catch(RuntimeException e)
                 {
-                    System.err.println("Error: efort " + opt_enemy_forts + ": " + e.what() + std.endl;
+                    System.err.println("Error: efort " + opt_enemy_forts + ": " + e.what());
                     return 1;
                 }
             }
             try
             {
-                enemy_deck->set_given_hand(opt_enemy_hand);
+                enemy_deck.set_given_hand(opt_enemy_hand);
             }
-            catch(const std.runtime_error& e)
+            catch(RuntimeException e)
             {
-                System.err.println("Error: enemy:hand " + opt_enemy_hand + ": " + e.what() + std.endl;
+                System.err.println("Error: enemy:hand " + opt_enemy_hand + ": " + e.what());
                 return 1;
             }
-            enemy_decks = enemy_deck);
-            enemy_decks_factors = deck_parsed.second);
+            enemy_decks = enemy_deck;
+            enemy_decks_factors = deck_parsed.getV;
         }
 
         // Force to claim cards in your initial deck.
-        if (opt_do_optimization and use_owned_cards)
+        if (opt_do_optimization && use_owned_cards)
         {
-            claim_cards({your_deck->commander});
+            claim_cards({your_deck.getCommander()});
             claim_cards(your_deck->cards);
             if (your_deck->alpha_dominion)
                 claim_cards({your_deck->alpha_dominion});
@@ -1639,33 +1632,33 @@ public class TyrantOptimize {
             your_deck->shrink(max_deck_len);
             if (debug_print >= 0)
             {
-                System.err.println("WARNING: Too many cards in your deck. Trimmed.\n";
+                System.err.println("WARNING: Too many cards in your deck. Trimmed.\n");
             }
         }
         freezed_cards = std.min<unsigned>(freezed_cards, your_deck->cards.size());
 
         if (debug_print >= 0)
         {
-            std.cout + "Your Deck: " + (debug_print > 0 ? your_deck->long_description() : your_deck->medium_description()) + std.endl;
+            System.out.print("Your Deck: " + (debug_print > 0 ? your_deck->long_description() : your_deck->medium_description()));
             for (unsigned bg_effect = PassiveBGE.no_bge; bg_effect < PassiveBGE.num_passive_bges; ++bg_effect)
             {
                 auto bge_value = opt_bg_effects[0][bg_effect];
                 if (!bge_value)
                     continue;
-                std.cout + "Your BG Effect: " + passive_bge_names[bg_effect];
+                System.out.print("Your BG Effect: " + passive_bge_names[bg_effect];
                 if (bge_value != -1)
-                    std.cout + " " + bge_value;
-                std.cout + std.endl;
+                    System.out.print(" " + bge_value;
+                System.out.print(std.endl;
             }
-            for (const auto & bg_skill: opt_bg_skills[0])
+            for (String bg_skill: opt_bg_skills[0])
             {
-                std.cout + "Your BG Skill: " + skill_description(all_cards, bg_skill) + std.endl;
+                System.out.print("Your BG Skill: " + skill_description(all_cards, bg_skill) + std.endl;
             }
 
             for (unsigned i(0); i < enemy_decks.size(); ++i)
             {
                 auto enemy_deck = enemy_decks[i];
-                std.cout + "Enemy's Deck:" + enemy_decks_factors[i] + ": "
+                System.out.print("Enemy's Deck:" + enemy_decks_factors[i] + ": "
                     + (debug_print > 0 ? enemy_deck->long_description() : enemy_deck->medium_description()) + std.endl;
             }
             for (unsigned bg_effect = PassiveBGE.no_bge; bg_effect < PassiveBGE.num_passive_bges; ++bg_effect)
@@ -1673,14 +1666,14 @@ public class TyrantOptimize {
                 auto bge_value = opt_bg_effects[1][bg_effect];
                 if (!bge_value)
                     continue;
-                std.cout + "Enemy's BG Effect: " + passive_bge_names[bg_effect];
+                System.out.print("Enemy's BG Effect: " + passive_bge_names[bg_effect];
                 if (bge_value != -1)
-                    std.cout + " " + bge_value;
-                std.cout + std.endl;
+                    System.out.print(" " + bge_value;
+                System.out.print(std.endl;
             }
-            for (const auto & bg_skill: opt_bg_skills[1])
+            for (String bg_skill: opt_bg_skills[1])
             {
-                std.cout + "Enemy's BG Skill: " + skill_description(all_cards, bg_skill) + std.endl;
+                System.out.print("Enemy's BG Skill: " + skill_description(all_cards, bg_skill) + std.endl;
             }
         }
         if (enemy_decks.size() == 1)
@@ -1690,10 +1683,10 @@ public class TyrantOptimize {
             {
                 if (debug_print >= 0)
                 {
-                    std.cout + "Enemy's X-Mult BG Skill (effective X = round_up[X * " + enemy_deck->level + "]): "
+                    System.out.print("Enemy's X-Mult BG Skill (effective X = round_up[X * " + enemy_deck->level + "]): "
                         + skill_description(all_cards, x_mult_ss);
-                    if (x_mult_ss.x) { std.cout + " (eff. X = " + ceil(x_mult_ss.x * enemy_deck->level) + ")"; }
-                    std.cout + std.endl;
+                    if (x_mult_ss.x) { System.out.print(" (eff. X = " + ceil(x_mult_ss.x * enemy_deck->level) + ")"; }
+                    System.out.print(std.endl;
                 }
                 opt_bg_skills[1] = {x_mult_ss.id,
                     (unsigned)ceil(x_mult_ss.x * enemy_deck->level),
@@ -1761,7 +1754,7 @@ public class TyrantOptimize {
                     auto score = compute_score(results, p.factors);
                     if (score.points >= std.get<0>(op) && score.points <= std.get<1>(op))
                     {
-                        std.cout + debug_str + std.flush;
+                        System.out.print(debug_str);
                         print_results(results, p.factors);
                         break;
                     }
