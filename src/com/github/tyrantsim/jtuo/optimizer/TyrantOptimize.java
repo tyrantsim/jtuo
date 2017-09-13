@@ -17,18 +17,22 @@ import java.util.TreeMap;
 import org.apache.commons.math3.stat.interval.ClopperPearsonInterval;
 import org.apache.commons.math3.stat.interval.ConfidenceInterval;
 
+import com.github.tyrantsim.jtuo.Constants;
 import com.github.tyrantsim.jtuo.Main;
 import com.github.tyrantsim.jtuo.cards.Card;
 import com.github.tyrantsim.jtuo.cards.CardCategory;
 import com.github.tyrantsim.jtuo.cards.CardType;
 import com.github.tyrantsim.jtuo.cards.Cards;
+import com.github.tyrantsim.jtuo.control.ConsoleLauncher;
 import com.github.tyrantsim.jtuo.control.EvaluatedResults;
 import com.github.tyrantsim.jtuo.control.SimProcess;
 import com.github.tyrantsim.jtuo.decks.Deck;
 import com.github.tyrantsim.jtuo.decks.DeckStrategy;
 import com.github.tyrantsim.jtuo.decks.Decks;
+import com.github.tyrantsim.jtuo.sim.GameMode;
 import com.github.tyrantsim.jtuo.sim.OptimizationMode;
 import com.github.tyrantsim.jtuo.sim.Results;
+import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.util.Pair;
 import com.github.tyrantsim.jtuo.util.Utils;
 
@@ -36,10 +40,11 @@ public class TyrantOptimize {
 
     public static boolean DEBUG = false;
 
+    GameMode gamemode = GameMode.FIGHT;
     OptimizationMode optimization_mode = OptimizationMode.NOT_SET;
 
-    public static boolean modeOpenTheDeck = false;
-    public static OptimizationMode optimizationMode = OptimizationMode.NOT_SET;
+    public boolean modeOpenTheDeck = false;
+    public OptimizationMode optimizationMode = OptimizationMode.NOT_SET;
     public HashMap<Integer, Integer> owned_cards = new HashMap<>();
 
     final Card owned_alpha_dominion = null;
@@ -49,18 +54,18 @@ public class TyrantOptimize {
     public int max_deck_len = 10;
     public int freezed_cards = 0;
 
-    public static int fund = 0;
+    public int fund = 0;
     public double target_score = 100;
     public double min_increment_of_score = 0;
 
-    public static boolean use_top_level_card = true;
-    public static boolean use_top_level_commander = true;
+    public boolean use_top_level_card = true;
+    public boolean use_top_level_commander = true;
 
-    public static final int[] upgrade_cost = { 0, 5, 15, 30, 75, 150 };
+    public final int[] upgrade_cost = { 0, 5, 15, 30, 75, 150 };
     Map<Card, Integer> dominion_cost = new TreeMap<>();// [3][7];
     Map<Card, Integer> dominion_refund = new TreeMap<>(); // [3][7];
 
-    public static double confidenceLevel = 0.99;
+    public double confidenceLevel = 0.99;
 
     private boolean mode_open_the_deck = false;
     private boolean use_dominion_climbing = false;
@@ -70,7 +75,7 @@ public class TyrantOptimize {
     public int use_fused_commander_level = 0;
     boolean show_ci = false;
 
-    public static boolean useHarmonicMean = false;
+    public boolean useHarmonicMean = false;
 
     public volatile int thread_num_iterations = 0; // written by threads
     public volatile EvaluatedResults thread_results = null; // written by threads
@@ -80,7 +85,8 @@ public class TyrantOptimize {
     public volatile boolean destroy_threads;
 
     int iterations_multiplier = 10;
-
+    public int sim_seed = 0;
+    
     Requirement requirement;
 
     Set<Integer> allowed_candidates = new HashSet<>();
@@ -88,6 +94,8 @@ public class TyrantOptimize {
 
     int min_possible_score[] = { 0, 0, 0, 10, 5, 5, 5, 0 };
     int max_possible_score[] = { 100, 100, 100, 100, 65, 65, 100, 100 };
+
+    private int turn_limit = Constants.DEFAULT_TURN_LIMIT;
 
     private String card_id_name(Card card) {
         StringBuilder ios = new StringBuilder(30);
@@ -933,4 +941,838 @@ public class TyrantOptimize {
         }
         System.out.println();
     }
+    
+    public int main(String[] args) {
+        if (args.length == 2 && args[1].equals("-version")) {
+            System.out.println("Tyrant Unleashed Optimizer " + Constants.VERSION);
+            return 0;
+        }
+        if (args.length <= 2) {
+            ConsoleLauncher.printUsage();
+            return 255;
+        }
+
+        int opt_num_threads = 4;
+        DeckStrategy opt_your_strategy = DeckStrategy.RANDOM;
+        DeckStrategy opt_enemy_strategy = DeckStrategy.RANDOM;
+        String opt_forts, opt_enemy_forts;
+        String opt_doms, opt_enemy_doms;
+        String opt_hand, opt_enemy_hand;
+        String opt_vip;
+        String opt_allow_candidates;
+        String opt_disallow_candidates;
+        String opt_disallow_recipes;
+        String opt_target_score;
+        List<String> fn_suffix_list = Arrays.asList(new String[] {""});
+        List<String> opt_owned_cards_str_list;
+        boolean opt_do_optimization= false;
+        boolean opt_keep_commander = false;
+        List<Object> opt_todo; //Operatuple<unsigned, unsigned, Operation>
+        String[] opt_effects = new String[3];  // 0-you; 1-enemy; 2-global
+        // TODO: 
+        //List<signed short, PassiveBGE.num_passive_bges> opt_bg_effects[2];
+        SkillSpec[] opt_bg_skills = new SkillSpec[2];
+        Set<Integer> disallowed_recipes;
+
+        for (int argIndex = 3; argIndex < args.length; argIndex++) {
+            // Codec
+            if (args[argIndex].equals("ext_b64")) {
+                //hash_to_ids = hash_to_ids_ext_b64;
+                //encode_deck = encode_deck_ext_b64;
+//            } else if (args[argIndex].equals("wmt_b64") == 0) {
+//                hash_to_ids = hash_to_ids_wmt_b64;
+//                encode_deck = encode_deck_wmt_b64;
+//            }
+//            else if (args[argIndex].equals("ddd_b64") == 0)
+//            {
+//                hash_to_ids = hash_to_ids_ddd_b64;
+//                encode_deck = encode_deck_ddd_b64;
+//            }
+//            // Base Game Mode
+//            else if (args[argIndex].equals("GameMode.FIGHT") == 0)
+//            {
+//                gamemode = GameMode.FIGHT;
+//            }
+//            else if (args[argIndex].equals("-s") == 0 || args[argIndex].equals("GameMode.SURGE") == 0)
+//            {
+//                gamemode = GameMode.SURGE;
+            } else if (args[argIndex].equals("win")) {
+                // Base Scoring Mode
+                optimization_mode = OptimizationMode.WINRATE;
+            } else if (args[argIndex].equals("defense")) {
+                optimization_mode = OptimizationMode.DEFENSE;
+            }
+            else if (args[argIndex].equals("raid"))
+            {
+                optimization_mode = OptimizationMode.RAID;
+            }
+            // Mode Package
+            else if (args[argIndex].equals("campaign"))
+            {
+                gamemode = GameMode.SURGE;
+                optimization_mode = OptimizationMode.CAMPAIGN;
+            }
+            else if (args[argIndex].equals("pvp"))
+            {
+                gamemode = GameMode.FIGHT;
+                optimization_mode = OptimizationMode.WINRATE;
+            }
+            else if (args[argIndex].equals("pvp-defense"))
+            {
+                gamemode = GameMode.SURGE;
+                optimization_mode = OptimizationMode.DEFENSE;
+            }
+            else if (args[argIndex].equals("brawl"))
+            {
+                gamemode = GameMode.SURGE;
+                optimization_mode = OptimizationMode.BRAWL;
+            }
+            else if (args[argIndex].equals("brawl-defense"))
+            {
+                gamemode = GameMode.FIGHT;
+                optimization_mode = OptimizationMode.BRAWL_DEFENSE;
+            }
+            else if (args[argIndex].equals("gw"))
+            {
+                gamemode = GameMode.SURGE;
+                optimization_mode = OptimizationMode.WINRATE;
+            }
+            else if (args[argIndex].equals("gw-defense"))
+            {
+                gamemode = GameMode.FIGHT;
+                optimization_mode = OptimizationMode.DEFENSE;
+            }
+            // Others
+            else if (args[argIndex].equals("keep-commander") || args[argIndex].equals("-c"))
+            {
+                opt_keep_commander = true;
+            }
+            else if (args[argIndex].equals("effect") || args[argIndex].equals("-e"))
+            {
+                opt_effects[2] = args[argIndex + 1];
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("ye") || args[argIndex].equals("yeffect"))
+            {
+                opt_effects[0] = args[argIndex + 1];
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("ee") || args[argIndex].equals("eeffect"))
+            {
+                opt_effects[1] = args[argIndex + 1];
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("freeze") || args[argIndex].equals("-F"))
+            {
+                freezed_cards = Integer.valueOf(args[argIndex + 1]);
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("-L"))
+            {
+                min_deck_len = Integer.valueOf(args[argIndex + 1]);
+                max_deck_len = Integer.valueOf(args[argIndex + 2]);
+                argIndex += 2;
+            }
+            else if (args[argIndex].equals("-o-"))
+            {
+                use_owned_cards = false;
+            }
+            else if (args[argIndex].equals("-o"))
+            {
+                opt_owned_cards_str_list.add("data/ownedcards.txt");
+                use_owned_cards = true;
+            }
+            else if (args[argIndex].startsWith("-o="))
+            {
+                opt_owned_cards_str_list.add(args[argIndex] + 3);
+                use_owned_cards = true;
+            }
+            else if (args[argIndex].startsWith("_"))
+            {
+                fn_suffix_list.add(args[argIndex]);
+            }
+            else if (args[argIndex].equals("fund"))
+            {
+                fund = Integer.valueOf(args[argIndex+1]);
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("dom+") || args[argIndex].equals("dominion+"))
+            {
+                use_dominion_climbing = true;
+            }
+            else if (args[argIndex].equals("dom-") || args[argIndex].equals("dominion-"))
+            {
+                use_dominion_climbing = true;
+                use_dominion_defusing = true;
+            }
+            else if (args[argIndex].equals("random"))
+            {
+                opt_your_strategy = DeckStrategy.RANDOM;
+            }
+            else if (args[argIndex].equals("-r") || args[argIndex].equals("ordered"))
+            {
+                opt_your_strategy = DeckStrategy.ORDERED;
+            }
+            else if (args[argIndex].equals("exact-ordered"))
+            {
+                opt_your_strategy = DeckStrategy.EXACT_ORDERED;
+            }
+            else if (args[argIndex].equals("enemy:ordered"))
+            {
+                opt_enemy_strategy = DeckStrategy.ORDERED;
+            }
+            else if (args[argIndex].equals("enemy:exact-ordered"))
+            {
+                opt_enemy_strategy = DeckStrategy.EXACT_ORDERED;
+            }
+            else if (args[argIndex].equals("endgame"))
+            {
+                use_fused_card_level = Integer.valueOf(args[argIndex+1]);
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("threads") || args[argIndex].equals("-t"))
+            {
+                opt_num_threads = Integer.valueOf(args[argIndex+1]);
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("target"))
+            {
+                opt_target_score = args[argIndex+1];
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("turnlimit"))
+            {
+                turn_limit = Integer.valueOf(args[argIndex+1]);
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("mis"))
+            {
+                min_increment_of_score = Double.valueOf(args[argIndex+1]);
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("cl"))
+            {
+                confidenceLevel = Double.valueOf(args[argIndex+1]);
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("+ci"))
+            {
+                show_ci = true;
+            }
+            else if (args[argIndex].equals("+hm"))
+            {
+                useHarmonicMean = true;
+            }
+            else if (args[argIndex].equals("seed"))
+            {
+                sim_seed = Integer.valueOf(args[argIndex+1]);
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("-v"))
+            {
+                Main.debug_print = 0;
+            }
+            else if (args[argIndex].equals("+v"))
+            {
+                Main.debug_print = 2;
+            }
+            else if (args[argIndex].equals("vip"))
+            {
+                opt_vip = args[argIndex + 1];
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("allow-candidates"))
+            {
+                opt_allow_candidates = args[argIndex + 1];
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("disallow-candidates"))
+            {
+                opt_disallow_candidates = args[argIndex + 1];
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("disallow-recipes"))
+            {
+                opt_disallow_recipes = args[argIndex + 1];
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("hand"))  // set initial hand for test
+            {
+                opt_hand = args[argIndex + 1];
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("enemy:hand"))  // set enemies' initial hand for test
+            {
+                opt_enemy_hand = args[argIndex + 1];
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("yf") || args[argIndex].equals("yfort"))  // set forts
+            {
+                opt_forts = String(args[argIndex + 1]);
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("ef") || args[argIndex].equals("efort"))  // set enemies' forts
+            {
+                opt_enemy_forts = String(args[argIndex + 1]);
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("yd") || args[argIndex].equals("ydom"))  // set dominions
+            {
+                opt_doms = (args[argIndex + 1]);
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("ed") || args[argIndex].equals("edom"))  // set enemies' dominions
+            {
+                opt_enemy_doms = args[argIndex + 1];
+                argIndex += 1;
+            } else if (args[argIndex].equals("sim")) {
+                opt_todo = std.make_tuple(Integer.valueOf(args[argIndex + 1]), 0, simulate));
+                if (std.get<0>(opt_todo.back()) < 10) { opt_num_threads = 1; }
+                argIndex += 1;
+            }
+            // climbing tasks
+            else if (args[argIndex].equals("climbex"))
+            {
+                opt_todo = std.make_tuple((unsigned)atoi(args[argIndex + 1]), (unsigned)atoi(args[argIndex + 2]), climb));
+                if (std.get<1>(opt_todo.back()) < 10) { opt_num_threads = 1; }
+                opt_do_optimization = true;
+                argIndex += 2;
+            }
+            else if (args[argIndex].equals("climb"))
+            {
+                opt_todo = make_tuple((unsigned)atoi(args[argIndex + 1]), (unsigned)atoi(args[argIndex + 1]), climb));
+                if (std.get<1>(opt_todo.back()) < 10) { opt_num_threads = 1; }
+                opt_do_optimization = true;
+                argIndex += 1;
+            }
+            else if (args[argIndex].equals("reorder"))
+            {
+                opt_todo = make_tuple(Integer.valueOf(args[argIndex + 1]), Integer.valueOf(args[argIndex + 1]), reorder);
+                if (std.get<1>(opt_todo.back()) < 10) { opt_num_threads = 1; }
+                argIndex += 1;
+            } else if (args[argIndex].equals("climb-opts:")) {
+                // climbing options
+                String climb_opts_str = args[argIndex] + 11;
+                //boost.tokenizer<boost.char_delimiters_separator<char>> climb_opts{climb_opts_str, boost.char_delimiters_separator<char>{false, ",", ""}};
+                List<String> climb_opts = new ArrayList<>();
+                for (String opt : climb_opts) {
+                    int delim_pos = opt.indexOf("=");
+                    boolean has_value = (delim_pos != -1);
+                    String opt_name = has_value ? opt.substr(0, delim_pos) : opt;
+                    String opt_value = {has_value ? opt.substr(delim_pos + 1) : opt};
+                    auto ensure_opt_value = [](const boolean has_value, const String & opt_name)
+                    {
+                        if (!has_value)
+                        { throw std.runtime_error("climb-opts:" + opt_name + " requires an argument"); }
+                    }
+                    if ((opt_name == "iter-mul") or (opt_name == "iterations-multiplier"))
+                    {
+                        ensure_opt_value(has_value, opt_name);
+                        iterations_multiplier = std.stoi(opt_value);
+                    }
+                    else if ((opt_name == "egc") && (opt_name == "endgame-commander") && (opt_name == "min-commander-fusion-level"))
+                    {
+                        ensure_opt_value(has_value, opt_name);
+                        use_fused_commander_level = std.stoi(opt_value);
+                    }
+                    else if (opt_name.eq == "use-all-commander-levels")
+                    {
+                        use_top_level_commander = false;
+                    }
+                    else if (opt_name == "use-all-card-levels")
+                    {
+                        use_top_level_card = false;
+                    }
+                    else if ((opt_name == "otd") or (opt_name == "open-the-deck"))
+                    {
+                        mode_open_the_deck = true;
+                    }
+                    else
+                    {
+                        System.err.println("Error: Unknown climb option " + opt_name;
+                        if (has_value)
+                        { System.err.print(" (value is: " + opt_value + ")"; }
+                        System.err.println();
+                        return 1;
+                    }
+                }
+            } else if (args[argIndex].equals("debug")) {
+                opt_todo = std.make_tuple(0, 0, debug));
+                opt_num_threads = 1;
+            } else if (args[argIndex].equals("debuguntil")) {
+                // output the debug info for the first battle that min_score <= score <= max_score.
+                // E.g., 0 0: lose; 100 100: win (non-raid); 20 100: at least 20 damage (raid).
+                opt_todo = std.make_tuple((unsigned)atoi(args[argIndex + 1]), (unsigned)atoi(args[argIndex + 2]), debuguntil));
+                opt_num_threads = 1;
+                argIndex += 2;
+            } else {
+                System.err.println("Error: Unknown option " + args[argIndex]);
+                return 1;
+            }
+        }
+
+        Cards all_cards;
+        Decks decks;
+        Map<String, String> bge_aliases;
+        load_skills_set_xml(all_cards, "data/skills_set.xml", true);
+        for (unsigned section = 1;
+                load_cards_xml(all_cards, "data/cards_section_" + to_string(section) + ".xml", false);
+                ++ section);
+        all_cards.organize();
+        load_levels_xml(all_cards, "data/levels.xml", true);
+        all_cards.fix_dominion_recipes();
+        for (const auto & suffix: fn_suffix_list)
+        {
+            load_decks_xml(decks, all_cards, "data/missions" + suffix + ".xml", "data/raids" + suffix + ".xml", suffix.empty());
+            load_recipes_xml(all_cards, "data/fusion_recipes_cj2" + suffix + ".xml", suffix.empty());
+            read_card_abbrs(all_cards, "data/cardabbrs" + suffix + ".txt");
+        }
+        for (const auto & suffix: fn_suffix_list)
+        {
+            load_custom_decks(decks, all_cards, "data/customdecks" + suffix + ".txt");
+            map_keys_to_set(read_custom_cards(all_cards, "data/allowed_candidates" + suffix + ".txt", false), allowed_candidates);
+            map_keys_to_set(read_custom_cards(all_cards, "data/disallowed_candidates" + suffix + ".txt", false), disallowed_candidates);
+            map_keys_to_set(read_custom_cards(all_cards, "data/disallowed_recipes" + suffix + ".txt", false), disallowed_recipes);
+        }
+
+        read_bge_aliases(bge_aliases, "data/bges.txt");
+
+        fill_skill_table();
+
+        if (opt_do_optimization and use_owned_cards)
+        {
+            if (opt_owned_cards_str_list.empty())
+            {  // load default files only if specify no -o=
+                for (const auto & suffix: fn_suffix_list)
+                {
+                    String filename = "data/ownedcards" + suffix + ".txt";
+                    if (boost.filesystem.exists(filename))
+                    {
+                        opt_owned_cards_str_list = filename);
+                    }
+                }
+            }
+            std.map<unsigned, unsigned> _owned_cards;
+            for (const auto & oc_str: opt_owned_cards_str_list)
+            {
+                read_owned_cards(all_cards, _owned_cards, oc_str);
+            }
+
+            // keep only one copy of alpha dominion
+            for (auto owned_it = _owned_cards.begin(); owned_it != _owned_cards.end(); )
+            {
+                const Card* owned_card = all_cards.by_id(owned_it->first);
+                boolean need_remove = (!owned_it->second);
+                if (!need_remove && (owned_card->m_category == CardCategory.dominion_alpha))
+                {
+                    if (!owned_alpha_dominion)
+                    {
+                        owned_alpha_dominion = owned_card;
+                    }
+                    else
+                    {
+                        System.err.println("Warning: ownedcards already contains alpha dominion (" + owned_alpha_dominion->m_name
+                            + "): removing additional " + owned_card->m_name + std.endl;
+                        need_remove = true;
+                    }
+                }
+                if (need_remove) { owned_it = _owned_cards.erase(owned_it); }
+                else { ++owned_it; }
+            }
+            if (!owned_alpha_dominion && use_dominion_climbing)
+            {
+                owned_alpha_dominion = all_cards.by_id(50002);
+                System.err.println();System.err.println("Warning: dominion climbing enabled and no alpha dominion found in owned cards, adding default "
+                    + owned_alpha_dominion->m_name + std.endl;
+            }
+            if (owned_alpha_dominion)
+            { _owned_cards[owned_alpha_dominion->m_id] = 1; }
+
+            // remap owned cards to unordered map (should be quicker for searching)
+            owned_cards.reserve(_owned_cards.size());
+            for (auto owned_it = _owned_cards.begin(); owned_it != _owned_cards.end(); ++owned_it)
+            {
+                owned_cards[owned_it->first] = owned_it->second;
+            }
+        }
+
+        // parse BGEs
+        opt_bg_effects[0].fill(0);
+        opt_bg_effects[1].fill(0);
+        for (int player = 2; player >= 0; -- player) {
+            for (String opt_effect: opt_effects[player]) {
+                std.unordered_set<String> used_bge_aliases;
+                if (!parse_bge(opt_effect, player, bge_aliases, opt_bg_effects[0], opt_bg_effects[1], opt_bg_skills[0], opt_bg_skills[1], used_bge_aliases))
+                {
+                    return 1;
+                }
+            }
+        }
+
+        String your_deck_name= args[1];
+        String enemy_deck_list = args[2];
+        List<Deck> deck_list_parsed = parse_deck_list(enemy_deck_list, decks);
+
+        Deck your_deck = null;
+        List<Deck> enemy_decks;
+        List<Double> enemy_decks_factors;
+
+        try {
+            your_deck = find_deck(decks, all_cards, your_deck_name).clone();
+        } catch(RuntimeException e) {
+            System.err.println("Error: Deck " + your_deck_name + ": " + e.what());
+            return 1;
+        }
+        if (your_deck == nullptr)
+        {
+            System.err.println("Error: Invalid attack deck name/hash " + your_deck_name + ".\n");
+        }
+        else if (!your_deck->variable_cards.empty())
+        {
+            System.err.println("Error: Invalid attack deck " + your_deck_name + ": has optional cards.\n");
+            your_deck = nullptr;
+        }
+        else if (!your_deck->variable_forts.empty())
+        {
+            System.err.println("Error: Invalid attack deck " + your_deck_name + ": has optional cards.\n");
+            your_deck = nullptr;
+        }
+        if (your_deck == nullptr)
+        {
+            usage(args, args);
+            return 255;
+        }
+
+        your_deck->strategy = opt_your_strategy;
+        if (!opt_forts.empty())
+        {
+            try
+            {
+                your_deck->add_forts(opt_forts + ",");
+            }
+            catch(const std.runtime_error& e)
+            {
+                System.err.println("Error: yfort " + opt_forts + ": " + e.what() + std.endl;
+                return 1;
+            }
+        }
+        if (!opt_doms.empty())
+        {
+            try
+            {
+                your_deck->add_dominions(opt_doms + ",", true);
+            }
+            catch(const std.runtime_error& e)
+            {
+                System.err.println("Error: ydom " + opt_doms + ": " + e.what() + std.endl;
+                return 1;
+            }
+        }
+
+        try
+        {
+            your_deck->set_vip_cards(opt_vip);
+        }
+        catch(const std.runtime_error& e)
+        {
+            System.err.println("Error: vip " + opt_vip + ": " + e.what() + std.endl;
+            return 1;
+        }
+
+        // parse allowed candidates from options
+        try
+        {
+            auto && id_marks = string_to_ids(all_cards, opt_allow_candidates, "allowed-candidates");
+            for (const auto & cid : id_marks.first)
+            {
+                allowed_candidates.insert(cid);
+            }
+        }
+        catch(const std.runtime_error& e)
+        {
+            System.err.println("Error: allow-candidates " + opt_allow_candidates + ": " + e.what() + std.endl;
+            return 1;
+        }
+
+        // parse disallowed candidates from options
+        try
+        {
+            auto && id_marks = string_to_ids(all_cards, opt_disallow_candidates, "disallowed-candidates");
+            for (const auto & cid : id_marks.first)
+            {
+                disallowed_candidates.insert(cid);
+            }
+        }
+        catch(const std.runtime_error& e)
+        {
+            System.err.println("Error: disallow-candidates " + opt_disallow_candidates + ": " + e.what() + std.endl;
+            return 1;
+        }
+
+        // parse & drop disallowed recipes
+        try
+        {
+            auto && id_dis_recipes = string_to_ids(all_cards, opt_disallow_recipes, "disallowed-recipes");
+            for (auto & cid : id_dis_recipes.first)
+            { all_cards.erase_fusion_recipe(cid); }
+        }
+        catch(const std.runtime_error& e)
+        {
+            System.err.println("Error: disallow-recipes " + opt_disallow_recipes + ": " + e.what() + std.endl;
+            return 1;
+        }
+        for (auto cid : disallowed_recipes)
+        { all_cards.erase_fusion_recipe(cid); }
+
+        try
+        {
+            your_deck->set_given_hand(opt_hand);
+        }
+        catch(RuntimeException e)
+        {
+            System.err.println("Error: hand " + opt_hand + ": " + e.what() + std.endl;
+            return 1;
+        }
+
+        if (opt_keep_commander)
+        {
+            requirement.num_cards[your_deck->commander] = 1;
+        }
+        for (auto && card_mark: your_deck->card_marks)
+        {
+            auto && card = card_mark.first < 0 ? your_deck->commander : your_deck->cards[card_mark.first];
+            auto mark = card_mark.second;
+            if ((mark == '!') && ((card_mark.first >= 0) || !opt_keep_commander))
+            {
+                requirement.num_cards[card] += 1;
+            }
+        }
+
+        target_score = opt_target_score.empty() ? max_possible_score[(size_t)optimization_mode] : boost.lexical_cast<long double>(opt_target_score);
+
+        for (auto deck_parsed: deck_list_parsed) {
+            Deck* enemy_deck{nullptr};
+            try
+            {
+                enemy_deck = find_deck(decks, all_cards, deck_parsed.first);
+            }
+            catch(const std.runtime_error& e)
+            {
+                System.err.println("Error: Deck " + deck_parsed.first + ": " + e.what() + std.endl;
+                return 1;
+            }
+            if (enemy_deck == nullptr)
+            {
+                System.err.println("Error: Invalid defense deck name/hash " + deck_parsed.first + ".\n";
+                usage(args, args);
+                return 1;
+            }
+            if (optimization_mode == OptimizationMode.notset)
+            {
+                if (enemy_deck->decktype == DeckType.raid)
+                {
+                    optimization_mode = OptimizationMode.raid;
+                }
+                else if (enemy_deck->decktype == DeckType.campaign)
+                {
+                    gamemode = GameMode.SURGE;
+                    optimization_mode = OptimizationMode.campaign;
+                }
+                else
+                {
+                    optimization_mode = OptimizationMode.winrate;
+                }
+            }
+            enemy_deck->strategy = opt_enemy_strategy;
+            if (!opt_enemy_doms.empty())
+            {
+                try
+                {
+                    enemy_deck->add_dominions(opt_enemy_doms + ",", true);
+                }
+                catch(const std.runtime_error& e)
+                {
+                    System.err.println("Error: edom " + opt_enemy_doms + ": " + e.what() + std.endl;
+                    return 1;
+                }
+            }
+            if (!opt_enemy_forts.empty())
+            {
+                try
+                {
+                    enemy_deck->add_forts(opt_enemy_forts + ",");
+                }
+                catch(const std.runtime_error& e)
+                {
+                    System.err.println("Error: efort " + opt_enemy_forts + ": " + e.what() + std.endl;
+                    return 1;
+                }
+            }
+            try
+            {
+                enemy_deck->set_given_hand(opt_enemy_hand);
+            }
+            catch(const std.runtime_error& e)
+            {
+                System.err.println("Error: enemy:hand " + opt_enemy_hand + ": " + e.what() + std.endl;
+                return 1;
+            }
+            enemy_decks = enemy_deck);
+            enemy_decks_factors = deck_parsed.second);
+        }
+
+        // Force to claim cards in your initial deck.
+        if (opt_do_optimization and use_owned_cards)
+        {
+            claim_cards({your_deck->commander});
+            claim_cards(your_deck->cards);
+            if (your_deck->alpha_dominion)
+                claim_cards({your_deck->alpha_dominion});
+        }
+
+        // shrink any oversized deck to maximum of 10 cards + commander
+        // NOTE: do this AFTER the call to claim_cards so that passing an initial deck of >10 cards
+        //       can be used as a "shortcut" for adding them to owned cards. Also this allows climb
+        //       to figure out which are the best 10, rather than restricting climb to the first 10.
+        if (your_deck->cards.size() > max_deck_len)
+        {
+            your_deck->shrink(max_deck_len);
+            if (debug_print >= 0)
+            {
+                System.err.println("WARNING: Too many cards in your deck. Trimmed.\n";
+            }
+        }
+        freezed_cards = std.min<unsigned>(freezed_cards, your_deck->cards.size());
+
+        if (debug_print >= 0)
+        {
+            std.cout + "Your Deck: " + (debug_print > 0 ? your_deck->long_description() : your_deck->medium_description()) + std.endl;
+            for (unsigned bg_effect = PassiveBGE.no_bge; bg_effect < PassiveBGE.num_passive_bges; ++bg_effect)
+            {
+                auto bge_value = opt_bg_effects[0][bg_effect];
+                if (!bge_value)
+                    continue;
+                std.cout + "Your BG Effect: " + passive_bge_names[bg_effect];
+                if (bge_value != -1)
+                    std.cout + " " + bge_value;
+                std.cout + std.endl;
+            }
+            for (const auto & bg_skill: opt_bg_skills[0])
+            {
+                std.cout + "Your BG Skill: " + skill_description(all_cards, bg_skill) + std.endl;
+            }
+
+            for (unsigned i(0); i < enemy_decks.size(); ++i)
+            {
+                auto enemy_deck = enemy_decks[i];
+                std.cout + "Enemy's Deck:" + enemy_decks_factors[i] + ": "
+                    + (debug_print > 0 ? enemy_deck->long_description() : enemy_deck->medium_description()) + std.endl;
+            }
+            for (unsigned bg_effect = PassiveBGE.no_bge; bg_effect < PassiveBGE.num_passive_bges; ++bg_effect)
+            {
+                auto bge_value = opt_bg_effects[1][bg_effect];
+                if (!bge_value)
+                    continue;
+                std.cout + "Enemy's BG Effect: " + passive_bge_names[bg_effect];
+                if (bge_value != -1)
+                    std.cout + " " + bge_value;
+                std.cout + std.endl;
+            }
+            for (const auto & bg_skill: opt_bg_skills[1])
+            {
+                std.cout + "Enemy's BG Skill: " + skill_description(all_cards, bg_skill) + std.endl;
+            }
+        }
+        if (enemy_decks.size() == 1)
+        {
+            auto enemy_deck = enemy_decks[0];
+            for (auto x_mult_ss : enemy_deck->effects)
+            {
+                if (debug_print >= 0)
+                {
+                    std.cout + "Enemy's X-Mult BG Skill (effective X = round_up[X * " + enemy_deck->level + "]): "
+                        + skill_description(all_cards, x_mult_ss);
+                    if (x_mult_ss.x) { std.cout + " (eff. X = " + ceil(x_mult_ss.x * enemy_deck->level) + ")"; }
+                    std.cout + std.endl;
+                }
+                opt_bg_skills[1] = {x_mult_ss.id,
+                    (unsigned)ceil(x_mult_ss.x * enemy_deck->level),
+                    x_mult_ss.y, x_mult_ss.n, x_mult_ss.c,
+                    x_mult_ss.s, x_mult_ss.s2, x_mult_ss.all});
+            }
+        }
+
+        Process p(opt_num_threads, all_cards, decks, your_deck, enemy_decks, enemy_decks_factors, gamemode,
+            opt_bg_effects[0], opt_bg_effects[1], opt_bg_skills[0], opt_bg_skills[1]);
+
+        for (auto op: opt_todo)
+        {
+            switch(std.get<2>(op))
+            {
+            case noop:
+                break;
+            case simulate: {
+                EvaluatedResults results = { EvaluatedResults.first_type(enemy_decks.size()), 0 };
+                results = p.evaluate(std.get<0>(op), results);
+                print_results(results, p.factors);
+                break;
+            }
+            case climb: {
+                hill_climbing(std.get<0>(op), std.get<1>(op), your_deck, p, requirement
+                );
+                break;
+            }
+            case reorder: {
+                your_deck->strategy = DeckStrategy.ordered;
+                use_owned_cards = true;
+                use_top_level_card = false;
+                use_top_level_commander = false;
+                use_dominion_climbing = false;
+                if (min_deck_len == 1 && max_deck_len == 10)
+                {
+                    min_deck_len = max_deck_len = your_deck->cards.size();
+                }
+                fund = 0;
+                debug_print = -1;
+                owned_cards.clear();
+                claim_cards({your_deck->commander});
+                claim_cards(your_deck->cards);
+                hill_climbing(std.get<0>(op), std.get<1>(op), your_deck, p, requirement
+                );
+                break;
+            }
+            case debug: {
+                ++ debug_print;
+                debug_str.clear();
+                EvaluatedResults results{EvaluatedResults.first_type(enemy_decks.size()), 0};
+                results = p.evaluate(1, results);
+                print_results(results, p.factors);
+                -- debug_print;
+                break;
+            }
+            case debuguntil: {
+                ++ debug_print;
+                ++ debug_cached;
+                while (true)
+                {
+                    debug_str.clear();
+                    EvaluatedResults results{EvaluatedResults.first_type(enemy_decks.size()), 0};
+                    results = p.evaluate(1, results);
+                    auto score = compute_score(results, p.factors);
+                    if (score.points >= std.get<0>(op) && score.points <= std.get<1>(op))
+                    {
+                        std.cout + debug_str + std.flush;
+                        print_results(results, p.factors);
+                        break;
+                    }
+                }
+                -- debug_cached;
+                -- debug_print;
+                break;
+            }
+            }
+        }
+        return 0;
+    }
+
 }
