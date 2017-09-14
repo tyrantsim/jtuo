@@ -109,13 +109,13 @@ public class DeckTest {
     public void testResolve() {
         CardsParser.initialize();
         Deck deck = new Deck();
-        deck.set("Barracus,Infantry-1");
+        deck.set("Barracus,Infantry");
         deck.resolve();
 
-        assertEquals(1001, deck.getCards().get(0).getId());
-        assertEquals("Barracus", deck.getCards().get(0).getName());
-        assertEquals(CardType.COMMANDER, deck.getCards().get(0).getType());
-        assertEquals(1, deck.getCards().get(1).getId());
+        assertEquals(1192, deck.getCommander().getId());
+        assertEquals("Barracus", deck.getCommander().getName());
+        assertEquals(CardType.COMMANDER, deck.getCommander().getType());
+        assertEquals(3, deck.getCards().get(0).getId());
     }
 
 }
