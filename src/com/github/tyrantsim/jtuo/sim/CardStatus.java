@@ -453,5 +453,94 @@ public class CardStatus implements Cloneable {
             throw new AssertionError();
         }
     }
+    
+    public String description() {
+        String desc = "P" + player + " ";
+        switch(card.getType()) {
+        case COMMANDER: desc += "Commander "; break;
+        case ASSAULT: desc += "Assault " + index + " "; break;
+        case STRUCTURE: desc += "Structure " + index + " "; break;
+        //case cardtypes: assert(false); break;
+        }
+        desc += "[" + m_card->m_name;
+        switch (m_card->m_type)
+        {
+        case assault:
+            desc += " att:[[" + to_string(m_card->m_attack) + "(base)";
+            if (m_perm_attack_buff)
+            {
+                desc += "+[" + to_string(m_perm_attack_buff) + "(perm)";
+                if (m_subdued) { desc += "-" + to_string(m_subdued) + "(subd)"; }
+                desc += "]";
+            }
+            if (m_corroded_weakened) { desc += "-" + to_string(m_corroded_weakened) + "(corr)"; }
+            desc += "]";
+            if (m_temp_attack_buff) { desc += (m_temp_attack_buff > 0 ? "+" : "") + to_string(m_temp_attack_buff) + "(temp)"; }
+            desc += "]=" + to_string(attack_power());
+        case structure:
+        case commander:
+            desc += " hp:" + to_string(m_hp);
+            break;
+        case CardType::num_cardtypes:
+            assert(false);
+            break;
+        }
+        if (m_delay) { desc += " cd:" + to_string(m_delay); }
+        // Status w/o value
+        if (m_jammed) { desc += ", jammed"; }
+        if (m_overloaded) { desc += ", overloaded"; }
+        if (m_sundered) { desc += ", sundered"; }
+        // Status w/ value
+        if (m_corroded_weakened || m_corroded_rate) { desc += ", corroded " + to_string(m_corroded_weakened) + " (rate: " + to_string(m_corroded_rate) + ")"; }
+        if (m_subdued) { desc += ", subdued " + to_string(m_subdued); }
+        if (m_enfeebled) { desc += ", enfeebled " + to_string(m_enfeebled); }
+        if (m_inhibited) { desc += ", inhibited " + to_string(m_inhibited); }
+        if (m_sabotaged) { desc += ", sabotaged " + to_string(m_sabotaged); }
+        if (m_poisoned) { desc += ", poisoned " + to_string(m_poisoned); }
+        if (m_protected) { desc += ", protected " + to_string(m_protected); }
+        if (m_protected_stasis) { desc += ", stasis " + to_string(m_protected_stasis); }
+        if (m_enraged) { desc += ", enraged " + to_string(m_enraged); }
+        if (m_entrapped) { desc += ", entrapped " + to_string(m_entrapped); }
+//        if(m_step != CardStep::none) { desc += ", Step " + to_string(static_cast<int>(m_step)); }
+        Skill::Trigger s_triggers[] = { Skill::Trigger::play, Skill::Trigger::activate, Skill::Trigger::death };
+        for (const Skill::Trigger& trig: s_triggers)
+        {
+            std::vector<SkillSpec> card_skills(
+                (trig == Skill::Trigger::play) ? m_card->m_skills_on_play :
+                (trig == Skill::Trigger::activate) ? m_card->m_skills :
+                (trig == Skill::Trigger::death) ? m_card->m_skills_on_death :
+                std::vector<SkillSpec>());
+
+            // emulate Berserk/Counter by status Enraged/Entrapped unless such skills exist (only for normal skill triggering)
+            if (trig == Skill::Trigger::activate)
+            {
+                if (m_enraged && !std::count_if(card_skills.begin(), card_skills.end(), [](const SkillSpec ss) { return (ss.id == Skill::berserk); }))
+                {
+                    SkillSpec ss{Skill::berserk, m_enraged, allfactions, 0, 0, Skill::no_skill, Skill::no_skill, false, 0,};
+                    card_skills.emplace_back(ss);
+                }
+                if (m_entrapped && !std::count_if(card_skills.begin(), card_skills.end(), [](const SkillSpec ss) { return (ss.id == Skill::counter); }))
+                {
+                    SkillSpec ss{Skill::counter, m_entrapped, allfactions, 0, 0, Skill::no_skill, Skill::no_skill, false, 0,};
+                    card_skills.emplace_back(ss);
+                }
+            }
+            for (const auto& ss : card_skills)
+            {
+                std::string skill_desc;
+                if (m_evolved_skill_offset[ss.id]) { skill_desc += "->" + skill_names[ss.id + m_evolved_skill_offset[ss.id]]; }
+                if (m_enhanced_value[ss.id]) { skill_desc += " +" + to_string(m_enhanced_value[ss.id]); }
+                if (!skill_desc.empty())
+                {
+                    desc += ", " + (
+                        (trig == Skill::Trigger::play) ? "(On Play)" :
+                        (trig == Skill::Trigger::death) ? "(On Death)" :
+                        std::string("")) + skill_names[ss.id] + skill_desc;
+                }
+            }
+        }
+        return desc + "]";
+    }
+
 
 }

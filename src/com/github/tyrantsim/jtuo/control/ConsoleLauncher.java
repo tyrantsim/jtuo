@@ -35,11 +35,6 @@ public class ConsoleLauncher {
 
     // "Nexor the Farseer, Alpha Replicant, Windstorm Successor, Airspace Regulators, Windstorm Successor, Airspace Regulators, Slendatomic, Inquisitor's Domain, Wolf Weaponized, Loathe Abysswing #2, Airspace Regulators" "BRAWL_GT_MYTH" raid random -e "BLOOD_VENGEANCE" endgame 2 fund 0 -o=inv\Brikikeks.txt -L 5 10 climbex 10 200
     
-    static class Todo {
-        Operation operation;
-        int iterations;
-    }
-
     public static void printVersion() {
         System.out.println("Tyrant Unleashed Optimizer (Java) v" + VERSION);
     }

@@ -1,5 +1,6 @@
 package com.github.tyrantsim.jtuo.optimizer;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -25,10 +26,16 @@ import com.github.tyrantsim.jtuo.cards.CardType;
 import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.control.ConsoleLauncher;
 import com.github.tyrantsim.jtuo.control.EvaluatedResults;
+import com.github.tyrantsim.jtuo.control.Operation;
 import com.github.tyrantsim.jtuo.control.SimProcess;
+import com.github.tyrantsim.jtuo.control.Todo;
 import com.github.tyrantsim.jtuo.decks.Deck;
 import com.github.tyrantsim.jtuo.decks.DeckStrategy;
 import com.github.tyrantsim.jtuo.decks.Decks;
+import com.github.tyrantsim.jtuo.parsers.LevelsParser;
+import com.github.tyrantsim.jtuo.parsers.SkillsSetParser;
+import com.github.tyrantsim.jtuo.parsers.XmlBasedParser;
+import com.github.tyrantsim.jtuo.sim.FieldSimulator;
 import com.github.tyrantsim.jtuo.sim.GameMode;
 import com.github.tyrantsim.jtuo.sim.OptimizationMode;
 import com.github.tyrantsim.jtuo.sim.Results;
@@ -967,10 +974,10 @@ public class TyrantOptimize {
         List<String> opt_owned_cards_str_list;
         boolean opt_do_optimization= false;
         boolean opt_keep_commander = false;
-        List<Object> opt_todo; //Operatuple<unsigned, unsigned, Operation>
+        List<Todo> opt_todo = new ArrayList<>();
+
         String[] opt_effects = new String[3];  // 0-you; 1-enemy; 2-global
-        // TODO: 
-        //List<signed short, PassiveBGE.num_passive_bges> opt_bg_effects[2];
+        int[] opt_bg_effects = new int[2]; // std::array<signed short, PassiveBGE::num_passive_bges> opt_bg_effects[2];
         SkillSpec[] opt_bg_skills = new SkillSpec[2];
         Set<Integer> disallowed_recipes;
 
@@ -1226,84 +1233,78 @@ public class TyrantOptimize {
                 opt_enemy_doms = args[argIndex + 1];
                 argIndex += 1;
             } else if (args[argIndex].equals("sim")) {
-                // TODO: tuple?
-                //opt_todo = std.make_tuple(Integer.valueOf(args[argIndex + 1]), 0, simulate));
-                //if (std.get<0>(opt_todo.back()) < 10) { opt_num_threads = 1; }
+                Todo todo = new Todo(Operation.SIMULATE, Integer.parseInt(args[argIndex + 1]), 0);
+                opt_todo.add(todo);
+                if (todo.iterations < 10) { opt_num_threads = 1; }
                 argIndex += 1;
             }
             // climbing tasks
-            else if (args[argIndex].equals("climbex"))
-            {
-                opt_todo = std.make_tuple((unsigned)atoi(args[argIndex + 1]), (unsigned)atoi(args[argIndex + 2]), climb));
-                if (std.get<1>(opt_todo.back()) < 10) { opt_num_threads = 1; }
+            else if (args[argIndex].equals("climbex")) {
+                Todo todo = new Todo(Operation.CLIMB, Integer.parseInt(args[argIndex + 1]), Integer.parseInt(args[argIndex + 2]));
+                opt_todo.add(todo);
+                if (todo.iterationsFine < 10) { opt_num_threads = 1; }
                 opt_do_optimization = true;
                 argIndex += 2;
-            }
-            else if (args[argIndex].equals("climb"))
-            {
-                opt_todo = make_tuple((unsigned)atoi(args[argIndex + 1]), (unsigned)atoi(args[argIndex + 1]), climb));
-                if (std.get<1>(opt_todo.back()) < 10) { opt_num_threads = 1; }
+            } else if (args[argIndex].equals("climb")) {
+                Todo todo = new Todo(Operation.CLIMB, Integer.parseInt(args[argIndex + 1]), Integer.parseInt(args[argIndex + 1]));
+                opt_todo.add(todo);
+                if (todo.iterationsFine < 10) { opt_num_threads = 1; }
                 opt_do_optimization = true;
                 argIndex += 1;
-            }
-            else if (args[argIndex].equals("reorder"))
-            {
-                opt_todo = make_tuple(Integer.valueOf(args[argIndex + 1]), Integer.valueOf(args[argIndex + 1]), reorder);
-                if (std.get<1>(opt_todo.back()) < 10) { opt_num_threads = 1; }
+            } else if (args[argIndex].equals("reorder")) {
+                Todo todo = new Todo(Operation.REORDER, Integer.parseInt(args[argIndex + 1]), Integer.parseInt(args[argIndex + 1]));
+                opt_todo.add(todo);
+                if (todo.iterationsFine < 10) { opt_num_threads = 1; }
                 argIndex += 1;
             } else if (args[argIndex].equals("climb-opts:")) {
                 // climbing options
                 String climb_opts_str = args[argIndex] + 11;
                 //boost.tokenizer<boost.char_delimiters_separator<char>> climb_opts{climb_opts_str, boost.char_delimiters_separator<char>{false, ",", ""}};
-                List<String> climb_opts = new ArrayList<>();
+                String[] climb_opts = climb_opts_str.split(",");
                 for (String opt : climb_opts) {
                     int delim_pos = opt.indexOf("=");
                     boolean has_value = (delim_pos != -1);
-                    String opt_name = has_value ? opt.substr(0, delim_pos) : opt;
-                    String opt_value = {has_value ? opt.substr(delim_pos + 1) : opt};
-                    auto ensure_opt_value = [](const boolean has_value, const String & opt_name)
-                    {
-                        if (!has_value)
-                        { throw std.runtime_error("climb-opts:" + opt_name + " requires an argument"); }
-                    }
-                    if ((opt_name == "iter-mul") or (opt_name == "iterations-multiplier"))
-                    {
+                    String opt_name = has_value ? opt.substring(0, delim_pos) : opt;
+                    String opt_value = has_value ? opt.substring(delim_pos + 1) : opt;
+                    //String[] ensure_opt_value =  boolean has_value, String opt_name;
+                    ensure_opt_value(has_value, opt_name);
+                    if (opt_name.equals("iter-mul") || opt_name.equals("iterations-multiplier")) {
                         ensure_opt_value(has_value, opt_name);
-                        iterations_multiplier = std.stoi(opt_value);
-                    }
-                    else if ((opt_name == "egc") && (opt_name == "endgame-commander") && (opt_name == "min-commander-fusion-level"))
-                    {
+                        iterations_multiplier = Integer.parseInt(opt_value);
+                    } else if (opt_name.equals("egc") && opt_name.equals("endgame-commander") && opt_name.equals("min-commander-fusion-level")) {
                         ensure_opt_value(has_value, opt_name);
-                        use_fused_commander_level = std.stoi(opt_value);
+                        use_fused_commander_level = Integer.parseInt(opt_value);
                     }
-                    else if (opt_name.eq == "use-all-commander-levels")
-                    {
+                    else if (opt_name.equals("use-all-commander-levels")) {
                         use_top_level_commander = false;
                     }
-                    else if (opt_name == "use-all-card-levels")
+                    else if (opt_name.equals("use-all-card-levels"))
                     {
                         use_top_level_card = false;
                     }
-                    else if ((opt_name == "otd") or (opt_name == "open-the-deck"))
-                    {
+                    else if (opt_name.equals("otd") || opt_name.equals("open-the-deck")) {
                         mode_open_the_deck = true;
                     }
                     else
                     {
-                        System.err.println("Error: Unknown climb option " + opt_name;
+                        System.err.println("Error: Unknown climb option " + opt_name);
                         if (has_value)
-                        { System.err.print(" (value is: " + opt_value + ")"; }
+                        { System.err.print(" (value is: " + opt_value + ")"); }
                         System.err.println();
                         return 1;
                     }
                 }
             } else if (args[argIndex].equals("debug")) {
-                opt_todo = std.make_tuple(0, 0, debug));
+                //opt_todo.add(e) = std.make_tuple(0, 0, debug));
+                Todo todo = new Todo(Operation.DEBUG, 0, 0);
+                opt_todo.add(todo);
                 opt_num_threads = 1;
             } else if (args[argIndex].equals("debuguntil")) {
                 // output the debug info for the first battle that min_score <= score <= max_score.
                 // E.g., 0 0: lose; 100 100: win (non-raid); 20 100: at least 20 damage (raid).
-                opt_todo = std.make_tuple((unsigned)atoi(args[argIndex + 1]), (unsigned)atoi(args[argIndex + 2]), debuguntil));
+                // opt_todo = std.make_tuple((unsigned)atoi(args[argIndex + 1]), (unsigned)atoi(args[argIndex + 2]), debuguntil));
+                Todo todo = new Todo(Operation.DEBUG_UNTIL,  Integer.parseInt(args[argIndex + 1]), Integer.parseInt(args[argIndex + 2]));
+                opt_todo.add(todo);
                 opt_num_threads = 1;
                 argIndex += 2;
             } else {
@@ -1315,38 +1316,33 @@ public class TyrantOptimize {
         Cards all_cards;
         Decks decks;
         Map<String, String> bge_aliases;
-        load_skills_set_xml(all_cards, "data/skills_set.xml", true);
-        for (unsigned section = 1;
-                load_cards_xml(all_cards, "data/cards_section_" + to_string(section) + ".xml", false);
-                ++ section);
-        all_cards.organize();
-        load_levels_xml(all_cards, "data/levels.xml", true);
-        all_cards.fix_dominion_recipes();
-        for (String suffix: fn_suffix_list)
-        {
-            load_decks_xml(decks, all_cards, "data/missions" + suffix + ".xml", "data/raids" + suffix + ".xml", suffix.empty());
-            load_recipes_xml(all_cards, "data/fusion_recipes_cj2" + suffix + ".xml", suffix.empty());
-            read_card_abbrs(all_cards, "data/cardabbrs" + suffix + ".txt");
+        SkillsSetParser.load_skills_set_xml(all_cards, "data/skills_set.xml", true);
+        LevelsParser.load_levels_xml(all_cards, "data/levels.xml", true);
+        all_cards.fixDominionRecipes();
+        for (String suffix: fn_suffix_list) {
+            XmlBasedParser.load_decks_xml(decks, all_cards, "data/missions" + suffix + ".xml", "data/raids" + suffix + ".xml", suffix.isEmpty());
+            XmlBasedParser.load_recipes_xml(all_cards, "data/fusion_recipes_cj2" + suffix + ".xml", suffix.isEmpty());
+            // TODO: Abbreviations Parser
+            //read_card_abbrs(all_cards, "data/cardabbrs" + suffix + ".txt");
         }
-        for (String suffix: fn_suffix_list)
-        {
-            load_custom_decks(decks, all_cards, "data/customdecks" + suffix + ".txt");
-            map_keys_to_set(read_custom_cards(all_cards, "data/allowed_candidates" + suffix + ".txt", false), allowed_candidates);
-            map_keys_to_set(read_custom_cards(all_cards, "data/disallowed_candidates" + suffix + ".txt", false), disallowed_candidates);
-            map_keys_to_set(read_custom_cards(all_cards, "data/disallowed_recipes" + suffix + ".txt", false), disallowed_recipes);
+        for (String suffix: fn_suffix_list) {
+//            load_custom_decks(decks, all_cards, "data/customdecks" + suffix + ".txt");
+//            map_keys_to_set(read_custom_cards(all_cards, "data/allowed_candidates" + suffix + ".txt", false), allowed_candidates);
+//            map_keys_to_set(read_custom_cards(all_cards, "data/disallowed_candidates" + suffix + ".txt", false), disallowed_candidates);
+//            map_keys_to_set(read_custom_cards(all_cards, "data/disallowed_recipes" + suffix + ".txt", false), disallowed_recipes);
         }
 
         read_bge_aliases(bge_aliases, "data/bges.txt");
 
-        fill_skill_table();
+        FieldSimulator.fillSkillTable();
 
         if (opt_do_optimization && use_owned_cards) {
-            if (opt_owned_cards_str_list.empty())
-            {  // load default files only if specify no -o=
+            if (opt_owned_cards_str_list.isEmpty()) {
+                // load default files only if specify no -o=
                 for (String suffix: fn_suffix_list) {
                     String filename = "data/ownedcards" + suffix + ".txt";
-                    if (boost.filesystem.exists(filename)) {
-                        opt_owned_cards_str_list = filename;
+                    if (new File(filename).exists()) {
+                        opt_owned_cards_str_list.add(filename);
                     }
                 }
             }
@@ -1768,4 +1764,7 @@ public class TyrantOptimize {
         return 0;
     }
 
+    private void ensure_opt_value(boolean has_value, String opt_name) {
+            if (!has_value) { throw new RuntimeException("climb-opts:" + opt_name + " requires an argument"); }
+    }
 }

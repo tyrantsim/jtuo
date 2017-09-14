@@ -1,10 +1,10 @@
 package com.github.tyrantsim.jtuo.control;
 
-enum Operation {
-
+public enum Operation {
     NOOP,
     SIMULATE,
     CLIMB,
     REORDER,
-
+    DEBUG,
+    DEBUG_UNTIL
 }
