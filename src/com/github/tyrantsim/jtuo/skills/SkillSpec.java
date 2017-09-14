@@ -4,6 +4,20 @@ import com.github.tyrantsim.jtuo.cards.Faction;
 
 public class SkillSpec implements Cloneable {
 
+    public SkillSpec(Skill id, float x, Faction y, int n, int c, Skill s, Skill s2, boolean all, int cardId, SkillTrigger trigger) {
+        super();
+        this.id = id;
+        this.x = x;
+        this.y = y;
+        this.n = n;
+        this.c = c;
+        this.s = s;
+        this.s2 = s2;
+        this.all = all;
+        this.cardId = cardId;
+        this.trigger = trigger;
+    }
+
     Skill id;
     float x;
     Faction y;

@@ -2,11 +2,16 @@ package com.github.tyrantsim.jtuo.sim;
 
 import com.github.tyrantsim.jtuo.cards.Card;
 import com.github.tyrantsim.jtuo.cards.CardCategory;
+import com.github.tyrantsim.jtuo.cards.Faction;
 import com.github.tyrantsim.jtuo.skills.Skill;
+import com.github.tyrantsim.jtuo.skills.SkillSpec;
+import com.github.tyrantsim.jtuo.skills.SkillTrigger;
 import com.github.tyrantsim.jtuo.skills.SkillUtils;
 import com.github.tyrantsim.jtuo.util.Utils;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import static com.github.tyrantsim.jtuo.util.Utils.safeMinus;
 
@@ -34,7 +39,7 @@ public class CardStatus implements Cloneable {
     private int poisoned;
     private int protectedBy;
     private int protectedByStasis;
-    private int enranged;
+    private int enraged;
     private int entrapped;
 
     private int[] primarySkillOffset;
@@ -69,7 +74,7 @@ public class CardStatus implements Cloneable {
         poisoned = 0;
         protectedBy = 0;
         protectedByStasis = 0;
-        enranged = 0;
+        enraged = 0;
         entrapped = 0;
 
         jammed = false;
@@ -141,7 +146,7 @@ public class CardStatus implements Cloneable {
 
     int skillBaseValue(Skill skillId) {
         return card.getSkillValue()[skillId.ordinal() + primarySkillOffset[skillId.ordinal()]]
-                + (skillId == Skill.BERSERK ? enranged : 0)
+                + (skillId == Skill.BERSERK ? enraged : 0)
                 + (skillId == Skill.COUNTER ? entrapped : 0);
     }
 
@@ -304,12 +309,12 @@ public class CardStatus implements Cloneable {
         return protectedByStasis;
     }
 
-    public void setEnranged(int enranged) {
-        this.enranged = enranged;
+    public void setEnraged(int enranged) {
+        this.enraged = enranged;
     }
 
-    public int getEnranged() {
-        return enranged;
+    public int getEnraged() {
+        return enraged;
     }
 
     public void setEntrapped(int entrapped) {
@@ -435,7 +440,7 @@ public class CardStatus implements Cloneable {
             copy.setPoisoned(poisoned);
             copy.setProtectedBy(protectedBy);
             copy.setProtectedByStasis(protectedByStasis);
-            copy.setEnranged(enranged);
+            copy.setEnraged(enraged);
             copy.setEntrapped(entrapped);
 
             copy.setPrimarySkillOffset(Utils.cloneArray(primarySkillOffset));
@@ -462,80 +467,75 @@ public class CardStatus implements Cloneable {
         case STRUCTURE: desc += "Structure " + index + " "; break;
         //case cardtypes: assert(false); break;
         }
-        desc += "[" + m_card->m_name;
-        switch (m_card->m_type)
+        desc += "[" + getCard().getName();
+        switch (getCard().getType())
         {
-        case assault:
-            desc += " att:[[" + to_string(m_card->m_attack) + "(base)";
-            if (m_perm_attack_buff)
-            {
-                desc += "+[" + to_string(m_perm_attack_buff) + "(perm)";
-                if (m_subdued) { desc += "-" + to_string(m_subdued) + "(subd)"; }
+        case ASSAULT:
+            desc += " att:[[" + getCard().getAttack() + "(base)";
+            if (getPermAttackBuff() > 0){
+                desc += "+[" + getPermAttackBuff() + "(perm)";
+                if (getSubdued() > 0) { desc += "-" + getSubdued() + "(subd)"; }
                 desc += "]";
             }
-            if (m_corroded_weakened) { desc += "-" + to_string(m_corroded_weakened) + "(corr)"; }
+            if (getCorrodedWeakened() > 0) { desc += "-" + getCorrodedWeakened() + "(corr)"; }
             desc += "]";
-            if (m_temp_attack_buff) { desc += (m_temp_attack_buff > 0 ? "+" : "") + to_string(m_temp_attack_buff) + "(temp)"; }
-            desc += "]=" + to_string(attack_power());
-        case structure:
-        case commander:
-            desc += " hp:" + to_string(m_hp);
+            if (tempAttackBuff != 0) { desc += (tempAttackBuff > 0 ? "+" : "") + tempAttackBuff + "(temp)"; }
+            desc += "]=" + getAttackPower();
+        case STRUCTURE:
+        case COMMANDER:
+            desc += " hp:" + getHP();
             break;
-        case CardType::num_cardtypes:
+        default:
             assert(false);
             break;
         }
-        if (m_delay) { desc += " cd:" + to_string(m_delay); }
+        if (getDelay() > -1) { desc += " cd:" + getDelay(); }
         // Status w/o value
-        if (m_jammed) { desc += ", jammed"; }
-        if (m_overloaded) { desc += ", overloaded"; }
-        if (m_sundered) { desc += ", sundered"; }
+        if (jammed) { desc += ", jammed"; }
+        if (overloaded) { desc += ", overloaded"; }
+        if (sundered) { desc += ", sundered"; }
         // Status w/ value
-        if (m_corroded_weakened || m_corroded_rate) { desc += ", corroded " + to_string(m_corroded_weakened) + " (rate: " + to_string(m_corroded_rate) + ")"; }
-        if (m_subdued) { desc += ", subdued " + to_string(m_subdued); }
-        if (m_enfeebled) { desc += ", enfeebled " + to_string(m_enfeebled); }
-        if (m_inhibited) { desc += ", inhibited " + to_string(m_inhibited); }
-        if (m_sabotaged) { desc += ", sabotaged " + to_string(m_sabotaged); }
-        if (m_poisoned) { desc += ", poisoned " + to_string(m_poisoned); }
-        if (m_protected) { desc += ", protected " + to_string(m_protected); }
-        if (m_protected_stasis) { desc += ", stasis " + to_string(m_protected_stasis); }
-        if (m_enraged) { desc += ", enraged " + to_string(m_enraged); }
-        if (m_entrapped) { desc += ", entrapped " + to_string(m_entrapped); }
-//        if(m_step != CardStep::none) { desc += ", Step " + to_string(static_cast<int>(m_step)); }
-        Skill::Trigger s_triggers[] = { Skill::Trigger::play, Skill::Trigger::activate, Skill::Trigger::death };
-        for (const Skill::Trigger& trig: s_triggers)
-        {
-            std::vector<SkillSpec> card_skills(
-                (trig == Skill::Trigger::play) ? m_card->m_skills_on_play :
-                (trig == Skill::Trigger::activate) ? m_card->m_skills :
-                (trig == Skill::Trigger::death) ? m_card->m_skills_on_death :
-                std::vector<SkillSpec>());
+        if (corrodedWeakened > 0 || corrodedRate >0) { desc += ", corroded " + corrodedWeakened + " (rate: " + corrodedRate + ")"; }
+        if (subdued > 0) { desc += ", subdued " + subdued; }
+        if (enfeebled > 0) { desc += ", enfeebled " + enfeebled; }
+        if (inhibited> 0) { desc += ", inhibited " + inhibited; }
+        if (sabotaged> 0) { desc += ", sabotaged " + sabotaged; }
+        if (poisoned> 0) { desc += ", poisoned " + poisoned; }
+        if (getProtectedBy() > 0) { desc += ", protected " + protectedBy; }
+        if (protectedByStasis >0) { desc += ", stasis " + protectedByStasis; }
+        if (enraged >0) { desc += ", enraged " + enraged; }
+        if (entrapped>0) { desc += ", entrapped " + entrapped; }
+//        if(step != CardStep::none) { desc += ", Step " + static_cast<int>(step); }
+        SkillTrigger s_triggers[] = { SkillTrigger.PLAY, SkillTrigger.ACTIVATE, SkillTrigger.DEATH };
+        for (SkillTrigger trig: s_triggers) {
+            List<SkillSpec> card_skills = 
+                (trig == SkillTrigger.PLAY) ? getCard().getSkillsOnPlay() :
+                (trig == SkillTrigger.ACTIVATE) ? getCard().getSkills() :
+                (trig == SkillTrigger.DEATH) ? getCard().getSkillsOnDeath() :
+                new ArrayList<SkillSpec>();
 
             // emulate Berserk/Counter by status Enraged/Entrapped unless such skills exist (only for normal skill triggering)
-            if (trig == Skill::Trigger::activate)
+            if (trig == SkillTrigger.ACTIVATE)
             {
-                if (m_enraged && !std::count_if(card_skills.begin(), card_skills.end(), [](const SkillSpec ss) { return (ss.id == Skill::berserk); }))
-                {
-                    SkillSpec ss{Skill::berserk, m_enraged, allfactions, 0, 0, Skill::no_skill, Skill::no_skill, false, 0,};
-                    card_skills.emplace_back(ss);
+                if (enraged > 0 && !card_skills.contains(Skill.BERSERK)) {
+                    SkillSpec ss = new SkillSpec(Skill.BERSERK, enraged, Faction.ALL_FACTIONS, 0, 0, Skill.NO_SKILL, Skill.NO_SKILL, false, 0);
+                    card_skills.add(ss);
                 }
-                if (m_entrapped && !std::count_if(card_skills.begin(), card_skills.end(), [](const SkillSpec ss) { return (ss.id == Skill::counter); }))
-                {
-                    SkillSpec ss{Skill::counter, m_entrapped, allfactions, 0, 0, Skill::no_skill, Skill::no_skill, false, 0,};
-                    card_skills.emplace_back(ss);
+                if (entrapped > 0 && !card_skills.contains(Skill.COUNTER)) {
+                    SkillSpec ss = new SkillSpec(Skill.COUNTER, entrapped, Faction.ALL_FACTIONS, 0, 0, Skill.NO_SKILL, Skill.NO_SKILL, false, 0);
+                    card_skills.add(ss);
                 }
             }
-            for (const auto& ss : card_skills)
-            {
-                std::string skill_desc;
-                if (m_evolved_skill_offset[ss.id]) { skill_desc += "->" + skill_names[ss.id + m_evolved_skill_offset[ss.id]]; }
-                if (m_enhanced_value[ss.id]) { skill_desc += " +" + to_string(m_enhanced_value[ss.id]); }
+            for (Skill ss : card_skills) {
+                String skill_desc = "";
+                if (evolved_skill_offset[ss.id]) { skill_desc += "->" + skill_names[ss.id + evolved_skill_offset[ss.id]]; }
+                if (enhanced_value[ss.id]) { skill_desc += " +" + enhanced_value[ss.id]; }
                 if (!skill_desc.empty())
                 {
                     desc += ", " + (
                         (trig == Skill::Trigger::play) ? "(On Play)" :
                         (trig == Skill::Trigger::death) ? "(On Death)" :
-                        std::string("")) + skill_names[ss.id] + skill_desc;
+                        "" + skill_names[ss.id] + skill_desc;
                 }
             }
         }
