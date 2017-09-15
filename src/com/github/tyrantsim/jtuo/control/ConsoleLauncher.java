@@ -84,9 +84,7 @@ public class ConsoleLauncher {
                 FieldSimulator.turnLimit = Integer.parseInt(args[argIndex + 1]);
                 argIndex += 1;
             } else if (arg.equals("sim")) {
-                Todo todo = new Todo();
-                todo.operation = Operation.SIMULATE;
-                todo.iterations = Integer.parseInt(args[argIndex + 1]);
+                Todo todo = new Todo(Operation.SIMULATE, Integer.parseInt(args[argIndex + 1]), Integer.parseInt(args[argIndex + 1]));
                 optTodo.add(todo);
                 argIndex += 1;
 
@@ -96,9 +94,7 @@ public class ConsoleLauncher {
             } else if (arg.equals("raid")) {
                 OptimizationMode optimizationMode = OptimizationMode.RAID;
                 GameMode mode = GameMode.FIGHT;
-                Todo todo = new Todo();
-                todo.operation = Operation.CLIMB;
-                todo.iterations = 5000; // Integer.parseInt(args[argIndex + 1]);
+                Todo todo = new Todo(Operation.CLIMB, 5000, 5000);
                 optTodo.add(todo);
                 argIndex += 1;
 
