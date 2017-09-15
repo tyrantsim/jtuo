@@ -31,7 +31,7 @@ public class Deck implements Cloneable {
     private int commanderMaxLevel;
     private List<Card> cards = new ArrayList<>();
     // <positions of card, prefix mark>: -1 indicating the commander. E.g, used as a mark to be kept in attacking deck when optimizing.
-    private Map<Integer, Boolean> cardMarks = new HashMap<>();
+    public Map<Integer, Boolean> cardMarks = new HashMap<>();
 
     private Card shuffledCommander;
     private List<Card> shuffledForts = new ArrayList<>();
@@ -53,9 +53,13 @@ public class Deck implements Cloneable {
     private List<Card> fortressCards = new ArrayList<>();
     private List<SkillSpec> effects = new ArrayList<>();
 
+    public List<SkillSpec> getEffects() {
+        return effects;
+    }
+
     // Optional card pools
-    OptionalCardPool variableForts = new OptionalCardPool();
-    OptionalCardPool variableCards = new OptionalCardPool();
+    public OptionalCardPool variableForts = new OptionalCardPool();
+    public OptionalCardPool variableCards = new OptionalCardPool();
 
     public Deck(DeckType deckType, int id, String name) {
 
@@ -250,7 +254,6 @@ public class Deck implements Cloneable {
             }
             sb.append(Constants.BASE64_CHARS.toCharArray()[factor + 32]);
         }
-
         return sb.toString();
     }
 
