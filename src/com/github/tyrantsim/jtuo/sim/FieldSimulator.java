@@ -513,7 +513,7 @@ public class FieldSimulator {
             // end of the opponent's next turn for enemy units
             status.setTempAttackBuff(0);
             status.setJammed(false);
-            status.setEnranged(0);
+            status.setEnraged(0);
             status.setSundered(false);
             status.setInhibited(0);
             status.setSabotaged(0);
@@ -537,12 +537,44 @@ public class FieldSimulator {
         cards.removeIf(card->!card.isAlive());
     }
 
-    private static void cooldownSkills(CardStatus card) {
-        // TODO: implement this
+    private static void cooldownSkills(CardStatus status) {
+        for (SkillSpec skill: status.getCard().getSkills()) {
+            if (status.getSkillCd(skill.getId()) > 0) {
+                debug(2, "%s reduces timer (%d) of skill %s\n",
+                        status.description(), String.valueOf(status.getSkillCd(skill.getId())), skill.getId().toString());
+                status.cooldownSkillCd(skill.getId());
+            }
+        }
     }
 
-    public static void checkAndPerformValor(Field field, CardStatus status) {
-        // TODO: implement this
+    /**
+     * @return true if valor triggered
+     */
+    public static boolean checkAndPerformValor(Field field, CardStatus src) {
+
+        int valorValue = src.skill(Skill.VALOR);
+
+        if (valorValue > 0 && !src.isSundered() && skillCheck(field, Skill.VALOR, src, null)) {
+
+            final Hand opponentPlayer = field.getPlayer(opponent(src.getPlayer()));
+            final CardStatus dst = opponentPlayer.getAssaults().size() > src.getIndex()
+                    ? opponentPlayer.getAssaults().get(src.getIndex()) : null;
+
+            if (dst == null || dst.getHP() <= 0) {
+                debug(1, "%s loses Valor (no blocker)\n", src.description());
+                return false;
+            } else if (dst.getAttackPower() <= src.getAttackPower()) {
+                debug(1, "%s loses Valor (weak blocker %s)\n", src.description(), dst.description());
+                return false;
+            }
+
+            debug(1, "%s activates Valor %d\n", src.description(), String.valueOf(valorValue));
+            src.setPermAttackBuff(src.getPermAttackBuff() + valorValue);
+            return true;
+        }
+
+        return false;
+
     }
 
     private static void checkAndPerformSummon(Field field, CardStatus status) {
@@ -777,7 +809,7 @@ public class FieldSimulator {
     private static int opponent(int player) {
         return ((player + 1) % 2);
     }
-    
+
     void perform_targetted_hostile_fast(Skill skill_id, Field fd, CardStatus src, SkillSpec s) {
         select_targets(skill_id, fd, src, s);
         List<CardStatus> paybackers;
@@ -1058,7 +1090,7 @@ public class FieldSimulator {
         }                                                              
     }
 
-    private void debug(int v, String format, String... args) {
+    private static void debug(int v, String format, String... args) {
         if (Main.debug_print >= v) {
             if (Main.debug_line) {
                 System.out.println(MessageFormat.format("%i - " + format, args));

@@ -6,11 +6,4 @@ public class Utils {
         return (x > y) ? (x - y) : 0;
     }
 
-    public static int[] cloneArray(int[] src) {
-        int[] dst = new int[src.length];
-        System.arraycopy(src, 0, dst, 0, src.length);
-        return dst;
-    }
-
-
 }

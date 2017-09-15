@@ -365,6 +365,8 @@ public class CardStatus implements Cloneable {
         skillCd[skill.ordinal()] = cd;
     }
 
+    public void cooldownSkillCd(Skill skill) { skillCd[skill.ordinal()]--; }
+
     public void setSkillCd(int[] skillCd) { this.skillCd = skillCd; }
 
     int getSkillCd(Skill skill) {
@@ -443,10 +445,10 @@ public class CardStatus implements Cloneable {
             copy.setEnraged(enraged);
             copy.setEntrapped(entrapped);
 
-            copy.setPrimarySkillOffset(Utils.cloneArray(primarySkillOffset));
-            copy.setEvolvedSkillOffset(Utils.cloneArray(evolvedSkillOffset));
-            copy.setEnhancedValue(Utils.cloneArray(enhancedValue));
-            copy.setSkillCd(Utils.cloneArray(skillCd));
+            copy.setPrimarySkillOffset(primarySkillOffset.clone());
+            copy.setEvolvedSkillOffset(evolvedSkillOffset.clone());
+            copy.setEnhancedValue(enhancedValue.clone());
+            copy.setSkillCd(skillCd.clone());
 
             copy.setJammed(jammed);
             copy.setOverloaded(overloaded);
