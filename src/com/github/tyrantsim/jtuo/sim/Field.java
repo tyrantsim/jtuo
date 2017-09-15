@@ -200,6 +200,14 @@ public class Field {
         }
     }
 
+    public boolean passiveEffectExists(PassiveBGE[] arr, PassiveBGE effect) {
+        for (int i = 0; i < arr.length; i++) {
+            if (arr[i] == effect)
+                return true;
+        }
+        return false;
+    }
+
     Deque<Pair<CardStatus, SkillSpec>> getSkillQueue() {
         return skillQueue;
     }

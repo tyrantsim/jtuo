@@ -140,6 +140,8 @@ public class CardStatus implements Cloneable {
         return canAct() && getDelay() == 0;
     }
 
+    boolean canBeHealed() { return isAlive() && hp < getMaxHP(); }
+
     boolean isDominion() {
         return getCard().getCategory() == CardCategory.DOMINION_ALPHA;
     }

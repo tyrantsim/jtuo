@@ -29,5 +29,4 @@ public class FileParserTest {
         assertEquals((Integer) 47457, ids.get(5));
     }
 
-
 }

@@ -12,6 +12,7 @@ import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.skills.SkillTrigger;
 import com.github.tyrantsim.jtuo.skills.SkillUtils;
 import com.github.tyrantsim.jtuo.util.Pair;
+import com.github.tyrantsim.jtuo.util.Utils;
 
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -20,6 +21,7 @@ import java.util.Comparator;
 import java.util.Deque;
 import java.util.List;
 
+import static com.github.tyrantsim.jtuo.util.Utils.findInArray;
 import static com.github.tyrantsim.jtuo.util.Utils.safeMinus;
 
 public class FieldSimulator {
@@ -577,8 +579,34 @@ public class FieldSimulator {
 
     }
 
-    private static void checkAndPerformSummon(Field field, CardStatus status) {
-        // TODO: implement this
+    /**
+     * @return summoned card, null if none
+     */
+    private static CardStatus checkAndPerformSummon(Field field, CardStatus status) {
+
+        int summonedCardId = status.getCard().getSkillValue()[Skill.SUMMON.ordinal()];
+        if (summonedCardId > 0) {
+            final Card summonedCard;
+            try {
+                summonedCard = Cards.getCardById(summonedCardId);
+            } catch (Exception e) {
+                return null;
+            }
+
+            debug(1, "%s summons %s\n", status.description(), summonedCard.getName());
+
+            switch (summonedCard.getType()) {
+                case ASSAULT:
+                case STRUCTURE:
+                    return new PlayCard(summonedCard, field, status.getPlayer(), status).op();
+                default:
+                    debug(0, "Unknown card type: #%d %s: %s\n", String.valueOf(summonedCard.getId()),
+                            summonedCard.getName(), summonedCard.getType().toString());
+                    throw new AssertionError();
+            }
+        }
+
+        return null;
     }
 
     private static void evaluateSkills(Field field, CardStatus card, List<SkillSpec> skills) {
@@ -710,11 +738,108 @@ public class FieldSimulator {
     }
 
     private static int modifyAttackDamage(Field field, CardType cardType, CardStatus attStatus, CardStatus defStatus, int preModifierDmg) {
+
         int attDmg = preModifierDmg;
 
-        if (attDmg == 0) return attDmg;
+        if (attDmg == 0) return 0;
 
-        // TODO: implement this
+        List<CardStatus> attAssaults = field.tap.getAssaults(); // (active) attacker assaults
+        List<CardStatus> defAssaults = field.tip.getAssaults(); // (inactive) defender assaults
+        int legionValue = 0; // Starting legion value
+
+        // Enhance damage (if additional damage isn't prevented)
+        if (!attStatus.isSundered()) {
+
+            // Skill: Legion
+            int legionBase = attStatus.skill(Skill.LEGION);
+            if (legionBase > 0) {
+
+                boolean bgeMegamorphosis = findInArray(field.getBGEffects(field.tapi), PassiveBGE.MEGAMORPHOSIS);
+
+                // Check if adjacent cards add legion value
+                if (attStatus.getIndex() > 0 && attAssaults.get(attStatus.getIndex() - 1).isAlive() && (bgeMegamorphosis
+                        || attAssaults.get(attStatus.getIndex() - 1).getCard().getFaction() == attStatus.getCard().getFaction()))
+                    legionValue++;
+
+                if (attStatus.getIndex() + 1 < attAssaults.size() && attAssaults.get(attStatus.getIndex() + 1).isAlive() && (bgeMegamorphosis
+                        || attAssaults.get(attStatus.getIndex() + 1).getCard().getFaction() == attStatus.getCard().getFaction()))
+                    legionValue++;
+
+                if (legionValue > 0) {
+                    legionValue *= legionBase;
+                    attDmg += legionValue;
+                }
+            }
+
+            // Skill: Coalition
+            int coalitionBase = attStatus.skill(Skill.COALITION);
+            if (coalitionBase > 0) {
+                // TODO: Implement this
+            }
+
+            // Skill: Rupture
+            int ruptureValue = attStatus.skill(Skill.RUPTURE);
+            if (ruptureValue > 0)
+                attDmg += ruptureValue;
+
+            // Skill: Venom
+            int venomValue = attStatus.skill(Skill.VENOM);
+            if (venomValue > 0 && defStatus.getPoisoned() > 0)
+                attDmg += venomValue;
+
+            // PassiveBGE: Bloodlust
+            if (field.bloodlustValue > 0)
+                attDmg += field.bloodlustValue;
+
+            // State: Enfeebled
+            if (defStatus.getEnfeebled() > 0)
+                attDmg += defStatus.getEnfeebled();
+        }
+
+        // Prevent damage
+        int reducedDmg = 0;
+
+        // Skill: Armor
+        int armorValue = 0;
+        if (defStatus.getCard().getType() == CardType.ASSAULT) {
+            // PassiveBGE: Fortification (adj step -> 1 (1 left, host, 1 right)
+            // TODO: C++ code says tapi but probably should be tipi.. Test this
+            int adjSize = findInArray(field.getBGEffects(field.tapi), PassiveBGE.FORTIFICATION) ? 1 : 0;
+            int hostIdx = defStatus.getIndex();
+            int fromIdx = safeMinus(hostIdx, adjSize);
+            int tillIdx = Math.min(hostIdx + adjSize, safeMinus(defAssaults.size(), 1));
+
+            while (fromIdx <= tillIdx) {
+                CardStatus adjStatus = defAssaults.get(fromIdx);
+                if (!adjStatus.isAlive()) continue;
+                armorValue = Math.max(armorValue, adjStatus.skill(Skill.ARMORED));
+                fromIdx++;
+            }
+        }
+
+        if (armorValue > 0)
+            reducedDmg += armorValue;
+
+        // Skill: Protect
+        if (defStatus.protectedValue() > 0)
+            reducedDmg += defStatus.protectedValue();
+
+        // Skill: Pierce
+        int pierceValue = attStatus.skill(Skill.PIERCE) + attStatus.skill(Skill.RUPTURE);
+        if (reducedDmg > 0 && pierceValue > 0)
+            reducedDmg = safeMinus(reducedDmg, pierceValue);
+
+        // Final Attack Damage
+        attDmg = safeMinus(attDmg, reducedDmg);
+
+        debug(1, "%s attacks %s for %d damage\n",
+                attStatus.description(), defStatus.description(), String.valueOf(preModifierDmg));
+
+        // PassiveBGE: Brigade
+        if (findInArray(field.getBGEffects(field.tapi), PassiveBGE.BRIGADE) && legionValue > 0 && attStatus.canBeHealed()) {
+            debug(1, "Brigade: %s heals itself for %d\n", attStatus.description(), String.valueOf(legionValue));
+            attStatus.addHP(legionValue);
+        }
 
         return attDmg;
     }
