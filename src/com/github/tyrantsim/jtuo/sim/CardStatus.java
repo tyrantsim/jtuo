@@ -371,13 +371,19 @@ public class CardStatus implements Cloneable {
 
     public void setSkillCd(int[] skillCd) { this.skillCd = skillCd; }
 
-    int getSkillCd(Skill skill) {
+    public int getSkillCd(Skill skill) {
         return skillCd[skill.ordinal()];
     }
 
     public int getEnhanced(Skill skillId) {
         return enhancedValue[skillId.ordinal() + primarySkillOffset[skillId.ordinal()]];
     }
+
+    public boolean hasAttacked() { return step == CardStep.ATTACKED; }
+
+    public CardStep getStep() { return step; }
+
+    public boolean isActiveNextTurn() { return canAct() && delay <= 1; }
 
     public void setDelay(int delay) {
         this.delay = delay;

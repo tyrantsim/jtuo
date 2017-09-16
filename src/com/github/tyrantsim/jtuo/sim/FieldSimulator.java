@@ -891,7 +891,24 @@ public class FieldSimulator {
     }
 
     private static boolean skillCheck(Field field, Skill skill, CardStatus c, CardStatus ref) {
-        return SkillUtils.isDefensiveSkill(skill) || c.isAlive();
+        switch (skill) {
+            case HEAL: return c.canBeHealed();
+            case MEND: return c.canBeHealed();
+            case RALLY: return !c.isSundered();
+            case OVERLOAD: return c.isActive() && !c.isOverloaded() && !c.hasAttacked();
+            case JAM:
+                if (field.getTapi() == ref.getPlayer())
+                    return c.isActiveNextTurn(); // active player performs Jam
+                return c.isActive() && c.getStep() == CardStep.NONE; // inactive player performs Jam
+            case LEECH: return c.canBeHealed();
+            case COALITION: return c.isActive();
+            case PAYBACK: return ref.getCard().getType() == CardType.ASSAULT;
+            case REVENGE: return skillCheck(field, Skill.PAYBACK, c, ref);
+            case TRIBUTE: return ref.getCard().getType() == CardType.ASSAULT && !c.equals(ref);
+            case REFRESH: return c.canBeHealed();
+            case DRAIN: return c.canBeHealed();
+            default: return SkillUtils.isDefensiveSkill(skill) || c.isAlive();
+        }
     }
 
     private static void prependOnDeath(Field field) {
@@ -984,8 +1001,8 @@ public class FieldSimulator {
                         Faction.ALL_FACTIONS, 0, 0, Skill.NO_SKILL, Skill.NO_SKILL, true, 0, SkillTrigger.ACTIVATE);
                 CardStatus commander = field.getPlayer(status.getPlayer()).getCommander();
                 debug(2, "Revenge: Preparing (head) skills  %s and %s\n", ssHeal.description(), ssRally.description());
-                field.skillQueue.addFirst(new Pair<>(commander, ssRally));
-                field.skillQueue.addFirst(new Pair<>(commander, ssHeal)); // +1: keep ss_heal at first place
+                field.skillQueue.addFirst(new Pair<>(commander.clone(), ssRally));
+                field.skillQueue.addFirst(new Pair<>(commander.clone(), ssHeal)); // +1: keep ss_heal at first place
             }
 
             // resolve On-Death skills
