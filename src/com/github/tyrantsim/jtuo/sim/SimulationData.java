@@ -22,8 +22,8 @@ public class SimulationData {
     List<Hand> enemyHands = new ArrayList<>();
     List<Double> factors = new ArrayList<>();
     GameMode gameMode;
-    PassiveBGE[] yourBGEffects = new PassiveBGE[PassiveBGE.values().length];
-    PassiveBGE[] enemyBGEffects = new PassiveBGE[PassiveBGE.values().length];
+    int[] yourBGEffects = new int[PassiveBGE.values().length];
+    int[] enemyBGEffects = new int[PassiveBGE.values().length];
     List<SkillSpec> yourBGSkills = Collections.emptyList();
     List<SkillSpec> enemyBGSkills = Collections.emptyList();
 
@@ -32,7 +32,7 @@ public class SimulationData {
     }
 
     public SimulationData(Random random, Cards cards, Decks decks, int numEnemyDecks, ArrayList<Double> factors,
-                          GameMode gameMode, PassiveBGE[] yourBGEffects, PassiveBGE[] enemyBGEffects,
+                          GameMode gameMode, int[] yourBGEffects, int[] enemyBGEffects,
                           ArrayList<SkillSpec> yourBGSkills, ArrayList<SkillSpec> enemyBGSkills) {
         this.random = random;
         this.cards = cards;
