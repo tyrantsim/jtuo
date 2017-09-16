@@ -539,15 +539,16 @@ public class CardStatus implements Cloneable {
             for (SkillSpec ss : card_skills) {
                 String skill_desc = "";
                 // TODO: replace c++ code
-//                if (evolved_skill_offset[ss.id]) { skill_desc += "->" + skill_names[ss.id + evolved_skill_offset[ss.id]]; }
-//                if (enhanced_value[ss.id]) { skill_desc += " +" + enhanced_value[ss.id]; }
-                if (!skill_desc.isEmpty())
-                {
-                    desc += ", " + (
-                        (trig == SkillTrigger.PLAY) ? "(On Play)" :
-                            (trig == SkillTrigger.ATTACK) ? "(On Attack)" :
-                        (trig == SkillTrigger.DEATH) ? "(On Death)" :
-                        "" + ss.getId().getDescription() + skill_desc);
+                // if (evolved_skill_offset[ss.id]) { skill_desc += "->" +
+                // skill_names[ss.id + evolved_skill_offset[ss.id]]; }
+                // if (enhanced_value[ss.id]) { skill_desc += " +" +
+                // enhanced_value[ss.id]; }
+                if (!skill_desc.isEmpty()) {
+                    desc += ", " + ( //
+                    (trig == SkillTrigger.PLAY) ? "(On Play)" : //
+                            (trig == SkillTrigger.ATTACKED) ? "(On Attack)" : //
+                                    (trig == SkillTrigger.DEATH) ? "(On Death)" : "" + //
+                                            ss.getId().getDescription() + skill_desc); //
                 }
             }
         }

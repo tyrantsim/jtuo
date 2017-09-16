@@ -136,7 +136,7 @@ public class SkillSpec implements Cloneable {
     public String description() {
 
         return ((trigger == SkillTrigger.PLAY) ? "(On Play)"
-                : (trigger == SkillTrigger.ATTACK) ? "(On Attacked)"
+                : (trigger == SkillTrigger.ATTACKED) ? "(On Attacked)"
                 : (trigger == SkillTrigger.DEATH) ? "(On Death)" : "")
                 + id.toString()
                 + (cardId == 0 ? "" : " " + Cards.getCardNameByIdSafe(cardId) + " id[" + cardId + "]")
