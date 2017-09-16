@@ -1,5 +1,6 @@
 package com.github.tyrantsim.jtuo.skills;
 
+import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.cards.Faction;
 
 public class SkillSpec implements Cloneable {
@@ -130,6 +131,21 @@ public class SkillSpec implements Cloneable {
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();
         }
+    }
+
+    public String description() {
+
+        return ((trigger == SkillTrigger.PLAY) ? "(On Play)"
+                : (trigger == SkillTrigger.ATTACK) ? "(On Attacked)"
+                : (trigger == SkillTrigger.DEATH) ? "(On Death)" : "")
+                + id.toString()
+                + (cardId == 0 ? "" : " " + Cards.getCardNameByIdSafe(cardId) + " id[" + cardId + "]")
+                + (all ? " all" : n == 0 ? "" : " " + n)
+                + (y == Faction.ALL_FACTIONS ? "" : " " + y.toString())
+                + (s == Skill.NO_SKILL ? "" : " " + s.toString())
+                + (s2 == Skill.NO_SKILL ? "" : " " + s2.toString())
+                + (x == 0 ? "" : " " + x)
+                + (c == 0 ? "" : " every " + c);
     }
     
     @Override

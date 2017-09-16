@@ -77,6 +77,14 @@ public class Cards {
             return cardsById.get(id);
     }
 
+    public static String getCardNameByIdSafe(final int id) {
+        try {
+            return getCardById(id).getName();
+        } catch (Exception e) {
+            return "UnknownCard.id[" + id + "]";
+        }
+    }
+
     public static void organize() {
 
         cardsById.clear();

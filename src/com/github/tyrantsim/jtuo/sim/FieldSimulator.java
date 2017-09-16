@@ -2,26 +2,16 @@ package com.github.tyrantsim.jtuo.sim;
 
 import com.github.tyrantsim.jtuo.Constants;
 import com.github.tyrantsim.jtuo.Main;
-import com.github.tyrantsim.jtuo.cards.Card;
-import com.github.tyrantsim.jtuo.cards.CardCategory;
-import com.github.tyrantsim.jtuo.cards.CardType;
-import com.github.tyrantsim.jtuo.cards.Cards;
-import com.github.tyrantsim.jtuo.parsers.CardsParser;
+import com.github.tyrantsim.jtuo.cards.*;
 import com.github.tyrantsim.jtuo.skills.Skill;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.skills.SkillTrigger;
 import com.github.tyrantsim.jtuo.skills.SkillUtils;
 import com.github.tyrantsim.jtuo.util.Pair;
-import com.github.tyrantsim.jtuo.util.Utils;
 
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Deque;
 import java.util.List;
 
-import static com.github.tyrantsim.jtuo.util.Utils.findInArray;
 import static com.github.tyrantsim.jtuo.util.Utils.safeMinus;
 
 public class FieldSimulator {
@@ -62,7 +52,7 @@ public class FieldSimulator {
             resolveSkill(field); // resolve postponed skills recursively
             field.finalizeAction();
 
-            boolean bgeMegamorphosis = field.getBGEffects(field.getTapi())[PassiveBGE.MEGAMORPHOSIS.ordinal()] != null;
+            boolean bgeMegamorphosis = field.hasBGEffect(field.getTapi(), PassiveBGE.MEGAMORPHOSIS);
 
             // Play a card
             Card playedCard = field.getTap().getDeck().next();
@@ -74,7 +64,7 @@ public class FieldSimulator {
             }
 
             // Evaluate Passive BGE Heroism skills
-            if (field.getBGEffects(field.getTapi())[PassiveBGE.HEROISM.ordinal()] != null) {
+            if (field.hasBGEffect(field.getTapi(), PassiveBGE.HEROISM)) {
                 evaluatePassiveBGEHeroismSkills(field);
             }
 
@@ -304,7 +294,7 @@ public class FieldSimulator {
     }
 
     private static void simulatePlayCardPhase(Field field, Card playedCard) {
-        boolean bgeMegamorphosis = field.getBGEffects(field.getTapi())[PassiveBGE.MEGAMORPHOSIS.ordinal()] != null;
+        boolean bgeMegamorphosis = field.hasBGEffect(field.getTapi(), PassiveBGE.MEGAMORPHOSIS);
 
         int playedFactionMask = 0;
         int sameFactionCardsCount = 0;
@@ -345,7 +335,7 @@ public class FieldSimulator {
                 }
             }
 
-            if (field.getBGEffects(field.getTapi())[PassiveBGE.COLDSLEEP.ordinal()] != null) {
+            if (field.hasBGEffect(field.getTapi(), PassiveBGE.COLDSLEEP)) {
                 int bgeValue = (status.getProtectedByStasis() + 1) / 2;
                 status.addHP(bgeValue);
             }
@@ -703,7 +693,7 @@ public class FieldSimulator {
 
         // Passive BGE: Bloodlust
         if (field.hasBGEffect(field.getTapi(), PassiveBGE.BLOODLUST) && !field.isAssaultBloodlusted() && attDmg > 0) {
-            field.addBloodlust(field.getBGEffects(field.getTapi())[PassiveBGE.BLOODLUST.ordinal()] != null ? 1 : 0);
+            field.addBloodlust(field.hasBGEffect(field.getTapi(), PassiveBGE.BLOODLUST) ? 1 : 0);
             field.setAssaultBloodlusted(true);
         }
 
@@ -730,7 +720,7 @@ public class FieldSimulator {
         if (field.isEnd()) {
             return attDmg;
         }
-        damageDependantPreOA(field, cardType, attStatus, defStatus);
+        damageDependantPreOA(field, attStatus, defStatus);
 
         // TODO: implement skills
 
@@ -754,7 +744,7 @@ public class FieldSimulator {
             int legionBase = attStatus.skill(Skill.LEGION);
             if (legionBase > 0) {
 
-                boolean bgeMegamorphosis = findInArray(field.getBGEffects(field.tapi), PassiveBGE.MEGAMORPHOSIS);
+                boolean bgeMegamorphosis = field.hasBGEffect(field.tapi, PassiveBGE.MEGAMORPHOSIS);
 
                 // Check if adjacent cards add legion value
                 if (attStatus.getIndex() > 0 && attAssaults.get(attStatus.getIndex() - 1).isAlive() && (bgeMegamorphosis
@@ -804,15 +794,15 @@ public class FieldSimulator {
         if (defStatus.getCard().getType() == CardType.ASSAULT) {
             // PassiveBGE: Fortification (adj step -> 1 (1 left, host, 1 right)
             // TODO: C++ code says tapi but probably should be tipi.. Test this
-            int adjSize = findInArray(field.getBGEffects(field.tapi), PassiveBGE.FORTIFICATION) ? 1 : 0;
+            int adjSize = field.hasBGEffect(field.tapi, PassiveBGE.FORTIFICATION) ? 1 : 0;
             int hostIdx = defStatus.getIndex();
             int fromIdx = safeMinus(hostIdx, adjSize);
             int tillIdx = Math.min(hostIdx + adjSize, safeMinus(defAssaults.size(), 1));
 
             while (fromIdx <= tillIdx) {
                 CardStatus adjStatus = defAssaults.get(fromIdx);
-                if (!adjStatus.isAlive()) continue;
-                armorValue = Math.max(armorValue, adjStatus.skill(Skill.ARMORED));
+                if (adjStatus.isAlive())
+                    armorValue = Math.max(armorValue, adjStatus.skill(Skill.ARMORED));
                 fromIdx++;
             }
         }
@@ -836,7 +826,7 @@ public class FieldSimulator {
                 attStatus.description(), defStatus.description(), String.valueOf(preModifierDmg));
 
         // PassiveBGE: Brigade
-        if (findInArray(field.getBGEffects(field.tapi), PassiveBGE.BRIGADE) && legionValue > 0 && attStatus.canBeHealed()) {
+        if (field.hasBGEffect(field.tapi, PassiveBGE.BRIGADE) && legionValue > 0 && attStatus.canBeHealed()) {
             debug(1, "Brigade: %s heals itself for %d\n", attStatus.description(), String.valueOf(legionValue));
             attStatus.addHP(legionValue);
         }
@@ -850,9 +840,27 @@ public class FieldSimulator {
         resolveSkill(field);
     }
 
-    private static void damageDependantPreOA(Field field, CardType cardType, CardStatus attStatus, CardStatus defStatus) {
-        switch (cardType) {
-            // TODO: implement this
+    private static void damageDependantPreOA(Field field, CardStatus attStatus, CardStatus defStatus) {
+        // Skill: Poison / Venom
+        int poisonValue = Math.max(attStatus.skill(Skill.POISON), attStatus.skill(Skill.VENOM));
+        if (poisonValue > defStatus.getPoisoned() && skillCheck(field, Skill.POISON, attStatus, defStatus)) {
+            // Perform skill poison
+            debug(1, "%s poisons %s by %d\n", attStatus.description(), defStatus.description(), String.valueOf(poisonValue));
+            defStatus.setPoisoned(poisonValue);
+        }
+
+        // Damage-Dependant Skill: Inhibit
+        int inhibitValue = attStatus.skill(Skill.INHIBIT);
+        if (inhibitValue > defStatus.getInhibited() && skillCheck(field, Skill.INHIBIT, attStatus, defStatus)) {
+            debug(1, "%s inhibits %s by %d\n", attStatus.description(), defStatus.description(), String.valueOf(inhibitValue));
+            defStatus.setInhibited(inhibitValue);
+        }
+
+        // Damage-Dependant Skill: Sabotage
+        int sabotagedValue = attStatus.skill(Skill.SABOTAGE);
+        if (sabotagedValue > defStatus.getSabotaged() && skillCheck(field, Skill.SABOTAGE, attStatus, defStatus)) {
+            debug(1, "%s sabotages %s by %d\n", attStatus.description(), defStatus.description(), String.valueOf(sabotagedValue));
+            defStatus.setSabotaged(sabotagedValue);
         }
     }
 
@@ -895,15 +903,90 @@ public class FieldSimulator {
         CardStatus leftVirulenceVictim = null;
         for (CardStatus status : field.getKilledUnits()) {
             if (status.getCard().getType() == CardType.ASSAULT) {
+
                 // Skill: Avenge
-                // TODO: implement this
+                final int hostIdx = status.getIndex();
+                int fromIdx, tillIdx;
+                if (field.hasBGEffect(field.tapi, PassiveBGE.BLOOD_VENGEANCE)) {
+                    // Passive BGE Blood Vengeance: scan all assaults for Avenge
+                    fromIdx = 0;
+                    tillIdx = assaults.size() - 1;
+                } else {
+                    fromIdx = safeMinus(hostIdx, 1);
+                    tillIdx = Math.min(hostIdx + 1, safeMinus(assaults.size(), 1));
+                }
+
+                for (; fromIdx <= tillIdx; fromIdx++) {
+                    if (fromIdx == hostIdx) continue;
+                    CardStatus adjStatus = assaults.get(fromIdx);
+                    if (!adjStatus.isAlive()) continue;
+                    int avengeValue = adjStatus.skill(Skill.AVENGE);
+                    if (avengeValue == 0) continue;
+
+                    // Passive BGE Blood Vengeance: use half value rounded up
+                    // (for distance > 1, i. e. non-standard Avenge triggering)
+                    if (Math.abs(fromIdx - hostIdx) > 1)
+                        avengeValue = (avengeValue + 1) / 2;
+
+                    debug(1, "%s%s activates Avenge %d\n", Math.abs(fromIdx - hostIdx) > 1
+                            ? "BGE BloodVengeance: " : "", adjStatus.description(), String.valueOf(avengeValue));
+
+                    if (!adjStatus.isSundered())
+                        adjStatus.setPermAttackBuff(adjStatus.getPermAttackBuff() + avengeValue);
+                    adjStatus.extHP(avengeValue);
+                }
 
                 // Passive BGE: Virulence
-                // TODO: implement this
+                if (field.hasBGEffect(field.tapi, PassiveBGE.VIRULENCE)) {
+                    if (status.getIndex() != lastIndex + 1) {
+                        stackedPoisonValue = 0;
+                        leftVirulenceVictim = null;
+                        if (status.getIndex() > 0) {
+                            CardStatus leftStatus = assaults.get(status.getIndex() - 1);
+                            if (leftStatus.isAlive())
+                                leftVirulenceVictim = leftStatus;
+                        }
+                    }
+
+                    if (status.getPoisoned() > 0) {
+                        if (leftVirulenceVictim != null) {
+                            debug(1, "Virulence: %s spreads left poison +%d to %s\n", status.description(),
+                                    String.valueOf(status.getPoisoned()), leftVirulenceVictim.description());
+                            leftVirulenceVictim.setPoisoned(leftVirulenceVictim.getPoisoned() + status.getPoisoned());
+                        }
+                        stackedPoisonValue += status.getPoisoned();
+                        debug(1, "Virulence: %s spreads right poison +%d = %d\n", status.description(),
+                                String.valueOf(status.getPoisoned()), String.valueOf(stackedPoisonValue));
+                    }
+
+                    if (status.getIndex() < assaults.size()) {
+                        CardStatus rightStatus = assaults.get(status.getIndex() + 1);
+                        if (rightStatus.isAlive()) {
+                            debug(1, "Virulence: spreads stacked poison +%d to %s\n",
+                                    String.valueOf(stackedPoisonValue), rightStatus.description());
+                            rightStatus.setPoisoned(rightStatus.getPoisoned() + stackedPoisonValue);
+                        }
+                    }
+
+                    lastIndex = status.getIndex();
+                }
             }
 
-            // Passive BGE: revenge
-            // TODO: implement this
+            // Passive BGE: Revenge
+            if (field.hasBGEffect(field.tapi, PassiveBGE.REVENGE)) {
+
+                if (field.getBGEffectValue(field.tapi, PassiveBGE.REVENGE) < 0)
+                    throw new RuntimeException("BGE Revenge: Value must be defined & positive");
+
+                SkillSpec ssHeal = new SkillSpec(Skill.HEAL, field.getBGEffectValue(field.tapi, PassiveBGE.REVENGE),
+                        Faction.ALL_FACTIONS, 0, 0, Skill.NO_SKILL, Skill.NO_SKILL, true, 0, SkillTrigger.ACTIVATE);
+                SkillSpec ssRally = new SkillSpec(Skill.RALLY, field.getBGEffectValue(field.tapi, PassiveBGE.REVENGE),
+                        Faction.ALL_FACTIONS, 0, 0, Skill.NO_SKILL, Skill.NO_SKILL, true, 0, SkillTrigger.ACTIVATE);
+                CardStatus commander = field.getPlayer(status.getPlayer()).getCommander();
+                debug(2, "Revenge: Preparing (head) skills  %s and %s\n", ssHeal.description(), ssRally.description());
+                field.skillQueue.addFirst(new Pair<>(commander, ssRally));
+                field.skillQueue.addFirst(new Pair<>(commander, ssHeal)); // +1: keep ss_heal at first place
+            }
 
             // resolve On-Death skills
             for (SkillSpec ss : status.getCard().getSkillsOnDeath()) {

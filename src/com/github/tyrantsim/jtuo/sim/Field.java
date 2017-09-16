@@ -25,7 +25,7 @@ public class Field {
     int turn = 1;
     GameMode gameMode;
     OptimizationMode optimizationMode;
-    PassiveBGE[] yourBGEffects, enemyBGEffects;
+    int[] yourBGEffects = new int[PassiveBGE.values().length], enemyBGEffects = new int[PassiveBGE.values().length];
     List<SkillSpec> yourBGSkills, enemyBGSkills;
     // With the introduction of on death skills, a single skill can trigger arbitrary many skills.
     // They are stored in this, and cleared after all have been performed.
@@ -44,7 +44,7 @@ public class Field {
     int bloodlustValue;
 
     public Field(Random random, Cards cards, Hand yourHand, Hand enemyHand, GameMode gameMode,
-                 OptimizationMode optimizationMode, PassiveBGE[] yourBGEffects, PassiveBGE[] enemyBGEffects,
+                 OptimizationMode optimizationMode, int[] yourBGEffects, int[] enemyBGEffects,
                  List<SkillSpec> yourBGSkills, List<SkillSpec> enemyBGSkills) {
         this.end = false;
         this.random = random;
@@ -87,7 +87,11 @@ public class Field {
     }
 
     public boolean hasBGEffect(int playerIndex, PassiveBGE effect) {
-        return getBGEffects(playerIndex)[effect.ordinal()] != null;
+        return getBGEffects(playerIndex)[effect.ordinal()] != 0;
+    }
+
+    public int getBGEffectValue(int playerIndex, PassiveBGE effect) {
+        return getBGEffects(playerIndex)[effect.ordinal()];
     }
 
     void addBloodlust(int value) {
@@ -180,7 +184,7 @@ public class Field {
         return currentPhase;
     }
 
-    public PassiveBGE[] getBGEffects(int playerIndex) {
+    public int[] getBGEffects(int playerIndex) {
         if (playerIndex == PLAYER_INDEX_ATTACKER) {
             return yourBGEffects;
         } else if (playerIndex == PLAYER_INDEX_DEFFENDER) {
@@ -198,14 +202,6 @@ public class Field {
         } else {
             throw new AssertionError("Unknown playerIndex: " + playerIndex);
         }
-    }
-
-    public boolean passiveEffectExists(PassiveBGE[] arr, PassiveBGE effect) {
-        for (int i = 0; i < arr.length; i++) {
-            if (arr[i] == effect)
-                return true;
-        }
-        return false;
     }
 
     Deque<Pair<CardStatus, SkillSpec>> getSkillQueue() {
