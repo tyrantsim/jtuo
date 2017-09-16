@@ -252,6 +252,9 @@ public class CardsParser {
                 case PLAY:
                     card.getSkillsOnPlay().add(skillSpec);
                     break;
+                case ATTACKED:
+                    card.getSkillsOnAttacked().add(skillSpec);
+                    break;
                 case DEATH:
                     card.getSkillsOnDeath().add(skillSpec);
                     break;
@@ -446,7 +449,11 @@ public class CardsParser {
             new_skill.setCardId(Integer.parseInt(card_id));
         }
         if (trigger != null && !trigger.isEmpty()) {
-            new_skill.setTrigger(SkillTrigger.valueOf(trigger.toUpperCase()));
+            try {
+                new_skill.setTrigger(SkillTrigger.valueOf(trigger.toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                System.out.println("Unkonow trigger: " + trigger + " " + e.getLocalizedMessage());
+            }
         }
     }
 }

@@ -28,6 +28,7 @@ public class Card implements Cloneable {
 
     ArrayList<SkillSpec> skills = new ArrayList<>();
     ArrayList<SkillSpec> skillsOnPlay = new ArrayList<>();
+    ArrayList<SkillSpec> skillsOnAttacked = new ArrayList<>();
     ArrayList<SkillSpec> skillsOnDeath = new ArrayList<>();
     int[] skillValue = new int[Skill.values().length];
     SkillTrigger[] skillTrigger = new SkillTrigger[Skill.values().length];
@@ -91,6 +92,7 @@ public class Card implements Cloneable {
         this.delay = card.delay;
         this.skills = card.skills;
         this.skillsOnPlay = card.skillsOnPlay;
+        this.skillsOnAttacked = card.skillsOnAttacked;
         this.skillsOnDeath = card.skillsOnDeath;
         this.skillValue = card.skillValue;
         this.skillTrigger = card.skillTrigger;
@@ -106,6 +108,7 @@ public class Card implements Cloneable {
         // remove previous copy of such skill.id
         skills.removeIf(ss -> ss.getId() == id);
         skillsOnPlay.removeIf(ss -> ss.getId() == id);
+        skillsOnAttacked.removeIf(ss -> ss.getId() == id);
         skillsOnDeath.removeIf(ss -> ss.getId() == id);
 
         // add a new one
@@ -115,6 +118,9 @@ public class Card implements Cloneable {
             break;
         case PLAY:
             skillsOnPlay.add(spec);
+            break;
+        case ATTACKED:
+            skillsOnAttacked.add(spec);
             break;
         case DEATH:
             skillsOnDeath.add(spec);
@@ -317,6 +323,14 @@ public class Card implements Cloneable {
 
     public void setSkillsOnPlay(ArrayList<SkillSpec> skillsOnPlay) {
         this.skillsOnPlay = skillsOnPlay;
+    }
+
+    public ArrayList<SkillSpec> getSkillsOnAttacked() {
+        return skillsOnAttacked;
+    }
+
+    public void setSkillsOnAttacked(ArrayList<SkillSpec> skillsOnAttacked) {
+        this.skillsOnAttacked = skillsOnAttacked;
     }
 
     public ArrayList<SkillSpec> getSkillsOnDeath() {
