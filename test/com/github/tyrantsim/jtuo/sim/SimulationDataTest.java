@@ -1,6 +1,7 @@
 package com.github.tyrantsim.jtuo.sim;
 
 import com.github.tyrantsim.jtuo.decks.Deck;
+import com.github.tyrantsim.jtuo.optimizer.TyrantOptimize;
 import com.github.tyrantsim.jtuo.parsers.CardsParser;
 import org.junit.Test;
 
@@ -33,7 +34,7 @@ public class SimulationDataTest {
         SimulationData sim = new SimulationData(random);
         sim.setDecks(yourDeck, Collections.singletonList(enemyDeck));
 
-        ArrayList<Results> results = sim.evaluate();
+        ArrayList<Results> results = sim.evaluate(new TyrantOptimize());
         assertEquals(1, results.size());
 
         Results result = results.get(0);

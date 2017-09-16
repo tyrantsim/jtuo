@@ -16,6 +16,7 @@ public class Deck implements Cloneable {
 
     private Cards allCards;
     private DeckType deckType = DeckType.DECK;
+
     private int id;
     private String name;
     private int upgradePoints;
@@ -89,6 +90,10 @@ public class Deck implements Cloneable {
 
     public void set(String deckString) {
         this.deckString = deckString;
+    }
+
+    public DeckType getDeckType() {
+        return deckType;
     }
 
     public Cards getAllCards() {
@@ -243,9 +248,7 @@ public class Deck implements Cloneable {
     }
 
     public String encodeDeck(List<Card> cards) {
-
         StringBuilder sb = new StringBuilder();
-
         for (Card card: cards) {
             int factor = card.getId();
             while (factor >= 32) {
@@ -524,6 +527,11 @@ public class Deck implements Cloneable {
     
     public Set<Integer> getVipCards() {
         return vipCards;
+    }
+    
+    private void getSize() {
+        
+    
     }
 
 }

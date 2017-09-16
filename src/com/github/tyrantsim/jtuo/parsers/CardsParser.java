@@ -423,7 +423,7 @@ public class CardsParser {
             String s2 = skill.getNamedItem("s2") == null ? "" : skill.getNamedItem("s2").getNodeValue();
 
             
-            SkillSpec new_skill = new SkillSpec();
+            SkillSpec new_skill = new SkillSpec(); // Skill.valueOf(id.toUpperCase()), x, y, n, c, s, s2, all, Integer.valueOf(card_id), SkillTrigger.valueOf(trigger.toUpperCase())
             new_skill.setId(Skill.valueOf(id.toUpperCase()));
             setSkillSpec(card, x, y, all, c, card_id, trigger, new_skill, n, s, s2);
             skillSpecs.add(new_skill);

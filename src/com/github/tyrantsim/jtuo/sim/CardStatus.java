@@ -522,24 +522,26 @@ public class CardStatus implements Cloneable {
             if (trig == SkillTrigger.ACTIVATE)
             {
                 if (enraged > 0 && !card_skills.contains(Skill.BERSERK)) {
-                    SkillSpec ss = new SkillSpec(Skill.BERSERK, enraged, Faction.ALL_FACTIONS, 0, 0, Skill.NO_SKILL, Skill.NO_SKILL, false, 0);
+                    SkillSpec ss = new SkillSpec(Skill.BERSERK, enraged, Faction.ALL_FACTIONS, 0, 0, Skill.NO_SKILL, Skill.NO_SKILL, false, 0, trig);
                     card_skills.add(ss);
                 }
                 if (entrapped > 0 && !card_skills.contains(Skill.COUNTER)) {
-                    SkillSpec ss = new SkillSpec(Skill.COUNTER, entrapped, Faction.ALL_FACTIONS, 0, 0, Skill.NO_SKILL, Skill.NO_SKILL, false, 0);
+                    SkillSpec ss = new SkillSpec(Skill.COUNTER, entrapped, Faction.ALL_FACTIONS, 0, 0, Skill.NO_SKILL, Skill.NO_SKILL, false, 0, trig);
                     card_skills.add(ss);
                 }
             }
-            for (Skill ss : card_skills) {
+            for (SkillSpec ss : card_skills) {
                 String skill_desc = "";
-                if (evolved_skill_offset[ss.id]) { skill_desc += "->" + skill_names[ss.id + evolved_skill_offset[ss.id]]; }
-                if (enhanced_value[ss.id]) { skill_desc += " +" + enhanced_value[ss.id]; }
-                if (!skill_desc.empty())
+                // TODO: replace c++ code
+//                if (evolved_skill_offset[ss.id]) { skill_desc += "->" + skill_names[ss.id + evolved_skill_offset[ss.id]]; }
+//                if (enhanced_value[ss.id]) { skill_desc += " +" + enhanced_value[ss.id]; }
+                if (!skill_desc.isEmpty())
                 {
                     desc += ", " + (
-                        (trig == Skill::Trigger::play) ? "(On Play)" :
-                        (trig == Skill::Trigger::death) ? "(On Death)" :
-                        "" + skill_names[ss.id] + skill_desc;
+                        (trig == SkillTrigger.PLAY) ? "(On Play)" :
+                            (trig == SkillTrigger.ATTACK) ? "(On Attack)" :
+                        (trig == SkillTrigger.DEATH) ? "(On Death)" :
+                        "" + ss.getId().getDescription() + skill_desc);
                 }
             }
         }

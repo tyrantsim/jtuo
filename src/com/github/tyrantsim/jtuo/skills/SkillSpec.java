@@ -18,6 +18,9 @@ public class SkillSpec implements Cloneable {
         this.trigger = trigger;
     }
 
+    public SkillSpec() {
+    }
+
     Skill id;
     float x;
     Faction y;

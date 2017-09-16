@@ -57,7 +57,7 @@ public class SimulationData {
         }
     }
 
-    public ArrayList<Results> evaluate() {
+    public ArrayList<Results> evaluate(TyrantOptimize optimize) {
         ArrayList<Results> res = new ArrayList<>(enemyHands.size());
         for (Hand enemyHand : enemyHands) {
             yourHand.reset(random);
@@ -67,16 +67,16 @@ public class SimulationData {
                     cards,
                     yourHand, enemyHand,
                     gameMode,
-                    TyrantOptimize.optimizationMode,
+                    optimize.optimizationMode,
                     yourBGEffects, enemyBGEffects,
                     yourBGSkills, enemyBGSkills
             );
             Results result = FieldSimulator.play(fd);
-            if (!TyrantOptimize.modeOpenTheDeck) {
+            if (!optimize.modeOpenTheDeck) {
                 // are there remaining (unopened) cards ?
                 if (fd.getPlayer(1).getDeck().getShuffledCards().size() != 0) {
                     // apply min score (there are unopened cards, so mission failed)
-                    result.points = Cards.MIN_POSSIBLE_SCORE[TyrantOptimize.optimizationMode.ordinal()];
+                    result.points = Cards.MIN_POSSIBLE_SCORE[optimize.optimizationMode.ordinal()];
                 }
             }
             res.add(result);

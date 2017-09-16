@@ -101,15 +101,7 @@ public class Card implements Cloneable {
     }
 
     void addSkill(SkillTrigger trigger, Skill id, int x, Faction y, int n, int c, Skill s, Skill s2, boolean all, int cardId) {
-        SkillSpec spec = new SkillSpec();
-        spec.setId(id);
-        spec.setX(x);
-        spec.setY(y);
-        spec.setN(n);
-        spec.setS(s);
-        spec.setS2(s2);
-        spec.setAll(all);
-        spec.setCardId(cardId);
+        SkillSpec spec = new SkillSpec(id, x, y, n, c, s, s2, all, cardId, trigger);
 
         // remove previous copy of such skill.id
         skills.removeIf(ss -> ss.getId() == id);

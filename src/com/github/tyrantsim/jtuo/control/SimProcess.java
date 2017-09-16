@@ -65,7 +65,7 @@ public class SimProcess {
             SimulationData simulationData = new SimulationData(random);
             simulationData.setDecks(yourDeck, enemyDecks);
 
-            results.add(simulationData.evaluate().get(0));
+            results.add(simulationData.evaluate(new TyrantOptimize()).get(0));
         }
         evaluatedResults.results.add(results);
 

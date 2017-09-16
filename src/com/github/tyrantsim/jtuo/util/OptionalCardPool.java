@@ -41,6 +41,11 @@ public class OptionalCardPool {
         return pool;
     }
 
+    public boolean isEmpty() {
+        return pool.isEmpty();
+    }
+
+    
     public void setPool(List<Card> pool) {
         this.pool = pool;
     }

@@ -1,6 +1,7 @@
 package com.github.tyrantsim.jtuo.optimizer;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -31,6 +32,7 @@ import com.github.tyrantsim.jtuo.control.SimProcess;
 import com.github.tyrantsim.jtuo.control.Todo;
 import com.github.tyrantsim.jtuo.decks.Deck;
 import com.github.tyrantsim.jtuo.decks.DeckStrategy;
+import com.github.tyrantsim.jtuo.decks.DeckType;
 import com.github.tyrantsim.jtuo.decks.Decks;
 import com.github.tyrantsim.jtuo.parsers.DeckParser;
 import com.github.tyrantsim.jtuo.parsers.FileParser;
@@ -40,6 +42,7 @@ import com.github.tyrantsim.jtuo.parsers.XmlBasedParser;
 import com.github.tyrantsim.jtuo.sim.FieldSimulator;
 import com.github.tyrantsim.jtuo.sim.GameMode;
 import com.github.tyrantsim.jtuo.sim.OptimizationMode;
+import com.github.tyrantsim.jtuo.sim.PassiveBGE;
 import com.github.tyrantsim.jtuo.sim.Results;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.util.Pair;
@@ -56,7 +59,7 @@ public class TyrantOptimize {
     public OptimizationMode optimizationMode = OptimizationMode.NOT_SET;
     public HashMap<Integer, Integer> owned_cards = new HashMap<>();
 
-    final Card owned_alpha_dominion = null;
+    public Card owned_alpha_dominion = null;
     boolean use_owned_cards = true;
 
     public int min_deck_len = 1;
@@ -951,6 +954,7 @@ public class TyrantOptimize {
         System.out.println();
     }
     
+    @SuppressWarnings("static-access")
     public int main(String[] args) {
         if (args.length == 2 && args[1].equals("-version")) {
             System.out.println("Tyrant Unleashed Optimizer " + Constants.VERSION);
@@ -965,7 +969,7 @@ public class TyrantOptimize {
         DeckStrategy opt_your_strategy = DeckStrategy.RANDOM;
         DeckStrategy opt_enemy_strategy = DeckStrategy.RANDOM;
         String opt_forts, opt_enemy_forts;
-        String opt_doms, opt_enemy_doms;
+        String opt_doms, opt_enemy_doms = new String("false");
         String opt_hand, opt_enemy_hand;
         String opt_vip;
         String opt_allow_candidates;
@@ -973,7 +977,7 @@ public class TyrantOptimize {
         String opt_disallow_recipes;
         String opt_target_score;
         List<String> fn_suffix_list = Arrays.asList(new String[] {""});
-        List<String> opt_owned_cards_str_list;
+        List<String> opt_owned_cards_str_list = new ArrayList<>();
         boolean opt_do_optimization= false;
         boolean opt_keep_commander = false;
         List<Todo> opt_todo = new ArrayList<>();
@@ -981,7 +985,7 @@ public class TyrantOptimize {
         String[] opt_effects = new String[3];  // 0-you; 1-enemy; 2-global
         int[] opt_bg_effects = new int[2]; // std::array<signed short, PassiveBGE::num_passive_bges> opt_bg_effects[2];
         SkillSpec[] opt_bg_skills = new SkillSpec[2];
-        Set<Integer> disallowed_recipes;
+        Set<Integer> disallowed_recipes = new HashSet();
 
         for (int argIndex = 3; argIndex < args.length; argIndex++) {
             // Codec
@@ -1315,8 +1319,8 @@ public class TyrantOptimize {
             }
         }
 
-        Cards all_cards;
-        Decks decks;
+        Cards all_cards = new Cards();
+        Decks decks = null;
         Map<String, String> bge_aliases = new HashMap<>();
         SkillsSetParser.load_skills_set_xml(all_cards, "data/skills_set.xml", true);
         LevelsParser.load_levels_xml(all_cards, "data/levels.xml", true);
@@ -1324,7 +1328,12 @@ public class TyrantOptimize {
         for (String suffix: fn_suffix_list) {
             XmlBasedParser.load_decks_xml(decks, all_cards, "data/missions" + suffix + ".xml", "data/raids" + suffix + ".xml", suffix.isEmpty());
             XmlBasedParser.load_recipes_xml(all_cards, "data/fusion_recipes_cj2" + suffix + ".xml", suffix.isEmpty());
-            FileParser.readCardAbbrs("data/cardabbrs" + suffix + ".txt");
+            try {
+                FileParser.readCardAbbrs("data/cardabbrs" + suffix + ".txt");
+            } catch (FileNotFoundException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
             // TODO: Abbreviations Parser
             //read_card_abbrs(all_cards, "data/cardabbrs" + suffix + ".txt");
         }
@@ -1356,61 +1365,74 @@ public class TyrantOptimize {
 
             // keep only one copy of alpha dominion
             for (Entry<Integer, Integer> owned_it : _owned_cards.entrySet()) {
-                Card owned_card = all_cards.getCardById(owned_it.getKey());
-                boolean need_remove = owned_it.getValue() != null;
-                if (!need_remove && (owned_card.getCategory() == CardCategory.DOMINION_ALPHA)) {
-                    if (owned_alpha_dominion != null) {
-                        owned_alpha_dominion = owned_card;
-                    } else {
-                        System.err.println("Warning: ownedcards already contains alpha dominion (" 
-                    + owned_alpha_dominion.getName() + "): removing additional " + owned_card.getName());
-                        need_remove = true;
+                Card owned_card;
+                try {
+                    owned_card = Cards.getCardById(owned_it.getKey());
+                    boolean need_remove = owned_it.getValue() != null;
+                    if (!need_remove && (owned_card.getCategory() == CardCategory.DOMINION_ALPHA)) {
+                        if (owned_alpha_dominion != null) {
+                            owned_alpha_dominion = owned_card;
+                        } else {
+                            System.err.println("Warning: ownedcards already contains alpha dominion (" 
+                        + owned_alpha_dominion.getName() + "): removing additional " + owned_card.getName());
+                            need_remove = true;
+                        }
                     }
-                }
-                if (need_remove) { 
-                    _owned_cards.remove(owned_it); 
-                } else { 
-                    continue; //owned_it.setValue(value); 
+                    if (need_remove) { 
+                        _owned_cards.remove(owned_it); 
+                    } else { 
+                        continue; //owned_it.setValue(value); 
+                    }
+                } catch (Exception e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
                 }
             }
             if (owned_alpha_dominion != null && use_dominion_climbing) {
-                owned_alpha_dominion = all_cards.getCardById(50002);
+                try {
+                    owned_alpha_dominion = all_cards.getCardById(50002);
+                } catch (Exception e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
                 System.err.println();
                 System.err.println("Warning: dominion climbing enabled and no alpha dominion found in owned cards, adding default "
                     + owned_alpha_dominion.getName());
             }
             if (owned_alpha_dominion != null) { 
-                _owned_cards.set [owned_alpha_dominion.getId()] = 1; 
+                _owned_cards.put(owned_alpha_dominion.getId(), 1); 
             }
 
+            // WTF????!!!
             // remap owned cards to unordered map (should be quicker for searching)
-            owned_cards.reserve(_owned_cards.size());
-            for (auto owned_it = _owned_cards.begin(); owned_it != _owned_cards.end(); ++owned_it)
-            {
-                owned_cards[owned_it->first] = owned_it->second;
-            }
+            // owned_cards.reserve(_owned_cards.size());
+            // for (auto owned_it = _owned_cards.begin(); owned_it != _owned_cards.end(); ++owned_it) {
+            //    owned_cards[owned_it->first] = owned_it->second;
+            // }
         }
 
         // parse BGEs
-        opt_bg_effects[0].fill(0);
-        opt_bg_effects[1].fill(0);
+        //opt_bg_effects[0].fill(0);
+        //opt_bg_effects[1].fill(0);
         for (int player = 2; player >= 0; -- player) {
-            for (String opt_effect: opt_effects[player]) {
-                std.unordered_set<String> used_bge_aliases;
-                if (!parse_bge(opt_effect, player, bge_aliases, opt_bg_effects[0], opt_bg_effects[1], opt_bg_skills[0], opt_bg_skills[1], used_bge_aliases))
-                {
-                    return 1;
-                }
-            }
+            // TODO: replace c++ code
+//            for (String opt_effect: opt_effects[player]) {
+//                Set<String> used_bge_aliases = new HashSet<>();
+//                if (!parse_bge(opt_effect, player, bge_aliases, opt_bg_effects[0], opt_bg_effects[1], opt_bg_skills[0], opt_bg_skills[1], used_bge_aliases))
+//                {
+//                    return 1;
+//                }
+//            }
         }
 
         String your_deck_name= args[1];
         String enemy_deck_list = args[2];
-        List<Deck> deck_list_parsed = DeckParser.parseDeckList(enemy_deck_list, decks);
+        // TODO: and where is deck object?
+        Map<String, Double> deck_list_parsed = DeckParser.parseDeckList(enemy_deck_list); //, decks);
 
         Deck your_deck = null;
-        List<Deck> enemy_decks;
-        List<Double> enemy_decks_factors;
+        List<Deck> enemy_decks = new ArrayList<>();
+        List<Double> enemy_decks_factors = new ArrayList<>();
 
         try {
             your_deck = findDeck(decks, all_cards, your_deck_name).clone();
@@ -1422,189 +1444,184 @@ public class TyrantOptimize {
         {
             System.err.println("Error: Invalid attack deck name/hash " + your_deck_name + ".\n");
         }
-        else if (!your_deck->variable_cards.empty())
+        else if (!your_deck.variableCards.isEmpty()) {
+            System.err.println("Error: Invalid attack deck " + your_deck_name + ": has optional cards.\n");
+            your_deck = null;
+        }
+        else if (!your_deck.variableForts.isEmpty())
         {
             System.err.println("Error: Invalid attack deck " + your_deck_name + ": has optional cards.\n");
-            your_deck = nullptr;
+            your_deck = null;
         }
-        else if (!your_deck->variable_forts.empty())
+        if (your_deck == null)
         {
-            System.err.println("Error: Invalid attack deck " + your_deck_name + ": has optional cards.\n");
-            your_deck = nullptr;
-        }
-        if (your_deck == nullptr)
-        {
-            usage(args, args);
+            //usage(args, args);
             return 255;
         }
 
         your_deck.setDeckStrategy(opt_your_strategy);
-        if (!opt_forts.isEmpty()) {
-            try {
-                your_deck.addForts(opt_forts + ",");
-            } catch(RuntimeException e) {
-                System.err.println("Error: yfort " + opt_forts + ": " + e.what());
-                return 1;
-            }
-        }
-        if (!opt_doms.isEmpty())
-        {
-            try
-            {
-                your_deck.addDominions(opt_doms + ",", true);
-            }
-            catch(RuntimeException e)
-            {
-                System.err.println("Error: ydom " + opt_doms + ": " + e.what());
-                return 1;
-            }
-        }
+        // TODO: fix here
+//        if (!opt_forts.isEmpty()) {
+//            try {
+//                your_deck.addForts(opt_forts + ",");
+//            } catch(RuntimeException e) {
+//                System.err.println("Error: yfort " + opt_forts + ": " + e.getLocalizedMessage()); // e.what()
+//                return 1;
+//            }
+//        }
+//        if (!opt_doms.isEmpty())
+//        {
+//            try
+//            {
+//                your_deck.addDominions(opt_doms + ",", true);
+//            }
+//            catch(RuntimeException e)
+//            {
+//                System.err.println("Error: ydom " + opt_doms + ": " + e.getLocalizedMessage());
+//                return 1;
+//            }
+//        }
 
-        try
-        {
-            your_deck.setVipCards(opt_vip);
-        }
-        catch(RuntimeException e)
-        {
-            System.err.println("Error: vip " + opt_vip + ": " + e.what());
-            return 1;
-        }
-
-        // parse allowed candidates from options
-        try {
-            Pair<List<Integer>, Map<Integer, Boolean>> id_marks = DeckParser.stringToIds(all_cards, opt_allow_candidates, "allowed-candidates");
-            for (String cid : id_marks.first) {
-                allowed_candidates.insert(cid);
-            }
-        } catch(RuntimeException e) {
-            System.err.println("Error: allow-candidates " + opt_allow_candidates + ": " + e.what());
-            return 1;
-        }
-
-        // parse disallowed candidates from options
-        try
-        {
-            Pair<List<Integer>, Map<Integer, Boolean>> id_marks = DeckParser.stringToIds(all_cards, opt_disallow_candidates, "disallowed-candidates");
-            for (String cid : id_marks.first)
-            {
-                disallowed_candidates.insert(cid);
-            }
-        }
-        catch(RuntimeException e)
-        {
-            System.err.println("Error: disallow-candidates " + opt_disallow_candidates + ": " + e.what());
-            return 1;
-        }
-
-        // parse & drop disallowed recipes
-        try
-        {
-            Pair<List<Integer>, Map<Integer, Boolean>>  id_dis_recipes = DeckParser.stringToIds(all_cards, opt_disallow_recipes, "disallowed-recipes");
-            for (Integer cid : id_dis_recipes.getFirst()) { all_cards.erase_fusion_recipe(cid); }
-        }
-        catch(RuntimeException e)
-        {
-            System.err.println("Error: disallow-recipes " + opt_disallow_recipes + ": " + e.what());
-            return 1;
-        }
-        for (Integer cid : disallowed_recipes)
-        { all_cards.eraseFusionRecipe(cid);
-
-        try
-        {
-            your_deck.setGivenHand(opt_hand);
-        }
-        catch(RuntimeException e)
-        {
-            System.err.println("Error: hand " + opt_hand + ": " + e.what());
-            return 1;
-        }
-
-        if (opt_keep_commander)
-        {
-            requirement.num_cards[your_deck->commander] = 1;
-        }
-        for (Entry<Integer, Boolean> card_mark: your_deck.cardMarks.entrySet()) {
-            Card card = card_mark.first < 0 ? your_deck.getCommander() : your_deck.getCards()[card_mark.first];
-            Boolean mark = card_mark.second;
-            if ((mark == '!') && ((card_mark.first >= 0) || !opt_keep_commander))
-            {
-                requirement.num_cards[card] += 1;
-            }
-        }
-
-        target_score = opt_target_score.isEmpty() ? max_possible_score[(size_t)optimization_mode] : boost.lexical_cast<Double>(opt_target_score);
-
-        for (Deck deck_parsed: deck_list_parsed) {
-            Deck enemy_deck = null;
-            try
-            {
-                enemy_deck = find_deck(decks, all_cards, deck_parsed.first);
-            }
-            catch(RuntimeException e)
-            {
-                System.err.println("Error: Deck " + deck_parsed.first + ": " + e.what());
-                return 1;
-            }
-            if (enemy_deck == nullptr)
-            {
-                System.err.println("Error: Invalid defense deck name/hash " + deck_parsed.first + ".\n");
-                usage(args, args);
-                return 1;
-            }
-            if (optimization_mode == OptimizationMode.notset)
-            {
-                if (enemy_deck->decktype == DeckType.raid)
-                {
-                    optimization_mode = OptimizationMode.raid;
-                }
-                else if (enemy_deck->decktype == DeckType.campaign)
-                {
-                    gamemode = GameMode.SURGE;
-                    optimization_mode = OptimizationMode.campaign;
-                }
-                else
-                {
-                    optimization_mode = OptimizationMode.winrate;
-                }
-            }
-            enemy_deck.setDeckStrategy(opt_enemy_strategy);
-            if (!opt_enemy_doms.isEmpty())
-            {
-                try
-                {
-                    enemy_deck.addDominions(opt_enemy_doms + ",", true);
-                }
-                catch(RuntimeException e)
-                {
-                    System.err.println("Error: edom " + opt_enemy_doms + ": " + e.getLocalizedMessage());
-                    return 1;
-                }
-            }
-            if (!opt_enemy_forts.isEmpty())
-            {
-                try
-                {
-                    enemy_deck.addForts(opt_enemy_forts + ",");
-                }
-                catch(RuntimeException e)
-                {
-                    System.err.println("Error: efort " + opt_enemy_forts + ": " + e.getLocalizedMessage());
-                    return 1;
-                }
-            }
-            try
-            {
-                enemy_deck.setGivenHand(opt_enemy_hand);
-            }
-            catch(RuntimeException e)
-            {
-                System.err.println("Error: enemy:hand " + opt_enemy_hand + ": " + e.getLocalizedMessage());
-                return 1;
-            }
-            enemy_decks.add(enemy_deck);
-            enemy_decks_factors = deck_parsed.getV;
-        }
+//        try {
+//            your_deck.setVipCards(opt_vip);
+//        } catch (RuntimeException e) {
+//            System.err.println("Error: vip " + opt_vip + ": " + e.getLocalizedMessage());
+//            return 1;
+//        }
+//
+//        // parse allowed candidates from options
+//        try {
+//            Pair<List<Integer>, Map<Integer, Boolean>> id_marks = DeckParser.stringToIds(opt_allow_candidates, "allowed-candidates"); // all_cards, 
+//            for (Integer cid : id_marks.getFirst()) {
+//                allowed_candidates.add(cid);
+//            }
+//        } catch(RuntimeException e) {
+//            System.err.println("Error: allow-candidates " + opt_allow_candidates + ": " + e.getLocalizedMessage());
+//            return 1;
+//        }
+//
+//        // parse disallowed candidates from options
+//        try
+//        {
+//            Pair<List<Integer>, Map<Integer, Boolean>> id_marks = DeckParser.stringToIds(opt_disallow_candidates, "disallowed-candidates"); // all_cards
+//            for (Integer cid : id_marks.getFirst())
+//            {
+//                disallowed_candidates.add(cid);
+//            }
+//        }
+//        catch(RuntimeException e)
+//        {
+//            System.err.println("Error: disallow-candidates " + opt_disallow_candidates + ": " + e.getLocalizedMessage());
+//            return 1;
+//        }
+//
+//        // parse & drop disallowed recipes
+//        try
+//        {
+//            Pair<List<Integer>, Map<Integer, Boolean>>  id_dis_recipes = DeckParser.stringToIds(opt_disallow_recipes, "disallowed-recipes"); // all_cards, 
+//            for (Integer cid : id_dis_recipes.getFirst()) { all_cards.eraseFusionRecipe(cid); }
+//        }
+//        catch(RuntimeException e)
+//        {
+//            System.err.println("Error: disallow-recipes " + opt_disallow_recipes + ": " + e.getLocalizedMessage());
+//            return 1;
+//        }
+//        for (Integer cid : disallowed_recipes) { 
+//            all_cards.eraseFusionRecipe(cid);
+//
+//        try
+//        {
+//            your_deck.setGivenHand(opt_hand);
+//        }
+//        catch(RuntimeException e)
+//        {
+//            System.err.println("Error: hand " + opt_hand + ": " + e.getLocalizedMessage());
+//            return 1;
+//        }
+//
+//        if (opt_keep_commander)
+//        {
+//            requirement.num_cards.put(your_deck.getCommander(), 1);
+//        }
+//        for (Entry<Integer, Boolean> card_mark: your_deck.cardMarks.entrySet()) {
+//            Card card = card_mark.getKey() < 0 ? your_deck.getCommander() : your_deck.getCards().get(card_mark.getKey());
+//            Boolean mark = card_mark.getValue();
+//                if (mark && ((card_mark.getKey() >= 0) || !opt_keep_commander)) {
+//                    requirement.num_cards.put(card, requirement.num_cards.get(card) + 1);
+//                }
+//        }
+//
+//        target_score = opt_target_score.isEmpty() ? max_possible_score[optimization_mode.ordinal()] : Double.valueOf(opt_target_score);
+//
+//        for (Entry<String, Double> deck_parsed: deck_list_parsed.entrySet()) {
+//            Deck enemy_deck = null;
+////            try
+////            {
+////                enemy_deck = findDeck(decks, all_cards, deck_parsed.hash());
+////            }
+////            catch(RuntimeException e)
+////            {
+////                System.err.println("Error: Deck " + deck_parsed.hash() + ": " + e.getLocalizedMessage());
+////                return 1;
+////            }
+////            if (enemy_deck == null) {
+////                System.err.println("Error: Invalid defense deck name/hash " + deck_parsed.hash() + ".\n");
+////                //usage(args, args);
+////                return 1;
+////            }
+//            if (optimization_mode == OptimizationMode.NOT_SET)
+//            {
+//                if (enemy_deck.getDeckType() == DeckType.RAID)
+//                {
+//                    optimization_mode = OptimizationMode.RAID;
+//                }
+//                else if (enemy_deck.getDeckType() == DeckType.CAMPAIGN)
+//                {
+//                    gamemode = GameMode.SURGE;
+//                    optimization_mode = OptimizationMode.CAMPAIGN;
+//                }
+//                else
+//                {
+//                    optimization_mode = OptimizationMode.WINRATE;
+//                }
+//            }
+//            enemy_deck.setDeckStrategy(opt_enemy_strategy);
+//            if (!opt_enemy_doms.isEmpty())
+//            {
+//                try
+//                {
+//                    enemy_deck.addDominions(opt_enemy_doms + ",", true);
+//                }
+//                catch(RuntimeException e)
+//                {
+//                    System.err.println("Error: edom " + opt_enemy_doms + ": " + e.getLocalizedMessage());
+//                    return 1;
+//                }
+//            }
+//            if (!opt_enemy_forts.isEmpty())
+//            {
+//                try
+//                {
+//                    enemy_deck.addForts(opt_enemy_forts + ",");
+//                }
+//                catch(RuntimeException e)
+//                {
+//                    System.err.println("Error: efort " + opt_enemy_forts + ": " + e.getLocalizedMessage());
+//                    return 1;
+//                }
+//            }
+//            try
+//            {
+//                enemy_deck.setGivenHand(opt_enemy_hand);
+//            }
+//            catch(RuntimeException e)
+//            {
+//                System.err.println("Error: enemy:hand " + opt_enemy_hand + ": " + e.getLocalizedMessage());
+//                return 1;
+//            }
+//            enemy_decks.add(enemy_deck);
+//            enemy_decks_factors.add(deck_parsed.getValue());
+//        }
 
         // Force to claim cards in your initial deck.
         if (opt_do_optimization && use_owned_cards) {
@@ -1617,63 +1634,65 @@ public class TyrantOptimize {
         // NOTE: do this AFTER the call to claim_cards so that passing an initial deck of >10 cards
         //       can be used as a "shortcut" for adding them to owned cards. Also this allows climb
         //       to figure out which are the best 10, rather than restricting climb to the first 10.
-        if (your_deck.cards.size() > max_deck_len)
+        if (your_deck.getCards().size() > max_deck_len)
         {
             your_deck.shrink(max_deck_len);
-            if (debug_print >= 0)
+            if (Main.debug_print >= 0)
             {
                 System.err.println("WARNING: Too many cards in your deck. Trimmed.\n");
             }
         }
-        freezed_cards = Math.min(freezed_cards, your_deck.cards.size());
+        // TODO: prüfen, ob nicht anders gesetzt werden soll 
+        freezed_cards = Math.min(freezed_cards, your_deck.getCards().size());
 
-        if (debug_print >= 0)
-        {
-            System.out.print("Your Deck: " + (debug_print > 0 ? your_deck.long_description() : your_deck.medium_description()));
-            for (unsigned bg_effect = PassiveBGE.no_bge; bg_effect < PassiveBGE.num_passive_bges; ++bg_effect)
-            {
-                auto bge_value = opt_bg_effects[0][bg_effect];
-                if (!bge_value)
-                    continue;
-                System.out.print("Your BG Effect: " + passive_bge_names[bg_effect]);
-                if (bge_value != -1) System.out.print(" " + bge_value);
-                System.out.println();
-            }
-            for (String bg_skill: opt_bg_skills[0])
-            {
-                System.out.println("Your BG Skill: " + skill_description(all_cards, bg_skill));
-            }
-
-            for (int i =0; i < enemy_decks.size(); ++i) {
-                auto enemy_deck = enemy_decks[i];
-                System.out.println("Enemy's Deck:" + enemy_decks_factors[i] + ": "
-                    + (debug_print > 0 ? enemy_deck.long_description() : enemy_deck.medium_description()));
-            }
-            for (unsigned bg_effect = PassiveBGE.no_bge; bg_effect < PassiveBGE.num_passive_bges; ++bg_effect)
-            {
-                auto bge_value = opt_bg_effects[1][bg_effect];
-                if (!bge_value)
-                    continue;
-                System.out.print("Enemy's BG Effect: " + passive_bge_names[bg_effect]);
-                if (bge_value != -1) System.out.print(" " + bge_value + "\n");
-            }
-            for (String bg_skill: opt_bg_skills[1])
-            {
-                System.out.println("Enemy's BG Skill: " + skill_description(all_cards, bg_skill));
-            }
-        }
+        if (Main.debug_print >= 0) {
+            // TODO: replace c++ code
+//            System.out.print("Your Deck: " + (Main.debug_print > 0 ? your_deck.longDescription() : your_deck.medium_description()));
+//            for (PassiveBGE double1 : PassiveBGE.values()) {
+//                auto bge_value = opt_bg_effects[0][bg_effect];
+//                if (!bge_value)
+//                    continue;
+//                System.out.print("Your BG Effect: " + passive_bge_names[bg_effect]);
+//                if (bge_value != -1) System.out.print(" " + bge_value);
+//                System.out.println();
+//            }
+//            for (SkillSpec bg_skill: opt_bg_skills[0])
+//            {
+//                System.out.println("Your BG Skill: " + skill_description(all_cards, bg_skill));
+//            }
+//
+//            for (int i =0; i < enemy_decks.size(); ++i) {
+//                auto enemy_deck = enemy_decks[i];
+//                System.out.println("Enemy's Deck:" + enemy_decks_factors[i] + ": "
+//                    + (Main.debug_print > 0 ? enemy_deck.long_description() : enemy_deck.medium_description()));
+//            }
+//            for (unsigned bg_effect = PassiveBGE.no_bge; bg_effect < PassiveBGE.num_passive_bges; ++bg_effect)
+//            {
+//                auto bge_value = opt_bg_effects[1][bg_effect];
+//                if (!bge_value)
+//                    continue;
+//                System.out.print("Enemy's BG Effect: " + passive_bge_names[bg_effect]);
+//                if (bge_value != -1) System.out.print(" " + bge_value + "\n");
+//            }
+//            for (String bg_skill: opt_bg_skills[1])
+//            {
+//                System.out.println("Enemy's BG Skill: " + skill_description(all_cards, bg_skill));
+//            }
+//        }
+            
         if (enemy_decks.size() == 1) {
-            Deck enemy_deck = enemy_decks.get(0);
-            for (auto x_mult_ss : enemy_deck.getEffects()) {
-                if (debug_print >= 0) {
-                    System.out.print("Enemy's X-Mult BG Skill (effective X = round_up[X * " + enemy_deck.level + "]): "
-                        + skill_description(all_cards, x_mult_ss));
-                    if (x_mult_ss.x) { System.out.print(" (eff. X = " + ceil(x_mult_ss.x * enemy_deck.level) + ")"); }
-                    System.out.print();
-                }
-                opt_bg_skills[1] = new SkillSpec[] {x_mult_ss.id, ceil(x_mult_ss.x * enemy_deck.getLevel),
-                    x_mult_ss.y, x_mult_ss.n, x_mult_ss.c, x_mult_ss.s, x_mult_ss.s2, x_mult_ss.all};
-            }
+            // TODO: replace c++ code
+//            Deck enemy_deck = enemy_decks.get(0);
+//            for (SkillSpec x_mult_ss : enemy_deck.getEffects()) {
+//                if (Main.debug_print >= 0) {
+//                    System.out.print("Enemy's X-Mult BG Skill (effective X = round_up[X * " + enemy_deck.level + "]): "
+//                        + skill_description(all_cards, x_mult_ss));
+//                    if (x_mult_ss.x) { System.out.print(" (eff. X = " + ceil(x_mult_ss.x * enemy_deck.level) + ")"); }
+//                    System.out.print();
+//                }
+//                opt_bg_skills[1] = new SkillSpec(x_mult_ss.id, ceil(x_mult_ss.x * enemy_deck.getLevel),
+//                    x_mult_ss.y, x_mult_ss.n, x_mult_ss.c, x_mult_ss.s, x_mult_ss.s2, x_mult_ss.all);
+//            }
         }
         
         // TODO: nicht mehr nötig?
@@ -1683,64 +1702,67 @@ public class TyrantOptimize {
 
         for (Todo op: opt_todo) {
             switch(op.operation) {
-            case noop:
+            case NOOP:
                 break;
-            case simulate: {
-                EvaluatedResults results = { EvaluatedResults.first_type(enemy_decks.size()), 0 };
-                results = p.evaluate(std.get<0>(op), results);
-                print_results(results, p.factors);
+            case SIMULATE: {
+                // TODO: replace c++ code
+//                EvaluatedResults results = { EvaluatedResults.first_type(enemy_decks.size()), 0 };
+//                results = p.evaluate(std.get<0>(op), results);
+//                print_results(results, p.factors);
                 break;
             }
-            case climb: {
+            case CLIMB: {
                 //hill_climbing(op.iterations, op.iterations.get, your_deck, p, requirement);
-                hill_climbing(op.iterations, op.iterationsFine, your_deck, p, requirement);
+                //hill_climbing(op.iterations, op.iterationsFine, your_deck, p, requirement);
                 break;
             }
-            case reorder: 
-                your_deck.setStrategy(DeckStrategy.ORDERED);
+            case REORDER: 
+                your_deck.setDeckStrategy(DeckStrategy.ORDERED);
                 use_owned_cards = true;
                 use_top_level_card = false;
                 use_top_level_commander = false;
                 use_dominion_climbing = false;
                 if (min_deck_len == 1 && max_deck_len == 10)
                 {
-                    min_deck_len = max_deck_len = your_deck.cards.size();
+                    min_deck_len = max_deck_len = your_deck.getCards().size();
                 }
                 fund = 0;
-                debug_print = -1;
+                Main.debug_print = -1;
                 owned_cards.clear();
                 claim_cards(Arrays.asList(your_deck.getCommander()));
                 claim_cards(your_deck.getCards());
-                hill_climbing(std.get<0>(op), std.get<1>(op), your_deck, p, requirement
-                );
+                //hill_climbing(op.iterations, op.iterationsFine, your_deck, p, requirement);
                 break;
-            case debug: 
-                ++ debug_print;
-                debug_str.clear();
-                EvaluatedResults results = {EvaluatedResults.first_type(enemy_decks.size()), 0};
-                results = p.evaluate(1, results);
-                print_results(results, p.factors);
-                -- debug_print;
+            case DEBUG: 
+                ++ Main.debug_print;
+                Main.debug_str.setLength(0);
+                //EvaluatedResults results = {EvaluatedResults.first_type(enemy_decks.size()), 0};
+                //results = p.evaluate(1, results);
+                //print_results(results, p.factors);
+                Main.debug_print--;
                 break;
-            case debuguntil: 
-                ++ debug_print;
-                ++ debug_cached;
+            case DEBUG_UNTIL: 
+                Main.debug_print ++;
+                Main.debug_cached ++;
                 while (true) {
-                    debug_str.clear();
-                    EvaluatedResults results = {EvaluatedResults.first_type(enemy_decks.size()), 0};
-                    results = p.evaluate(1, results);
-                    auto score = compute_score(results, p.factors);
-                    if (score.points >= op.iterations && score.points <= op.iterationsFine) {
-                        System.out.print(debug_str);
-                        print_results(results, p.factors);
+                    // TODO: replace c++ code
+//                    Main.debug_str.setLength(0);
+//                    EvaluatedResults results = {EvaluatedResults.first_type(enemy_decks.size()), 0};
+//                    results = p.evaluate(1, results);
+//                    auto score = compute_score(results, p.factors);
+//                    if (score.points >= op.iterations && score.points <= op.iterationsFine) {
+//                        System.out.print(debug_str);
+//                        print_results(results, p.factors);
                         break;
-                    }
+//                    }
                 }
-                -- debug_cached;
-                -- debug_print;
+                Main.debug_cached--;
+                Main.debug_print--;
                 break;
+            }
         }
-        return 0;
+        }
+        return opt_num_threads;
     }
     
     private void claim_cards(List<Card> card_list) {
@@ -1750,12 +1772,9 @@ public class TyrantOptimize {
             Card card = it.getKey();
             Integer num_to_claim = Utils.safeMinus(it.getValue(), owned_cards.get(card.getId()));
             if (num_to_claim > 0) {
-                
                 //NumStop = 
-                AnragWiederV = owned_cards.get(card.getId()) += num_to_claim;
-                owned_cards = 
-                if (Main.debug_print >= 0)
-                {
+                owned_cards.put(card.getId(), owned_cards.get(card.getId()) + num_to_claim);
+                if (Main.debug_print >= 0) {
                     System.err.println("WARNING: Need extra " + num_to_claim + " " + card.getName() + " to build your initial deck: adding to owned card list.\n");
                 }
             }
