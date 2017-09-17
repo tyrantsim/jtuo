@@ -1,7 +1,6 @@
 package com.github.tyrantsim.jtuo.parsers;
 
 import com.github.tyrantsim.jtuo.decks.Deck;
-import com.github.tyrantsim.jtuo.util.Utils;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -29,5 +28,6 @@ public class FileParserTest {
         assertEquals((Integer) 43835, ids.get(4));
         assertEquals((Integer) 47457, ids.get(5));
     }
+
 
 }

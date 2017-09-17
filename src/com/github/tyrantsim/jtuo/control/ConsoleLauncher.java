@@ -66,7 +66,8 @@ public class ConsoleLauncher {
         // TODO: print score
     }
 
-    public static void run(String[] args) {
+    public static int run(String[] args) {
+       
         int optNumThreads = Constants.DEFAULT_THREAD_NUMBER;
         DeckStrategy optYourDeckStrategy = DeckStrategy.RANDOM;
         DeckStrategy optEnemyStrategy = DeckStrategy.RANDOM;
@@ -125,12 +126,12 @@ public class ConsoleLauncher {
         } catch (RuntimeException e) {
             e.printStackTrace();
             System.err.println("Error: Deck " + yourDeckName + ": " + e.getMessage());
-            return;
+            return 1;
         }
 
         if (yourDeck == null) {
             System.err.println("Error: Invalid attack deck name/hash " + yourDeckName);
-            return;
+            return 2;
         }
 
         yourDeck.setDeckStrategy(optYourDeckStrategy);
@@ -143,12 +144,12 @@ public class ConsoleLauncher {
                 enemyDeck = Decks.findDeck(key).clone();
             } catch (RuntimeException e) {
                 System.err.println("Error: Deck " + value + ": " + e.getMessage());
-                return;
+                return 3;
             }
 
             if (enemyDeck == null) {
                 System.err.println("Error: Invalid defense deck name/hash " + value);
-                return;
+                return 4;
             }
 
             enemyDeck.setDeckStrategy(optEnemyStrategy);
@@ -180,10 +181,12 @@ public class ConsoleLauncher {
                 // EvaluatedResults results = p.evaluate(op.iterations);
                 Requirement requirement = new Requirement();
                 int min_iterations = 10;
-                new TyrantOptimize().hillClimbing(min_iterations, op.iterations, yourDeck, p, requirement);
+                
+                new TyrantOptimize().main(args); //hillClimbing(min_iterations, op.iterations, yourDeck, p, requirement);
                 break;
             }
         }
+        return 0;
     }
 
 }

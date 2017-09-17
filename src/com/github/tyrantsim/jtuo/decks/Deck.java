@@ -589,7 +589,6 @@ public class Deck implements Cloneable {
     public int getId() { return id; }
 
     public Card getAlphaDominion() { return alphaDominion; }
-
     public void setAlphaDominion(Card alphaDominion) {
         this.alphaDominion = alphaDominion;
     }
@@ -597,5 +596,15 @@ public class Deck implements Cloneable {
     public Set<Integer> getVipCards() {
         return vipCards;
     }
+    
+    private int getSize() {
+        return getCards().size();
+    }
+    
+    @Override
+    public String toString() {
+        return getCards().toString();
+    }
+    
 
 }

@@ -25,24 +25,20 @@ import com.github.tyrantsim.jtuo.cards.Card;
 import com.github.tyrantsim.jtuo.cards.CardCategory;
 import com.github.tyrantsim.jtuo.cards.CardType;
 import com.github.tyrantsim.jtuo.cards.Cards;
-import com.github.tyrantsim.jtuo.control.ConsoleLauncher;
 import com.github.tyrantsim.jtuo.control.EvaluatedResults;
 import com.github.tyrantsim.jtuo.control.Operation;
 import com.github.tyrantsim.jtuo.control.SimProcess;
 import com.github.tyrantsim.jtuo.control.Todo;
 import com.github.tyrantsim.jtuo.decks.Deck;
 import com.github.tyrantsim.jtuo.decks.DeckStrategy;
-import com.github.tyrantsim.jtuo.decks.DeckType;
 import com.github.tyrantsim.jtuo.decks.Decks;
 import com.github.tyrantsim.jtuo.parsers.DeckParser;
 import com.github.tyrantsim.jtuo.parsers.FileParser;
 import com.github.tyrantsim.jtuo.parsers.LevelsParser;
 import com.github.tyrantsim.jtuo.parsers.SkillsSetParser;
 import com.github.tyrantsim.jtuo.parsers.XmlBasedParser;
-import com.github.tyrantsim.jtuo.sim.FieldSimulator;
 import com.github.tyrantsim.jtuo.sim.GameMode;
 import com.github.tyrantsim.jtuo.sim.OptimizationMode;
-import com.github.tyrantsim.jtuo.sim.PassiveBGE;
 import com.github.tyrantsim.jtuo.sim.Results;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.util.Pair;
@@ -953,17 +949,9 @@ public class TyrantOptimize {
         }
         System.out.println();
     }
-
+    
     @SuppressWarnings("static-access")
     public int main(String[] args) {
-        if (args.length == 2 && args[1].equals("-version")) {
-            System.out.println("Tyrant Unleashed Optimizer " + Constants.VERSION);
-            return 0;
-        }
-        if (args.length <= 2) {
-            ConsoleLauncher.printUsage();
-            return 255;
-        }
 
         int opt_num_threads = 4;
         DeckStrategy opt_your_strategy = DeckStrategy.RANDOM;
@@ -1642,7 +1630,7 @@ public class TyrantOptimize {
                 System.err.println("WARNING: Too many cards in your deck. Trimmed.\n");
             }
         }
-        // TODO: prï¿½fen, ob nicht anders gesetzt werden soll 
+        // TODO: prüfen, ob nicht anders gesetzt werden soll 
         freezed_cards = Math.min(freezed_cards, your_deck.getCards().size());
 
         if (Main.debug_print >= 0) {
@@ -1695,7 +1683,7 @@ public class TyrantOptimize {
 //            }
         }
         
-        // TODO: nicht mehr nï¿½tig?
+        // TODO: nicht mehr nötig?
 
 //        Process p(opt_num_threads, all_cards, decks, your_deck, enemy_decks, enemy_decks_factors, gamemode,
 //            opt_bg_effects[0], opt_bg_effects[1], opt_bg_skills[0], opt_bg_skills[1]);

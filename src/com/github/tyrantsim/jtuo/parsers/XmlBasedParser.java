@@ -20,6 +20,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -31,6 +32,8 @@ import com.github.tyrantsim.jtuo.cards.CardCategory;
 import com.github.tyrantsim.jtuo.cards.CardType;
 import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.cards.Faction;
+import com.github.tyrantsim.jtuo.decks.Deck;
+import com.github.tyrantsim.jtuo.decks.DeckType;
 import com.github.tyrantsim.jtuo.decks.Decks;
 import com.github.tyrantsim.jtuo.skills.Skill;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
@@ -49,18 +52,15 @@ public class XmlBasedParser {
 
     public static void initialize() {
         if (!initialized) {
-            for (int i = 1; i < 100; i++) {
-                try {
-                    readCards("cards_section_" + i + ".xml");
-                } catch (FileNotFoundException e) {
-                    // e.printStackTrace();
-                    break;
-                }
+            try {
+                readRaids("raids.xml");
+            } catch (FileNotFoundException e) {
+                // e.printStackTrace();
             }
         }
         initialized = true;
-        Cards.allCards.addAll(cards.values());
-        Cards.organize();
+        // Cards.allCards.addAll(cards.values());
+        // Cards.organize();
     }
 
     public static Card getCardCopy(int id) {
@@ -68,10 +68,11 @@ public class XmlBasedParser {
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
+        CardsParser.initialize();
         XmlBasedParser.initialize();
     }
 
-    public static void readCards(String file) throws FileNotFoundException {
+    public static void readDocument(String file) throws FileNotFoundException {
 
         File cardFile = new File(new File(".", Constants.DATA), file);
         if (!cardFile.getParentFile().exists()) {
@@ -80,12 +81,14 @@ public class XmlBasedParser {
             }
         }
         System.out.println(file);
-        
+
         if (!cardFile.exists() || ((new Date().getTime() - cardFile.lastModified()) > 86400000)) {
             try {
                 // http://mobile.tyrantonline.com/assets/cards_section_1.xml
-                Document document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(Constants.ASSETS + file);
-                cards.putAll(readCards(document));
+                Document document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(Constants.GITHUB + file);
+                // cards.putAll(
+                readRaids(document);
+                // );
 
                 Transformer transformer = TransformerFactory.newInstance().newTransformer();
                 transformer.setOutputProperty(OutputKeys.INDENT, "yes");
@@ -99,145 +102,390 @@ public class XmlBasedParser {
             }
         } else {
             try {
-                cards.putAll(readCards(DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(cardFile)));
+                //cards.putAll(
+                        readRaids(DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(cardFile));
             } catch (SAXException | ParserConfigurationException | IOException e) {
                 e.printStackTrace();
             }
         }
     }
 
-    private static Map<Integer, Card> readCards(Document parse) {
-        TreeMap<Integer, Card> cards = new TreeMap<>();
-        NodeList units = parse.getElementsByTagName("unit");
-        for (int i = 0; i < units.getLength(); i++) {
-            Node unit = units.item(i);
-            NodeList unitChilds = unit.getChildNodes();
-            String name = "";
-            String baseId = "";
-            Integer baseIdInt = null;
-            Integer idInt = null;
-            Card baseCard = new Card();
-            ArrayList<SkillSpec> skillSpecs = new ArrayList<>();
-            Map<Integer, Card> upgrades = new TreeMap<>();
-            for (int j = 0; j < unitChilds.getLength(); j++) {
-                Node unitChild = unitChilds.item(j);
-                //System.out.println(unitChild.getNodeName());
-                if (unitChild.getNodeName().equals("id")) {
-                    if (unitChild.getFirstChild().getNodeValue() != null) {
-                        baseId = unitChild.getFirstChild().getNodeValue();
-                        baseIdInt = Integer.parseInt(baseId);
-                    }
-                    baseCard.setBaseId(baseIdInt);
-                    baseCard.setId(baseIdInt);
-                }
-                if (unitChild.getNodeName().equals("name")) {
-                    if (unitChild.getFirstChild().getNodeValue() != null) {
-                        name = unitChild.getFirstChild().getNodeValue();
-                        baseCard.setName(name);
-                    }
-                }
+    private static void readRaids(Document document) {
 
-                if (unitChild.getNodeName().equals("rarity")) {
-                    if (unitChild.getFirstChild().getNodeValue() != null) {
-                        baseCard.setRarity(Integer.parseInt(unitChild.getFirstChild().getNodeValue()));
-                    }
-                }
-                
-                if (unitChild.getNodeName().equals("type")) {
-                    if (unitChild.getFirstChild().getNodeValue() != null) {
-                        baseCard.setFaction(Faction.values()[Integer.parseInt(unitChild.getFirstChild().getNodeValue())]);
-                    }
-                }
-                if (unitChild.getNodeName().equals("fortress_type")) {
-                    if (unitChild.getFirstChild().getNodeValue() != null) {
-                        switch (Integer.parseInt(unitChild.getFirstChild().getNodeValue())) {
-                        case 1:
-                            baseCard.setCategory(CardCategory.FORTRESS_DEFENSE);                            
-                            break;
-                        case 2:
-                            baseCard.setCategory(CardCategory.FORTRESS_SIEGE);
-                        default:
-                            break;
-                        }
-                    }
-                }
-                
-                if (unitChild.getNodeName().equals("set")) {
-                    if (unitChild.getFirstChild().getNodeValue() != null) {
-                        int set = Integer.parseInt(unitChild.getFirstChild().getNodeValue());
-                        baseCard.setSet(set);
-                    }
-                }
-                if (baseCard != null) {
-                    updateSameCardAttributes(unitChild, baseCard, skillSpecs);
-                }
-                
-                if (baseIdInt != null && name != null && !name.isEmpty()) {
-                    cards.put(baseIdInt, baseCard);
+        Node root = document.getFirstChild();
 
-                    // System.out.println("" + name);
-                    if (unitChild.getNodeName().equals("upgrade")) {
-                        // Card card = (Card)baseCard.clone();
-                        ArrayList<SkillSpec> skillSpecsUpgraded = new ArrayList<>(); 
-                        Card card = baseCard.clone();
-                        NodeList upgradeChilds = unitChild.getChildNodes();
-                        String id = "";
-                        card.setSkills(new ArrayList<SkillSpec>());
-                        for (int l = 0; l < upgradeChilds.getLength(); l++) {
-                            Node upgradeChild = upgradeChilds.item(l);
-                            if (upgradeChild.getNodeName().equals("level")) {
-                                String level = upgradeChild.getFirstChild().getNodeValue();
-                                if (level != null) {
-                                    card.setLevel(Integer.parseInt(level));
-                                }
-                            }
-                            if (upgradeChild.getNodeName().equals("card_id")) {
-                                id = upgradeChild.getFirstChild().getNodeValue();
-                                idInt = Integer.parseInt(id);
-                                card.setId(idInt);
-                            }
-                            if (unitChild.getNodeName().equals("name")) {
-                                if (unitChild.getFirstChild().getNodeValue() != null) {
-                                    name = unitChild.getFirstChild().getNodeValue();
-                                    card.setName(name);
-                                }
-                            }
-                            updateSameCardAttributes(unitChild, card, skillSpecsUpgraded);
-                        }
-                        if (!skillSpecsUpgraded.isEmpty()) {
-                            card.setSkills(skillSpecsUpgraded);
-                            updateSkills(card, skillSpecsUpgraded);
-                            skillSpecs = skillSpecsUpgraded;
-                        }
-                        if (id != null) {
-                            upgrades.put(card.getLevel(), card);
-                            card.setId(idInt);
-                            cards.put(idInt, card);
-                        }
+        if (root == null) {
+            return;
+        }
+        NodeList raids = document.getElementsByTagName("raid");
+        for (int i = 0; i < raids.getLength(); i++) {
+            // raid_node = raid_node->next_sibling("raid"))
+            Node raid = raids.item(i);
+            NodeList childes = raid.getChildNodes(); //
+            int id = 0;
+            String deck_name = null;
+            String idString = null;
+            for (int childe_id = 0; childe_id < childes.getLength(); childe_id++) {
+                Node childe_node = childes.item(childe_id); //
+                assert (childe_node != null);
+                if (childe_node.getNodeName().equals("id")) {
+                    idString = childe_node.getTextContent();
+                    System.out.println(idString);
 
-                    }
+                    id = idString != null ? Integer.parseInt(idString) : 0;
                 }
+                if (childe_node.getNodeName().equals("name")) {
+                    // System.out.println(childe_node.getTextContent());
+                    String nameString = childe_node.getTextContent();
+                    // int id = childe_node.getTextContent() != null ?
+                    // Integer.parseInt(childe_node.getTextContent()) : 0;
+                    deck_name = nameString;
+                    System.out.println("" + idString + "");
+                    System.out.println(deck_name);
+                }
+                // xml_node<>* name_node(raid_node->first_node("name"));
+
             }
-            updateSkills(baseCard, skillSpecs);
-            recognizeCardType(baseCard);
-            Card topLevelCard = baseCard;
-            for (Card card : upgrades.values()) {
-                if (card.getLevel() > topLevelCard.getLevel()) {
-                    topLevelCard = card;
-                    card.setType(baseCard.getType());
-                }
+            readDeck((Element) raid, DeckType.RAID, id, deck_name);
+            // int id = id_node ? Integer.parseInt(id_node.getNodeValue()) : 0;
+            // xml_node<>* name_node(raid_node->first_node("name"));
+            // std::string deck_name{name_node->value()};
+            // try
+            // {
+            // read_deck(decks, all_cards, raid_node, DeckType::raid, id,
+            // deck_name);
+            // }
+            // catch (const std::runtime_error& e)
+            // {
+            // std::cerr << "WARNING: Failed to parse raid [" << deck_name << "]
+            // in file " << filename << ": [" << e.what() << "]. Skip the
+            // raid.\n";
+            // continue;
+            // }
+        }
+
+        // for (xml_node<>* campaign_node = root->first_node("campaign");
+        // campaign_node;
+        // campaign_node = campaign_node->next_sibling("campaign"))
+        // {
+        // xml_node<>* id_node(campaign_node->first_node("id"));
+        // unsigned id(id_node ? atoi(id_node->value()) : 0);
+        // for (auto && name_node = campaign_node->first_node("name");
+        // name_node;
+        // name_node = name_node->next_sibling("name"))
+        // {
+        // try
+        // {
+        // read_deck(decks, all_cards, campaign_node, DeckType::campaign, id,
+        // name_node->value());
+        // }
+        // catch (const std::runtime_error& e)
+        // {
+        // std::cerr << "WARNING: Failed to parse campaign [" <<
+        // name_node->value() << "] in file " << filename << ": [" << e.what()
+        // << "]. Skip the campaign.\n";
+        // continue;
+        // }
+        // }
+        // }
+    }
+
+    private static Deck readDeck(Element raidElement, DeckType raid2, int id, String base_deck_name) {
+        // TODO: implement Raid parser
+
+        // int id =
+        // Integer.parseInt(element.getElementsByTagName("id").item(0).getTextContent());
+        String name = raidElement.getElementsByTagName("name").item(0).getTextContent();
+
+        Deck deck = new Deck();
+        String deckName = "";
+        int levels = Integer.parseInt(raidElement.getElementsByTagName("levels").item(0).getTextContent());
+        Card commander_card;
+        try {
+            commander_card = Cards.getCardById(Integer.parseInt(raidElement.getElementsByTagName("commander").item(0).getTextContent()));
+            int commander_max_level = commander_card.getTopLevelCard().getLevel();
+            if (raidElement.getElementsByTagName("commander_max_level").getLength() > 0) {
+                commander_max_level = Integer.parseInt(raidElement.getElementsByTagName("commander_max_level").item(0).getTextContent());
             }
-            baseCard.setTopLevelCard(topLevelCard);
-            for (Card card : upgrades.values()) {
-                if (card.getLevel() == baseCard.getLevel() + 1) {
-                    baseCard.addUsedForCard(card, 1);
-                } else if (card.getLevel() != baseCard.getLevel()) {
-                    upgrades.get(card.getLevel() - 1).addUsedForCard(card, 1);
-                }
-                card.setTopLevelCard(topLevelCard);
+        } catch (Exception e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+        }
+
+        NodeList fortressCardNodeList = raidElement.getElementsByTagName("fortress_card");
+        for (int i = 0; i < fortressCardNodeList.getLength(); i++) {
+            Node fortressCardNode = fortressCardNodeList.item(i);
+            try {
+                Card fortressCard = Cards.getCardById(Integer.parseInt(fortressCardNode.getAttributes().getNamedItem("id").getTextContent()));
+                System.out.println(fortressCard.getName());
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
             }
         }
-        return cards;
+        if (raidElement.getElementsByTagName("effects").getLength() > 0) {
+            NodeList effectsNodeList = ((Element) raidElement.getElementsByTagName("effects").item(0)).getElementsByTagName("skill");
+            for (int i = 0; i < effectsNodeList.getLength(); i++) {
+                Node skillNode = effectsNodeList.item(i);
+                String skillId = skillNode.getAttributes().getNamedItem("id").getTextContent();
+                Boolean all = null;
+                if (skillNode.getAttributes().getNamedItem("all") != null) {
+                    all = Boolean.parseBoolean(skillNode.getAttributes().getNamedItem("all").getTextContent());
+                }
+                Float x = null;
+                if (skillNode.getAttributes().getNamedItem("x") != null) {
+                    x = Float.parseFloat(skillNode.getAttributes().getNamedItem("x").getTextContent());
+                }
+                try {
+                    SkillSpec skillSpec = new SkillSpec(Skill.valueOf(skillId.toUpperCase()), x, Faction.ALL_FACTIONS, 0, 0, null, null, all, 0, SkillTrigger.PLAY);                    
+                } catch (Exception e) {
+                    // TODO: handle exception
+                }
+
+            }
+        }
+        if (raidElement.getElementsByTagName("fortress_pool").getLength() > 0) {
+            Element fortressPoolElement = (Element) raidElement.getElementsByTagName("fortress_pool").item(0);
+            Integer amount = Integer.parseInt(fortressPoolElement.getAttributes().getNamedItem("amount").getTextContent());
+            NodeList fortressPoolCards = fortressPoolElement.getElementsByTagName("card");
+            for (int i = 0; i < fortressPoolCards.getLength(); i++) {
+                try {
+                    Card fortressCard = Cards.getCardById(Integer.parseInt(fortressPoolCards.item(i).getTextContent()));
+                    Integer replicates = Integer.parseInt(fortressPoolCards.item(i).getAttributes().getNamedItem("replicates").getTextContent());
+                    System.out.println(fortressCard.getName() + "-" + replicates);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        Element deckElement = (Element) raidElement.getElementsByTagName("deck").item(0);
+        if (raidElement.getElementsByTagName("always_include").getLength() > 0) {
+            NodeList alwaysIncludeCardsNodeList = ((Element) deckElement.getElementsByTagName("always_include").item(0)).getElementsByTagName("card");
+            for (int i = 0; i < alwaysIncludeCardsNodeList.getLength(); i++) {
+                try {
+                    Card alwaysIncludeCard = Cards.getCardById(Integer.parseInt(alwaysIncludeCardsNodeList.item(i).getTextContent()));
+                    Integer replicates = 1;
+                    if (alwaysIncludeCardsNodeList.item(i).getAttributes().getNamedItem("replicates") != null) {
+                        replicates = Integer.parseInt(alwaysIncludeCardsNodeList.item(i).getAttributes().getNamedItem("replicates").getTextContent());
+                    }
+                    System.out.println(alwaysIncludeCard.getName() + "-" + replicates);
+                } catch (Exception e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+        }
+        if (raidElement.getElementsByTagName("card_pool").getLength() > 0) {
+            for (int i = 0; i < raidElement.getElementsByTagName("card_pool").getLength(); i++) {
+                NodeList cardPoolNodeList = ((Element) deckElement.getElementsByTagName("card_pool").item(0)).getElementsByTagName("card");
+                Integer amount = Integer.parseInt(deckElement.getElementsByTagName("card_pool").item(0).getAttributes().getNamedItem("amount").getTextContent());
+                for (int j = 0; j < cardPoolNodeList.getLength(); j++) {
+                    try {
+                        Card cardPoolCard = Cards.getCardById(Integer.parseInt(cardPoolNodeList.item(i).getTextContent()));
+                        System.out.println(cardPoolCard.getName());
+                    } catch (Exception e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }
+
+            }
+        }
+        // std::vector<const Card*> always_cards;
+        // std::vector<std::tuple<unsigned, unsigned, std::vector<const Card*>>>
+        // some_forts;
+        // std::vector<std::tuple<unsigned, unsigned, std::vector<const Card*>>>
+        // some_cards;
+        // xml_node<>* levels_node(node->first_node("levels"));
+        // xml_node<>* effects_node(node->first_node("effects"));
+        // xml_node<>* deck_node(node->first_node("deck"));
+        // unsigned max_level = levels_node ? atoi(levels_node->value()) : 10;
+        //
+        // // Effectes (skill based BGEs; assuming that X is a floating point
+        // number (multiplier))
+        // std::vector<SkillSpecXMult> effects;
+        // if (effects_node)
+        // {
+        // for (xml_node<>* skill_node = effects_node->first_node("skill");
+        // skill_node;
+        // skill_node = skill_node->next_sibling("skill"))
+        // {
+        // auto skill_name = skill_node->first_attribute("id")->value();
+        // Skill::Skill skill_id = skill_name_to_id(skill_name);
+        // if (skill_id == Skill::no_skill) { throw std::runtime_error("unknown
+        // skill id:" + to_string(skill_name)); }
+        // auto x = node_value_float(skill_node, "x", 0.0);
+        // auto y = skill_faction(skill_node);
+        // auto n = node_value(skill_node, "n", 0);
+        // auto c = node_value(skill_node, "c", 0);
+        // auto s = skill_target_skill(skill_node, "s");
+        // auto s2 = skill_target_skill(skill_node, "s2");
+        // bool all(skill_node->first_attribute("all"));
+        // effects.push_back({skill_id, x, y, n, c, s, s2, all});
+        // }
+        // }
+        //
+        // // Fixed fortresses (<fortress_card id="xxx"/>)
+        // std::vector<const Card*> fortress_cards;
+        // for (xml_node<>* fortress_card_node =
+        // node->first_node("fortress_card");
+        // fortress_card_node;
+        // fortress_card_node =
+        // fortress_card_node->next_sibling("fortress_card"))
+        // {
+        // const Card* card =
+        // all_cards.by_id(atoi(fortress_card_node->first_attribute("id")->value()));
+        // fortress_cards.push_back(card);
+        // upgrade_opportunities += card->m_top_level_card->m_level -
+        // card->m_level;
+        // }
+        //
+        // // Variable fortresses (<fortress_pool amount="x" replicates="y"> ...
+        // </fortress_pool>)
+        // for (xml_node<>* fortress_pool_node =
+        // node->first_node("fortress_pool");
+        // fortress_pool_node;
+        // fortress_pool_node =
+        // fortress_pool_node->next_sibling("fortress_pool"))
+        // {
+        // unsigned
+        // num_cards_from_pool(atoi(fortress_pool_node->first_attribute("amount")->value()));
+        // unsigned
+        // pool_replicates(fortress_pool_node->first_attribute("replicates")
+        // ? atoi(fortress_pool_node->first_attribute("replicates")->value())
+        // : 1);
+        // std::vector<const Card*> cards_from_pool;
+        // unsigned upgrade_points = 0;
+        // for (xml_node<>* card_node = fortress_pool_node->first_node("card");
+        // card_node;
+        // card_node = card_node->next_sibling("card"))
+        // {
+        // card = all_cards.by_id(atoi(card_node->value()));
+        // unsigned card_replicates(card_node->first_attribute("replicates") ?
+        // atoi(card_node->first_attribute("replicates")->value()) : 1);
+        // while (card_replicates --)
+        // {
+        // cards_from_pool.push_back(card);
+        // upgrade_points += card->m_top_level_card->m_level - card->m_level;
+        // }
+        // }
+        // some_forts.push_back(std::make_tuple(num_cards_from_pool,
+        // pool_replicates, cards_from_pool));
+        // upgrade_opportunities += upgrade_points * num_cards_from_pool *
+        // pool_replicates / cards_from_pool.size();
+        // }
+        //
+        // // Fixed cards (<always_include> ... </always_include>)
+        // xml_node<>* always_node{deck_node->first_node("always_include")};
+        // for (xml_node<>* card_node = (always_node ? always_node :
+        // deck_node)->first_node("card");
+        // card_node;
+        // card_node = card_node->next_sibling("card"))
+        // {
+        // card = all_cards.by_id(atoi(card_node->value()));
+        // unsigned replicates(card_node->first_attribute("replicates") ?
+        // atoi(card_node->first_attribute("replicates")->value()) : 1);
+        // while (replicates --)
+        // {
+        // always_cards.push_back(card);
+        // upgrade_opportunities += card->m_top_level_card->m_level -
+        // card->m_level;
+        // }
+        // }
+        //
+        // // Variable cards (<card_pool amount="x" replicates="y"> ...
+        // </card_pool>)
+        // for (xml_node<>* pool_node = deck_node->first_node("card_pool");
+        // pool_node;
+        // pool_node = pool_node->next_sibling("card_pool"))
+        // {
+        // unsigned
+        // num_cards_from_pool(atoi(pool_node->first_attribute("amount")->value()));
+        // unsigned pool_replicates(pool_node->first_attribute("replicates") ?
+        // atoi(pool_node->first_attribute("replicates")->value()) : 1);
+        // std::vector<const Card*> cards_from_pool;
+        // unsigned upgrade_points = 0;
+        // for (xml_node<>* card_node = pool_node->first_node("card");
+        // card_node;
+        // card_node = card_node->next_sibling("card"))
+        // {
+        // card = all_cards.by_id(atoi(card_node->value()));
+        // unsigned card_replicates(card_node->first_attribute("replicates") ?
+        // atoi(card_node->first_attribute("replicates")->value()) : 1);
+        // while (card_replicates --)
+        // {
+        // cards_from_pool.push_back(card);
+        // upgrade_points += card->m_top_level_card->m_level - card->m_level;
+        // }
+        // }
+        // some_cards.push_back(std::make_tuple(num_cards_from_pool,
+        // pool_replicates, cards_from_pool));
+        // upgrade_opportunities += upgrade_points * num_cards_from_pool *
+        // pool_replicates / cards_from_pool.size();
+        // }
+        //
+        // // Mission requirement
+        // xml_node<>* mission_req_node(node->first_node(decktype ==
+        // DeckType::mission ? "req" : "mission_req"));
+        // unsigned mission_req(mission_req_node ?
+        // atoi(mission_req_node->value()) : 0);
+        //
+        // for (unsigned level = 1; level < max_level; ++ level)
+        // {
+        // std::string deck_name = base_deck_name + "-" + to_string(level);
+        // unsigned upgrade_points = ceil(upgrade_opportunities * (level - 1) /
+        // (double)(max_level - 1));
+        // decks.decks.push_back(Deck{all_cards, decktype, id, deck_name,
+        // upgrade_points, upgrade_opportunities});
+        // Deck* deck = &decks.decks.back();
+        // deck->set(commander_card, commander_max_level, always_cards,
+        // some_forts, some_cards, mission_req);
+        // deck->fortress_cards = fortress_cards;
+        // deck->effects = effects;
+        // deck->level = level;
+        // decks.add_deck(deck, deck_name);
+        // decks.add_deck(deck, decktype_names[decktype] + " #" + to_string(id)
+        // + "-" + to_string(level));
+        // }
+        //
+        // decks.decks.push_back(Deck{all_cards, decktype, id, base_deck_name});
+        // Deck* deck = &decks.decks.back();
+        // deck->set(commander_card, commander_max_level, always_cards,
+        // some_forts, some_cards, mission_req);
+        // deck->fortress_cards = fortress_cards;
+        // deck->effects = effects;
+        // deck->level = max_level;
+        //
+        // // upgrade cards for full-level missions/raids
+        // if (max_level > 1)
+        // {
+        // while (deck->commander->m_level < commander_max_level)
+        // { deck->commander = deck->commander->upgraded(); }
+        // for (auto && card: deck->fortress_cards)
+        // { card = card->m_top_level_card; }
+        // for (auto && card: deck->cards)
+        // { card = card->m_top_level_card; }
+        // for (auto && pool: deck->variable_forts)
+        // {
+        // for (auto && card: std::get<2>(pool))
+        // { card = card->m_top_level_card; }
+        // }
+        // for (auto && pool: deck->variable_cards)
+        // {
+        // for (auto && card: std::get<2>(pool))
+        // { card = card->m_top_level_card; }
+        // }
+        // }
+        //
+        // decks.add_deck(deck, base_deck_name);
+        // decks.add_deck(deck, base_deck_name + "-" + to_string(max_level));
+        // decks.add_deck(deck, decktype_names[decktype] + " #" +
+        // to_string(id));
+        // decks.add_deck(deck, decktype_names[decktype] + " #" + to_string(id)
+        // + "-" + to_string(max_level));
+        // decks.by_type_id[{decktype, id}] = deck;
+        return deck;
     }
 
     private static void updateSkills(Card card, ArrayList<SkillSpec> skillSpecs) throws AssertionError {
@@ -263,173 +511,6 @@ public class XmlBasedParser {
         }
     }
 
-    private static void recognizeCardType(Card baseCard) {
-
-        int id = baseCard.getBaseId();
-
-        switch (id / 1000) {
-        case 0:
-            baseCard.setType(CardType.ASSAULT);
-            break;
-        case 1:
-            baseCard.setType(CardType.COMMANDER);
-            break;
-        case 2:
-            baseCard.setType(CardType.STRUCTURE);
-            // fortress
-            // if (id >= 2700 && id < 2997) {
-            // //unsigned fort_type_value = atoi(fortress_type_node->value());
-            // switch (baseCard.get) {
-            // case 1:
-            // baseCard.setCategory(CardCategory.FORTRESS_DEFENSE);
-            // break;
-            // case 2:
-            // baseCard.setCategory(CardCategory.FORTRESS_SIEGE);
-            // break;
-            // default:
-            // System.err.println("WARNING: parsing card [" + id + "]:
-            // unsupported fortress_type=");
-            // }
-            // else if (id < 2748 || id >= 2754) // except Sky Fortress
-            // {
-            // System.err.println("WARNING: parsing card [" + id + "]: expected
-            // fortress_type=" );
-            // }
-            // }
-            break;
-        case 3:
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            baseCard.setType(CardType.ASSAULT);
-            break;
-        case 8:
-        case 9:
-            baseCard.setType(CardType.STRUCTURE);
-            break;
-
-        case 10:
-        case 11:
-        case 12:
-        case 13:
-        case 14:
-        case 15:
-        case 16:
-            baseCard.setType(CardType.ASSAULT);
-            break;
-        case 17:
-        case 18:
-        case 19:
-        case 20:
-        case 21:
-        case 22:
-        case 23:
-        case 24:
-            baseCard.setType(CardType.STRUCTURE);
-            break;
-        case 25:
-        case 26:
-        case 27:
-        case 28:
-        case 29:            
-            baseCard.setType(CardType.COMMANDER);
-            break;
-        case 30:
-        case 31:
-        case 32:
-        case 33:
-        case 34:
-        case 35:
-        case 36:
-        case 37:
-        case 38:
-        case 39:
-        case 40:
-        case 41:
-        case 42:
-        case 43:
-        case 44:
-        case 45:
-        case 46:
-        case 47:
-        case 48:
-        case 49:
-        case 50:
-            baseCard.setType(CardType.ASSAULT);
-            if (id == 43451 || id == 43452) {
-                baseCard.setCategory(CardCategory.DOMINION_MATERIAL);
-            }
-            break;
-        case 51:
-        case 52:
-        case 53:
-        case 54:
-            // Nexus start at 50238
-//          // [50001 .. 55000]
-//          else if (card->m_id < 55001)
-            baseCard.setType(CardType.STRUCTURE);
-            baseCard.setCategory(CardCategory.DOMINION_ALPHA);
-            break;
-        default:
-            // [55001 .. ...]
-            baseCard.setType(CardType.ASSAULT);
-            break;
-        }
-        
-        // fortresses
-        if (baseCard.getSet() == 8000) {
-            if (baseCard.getType() != CardType.STRUCTURE) {
-                System.err.println("WARNING: parsing card [" + id + "]: set 8000 supposes fortresses card that implies type Structure, but card has type " + baseCard.getType().name());
-            }
-            // assume all other fortresses as conquest towers
-            if (baseCard.getCategory() == CardCategory.NORMAL) {
-                baseCard.setCategory(CardCategory.FORTRESS_CONQUEST);
-            }
-        }
-
-    }
-
-    private static void updateSameCardAttributes(Node unitChild, Card card, List<SkillSpec> skillSpecs) {
-        if (unitChild.getNodeName().equals("cost") && unitChild.getFirstChild() != null) {
-            String cost = unitChild.getFirstChild().getNodeValue();
-            card.setRecipeCost(Integer.parseInt(cost));
-        }
-
-        if (unitChild.getNodeName().equals("attack") && unitChild.getFirstChild() != null) {
-            if (unitChild.getFirstChild() != null) {
-                String attack = unitChild.getFirstChild().getNodeValue();
-                card.setAttack(Integer.parseInt(attack));
-            }
-        }
-        if (unitChild.getNodeName().equals("health") && unitChild.getFirstChild() != null) {
-            String health = unitChild.getFirstChild().getNodeValue();
-            card.setHealth(Integer.parseInt(health));
-        }
-        if (unitChild.getNodeName().equals("fusion_level") && unitChild.getFirstChild() != null) {
-            String level = unitChild.getFirstChild().getNodeValue();
-            card.setFusionLevel(Integer.parseInt(level));
-        }
-        if (unitChild.getNodeName().equals("skill")) {
-            NamedNodeMap skill = unitChild.getAttributes();
-            String id = skill.getNamedItem("id") == null ? "" : skill.getNamedItem("id").getNodeValue();
-            String x = skill.getNamedItem("x") == null ? "" : skill.getNamedItem("x").getNodeValue();
-            String y = skill.getNamedItem("y") == null ? "" : skill.getNamedItem("y").getNodeValue();
-            String all = skill.getNamedItem("all") == null ? "" : skill.getNamedItem("all").getNodeValue();
-            String c = skill.getNamedItem("c") == null ? "" : skill.getNamedItem("c").getNodeValue();
-            String card_id = skill.getNamedItem("card_id") == null ? "" : skill.getNamedItem("card_id").getNodeValue();
-            String trigger = skill.getNamedItem("trigger") == null ? "" : skill.getNamedItem("trigger").getNodeValue();
-            String n = skill.getNamedItem("n") == null ? "" : skill.getNamedItem("n").getNodeValue();
-            String s = skill.getNamedItem("s") == null ? "" : skill.getNamedItem("s").getNodeValue();
-            String s2 = skill.getNamedItem("s2") == null ? "" : skill.getNamedItem("s2").getNodeValue();
-
-            
-            SkillSpec new_skill = new SkillSpec();
-            new_skill.setId(Skill.valueOf(id.toUpperCase()));
-            setSkillSpec(card, x, y, all, c, card_id, trigger, new_skill, n, s, s2);
-            skillSpecs.add(new_skill);
-        }
-    }
 
     private static void setSkillSpec(Card card, String x, String y, String all, String c, String card_id, String trigger, SkillSpec new_skill, String n, String s, String s2) {
         new_skill.setAll(all != null && all.equals("1"));
@@ -453,11 +534,15 @@ public class XmlBasedParser {
 
     public static void load_decks_xml(Decks decks, Cards all_cards, String string, String string2, boolean empty) {
         // TODO Auto-generated method stub
-        
+
     }
 
     public static void load_recipes_xml(Cards all_cards, String string, boolean empty) {
         // TODO Auto-generated method stub
-        
+
+    }
+
+    public static void readRaids(String filename, boolean... do_warn_on_missing) throws FileNotFoundException {
+        readDocument(filename);
     }
 }
