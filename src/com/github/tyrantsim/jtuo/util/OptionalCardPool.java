@@ -45,7 +45,6 @@ public class OptionalCardPool {
         return pool.isEmpty();
     }
 
-    
     public void setPool(List<Card> pool) {
         this.pool = pool;
     }

@@ -393,6 +393,4 @@ public class Card implements Cloneable {
         this.faction = faction;
     }
 
-
-
 }

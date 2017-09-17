@@ -1,6 +1,7 @@
 package com.github.tyrantsim.jtuo.decks;
 
 import com.github.tyrantsim.jtuo.Constants;
+import com.github.tyrantsim.jtuo.Main;
 import com.github.tyrantsim.jtuo.cards.Card;
 import com.github.tyrantsim.jtuo.cards.CardCategory;
 import com.github.tyrantsim.jtuo.cards.CardType;
@@ -9,6 +10,7 @@ import com.github.tyrantsim.jtuo.parsers.DeckParser;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.util.OptionalCardPool;
 import com.github.tyrantsim.jtuo.util.Pair;
+import com.github.tyrantsim.jtuo.util.Utils;
 
 import java.util.*;
 
@@ -155,11 +157,36 @@ public class Deck implements Cloneable {
     }
 
     public void addDominions(String deckString, boolean overrideDom) {
-        // TODO: implement this
+        for (Integer id: DeckParser.stringToIds(deckString, "dominion_cards").getFirst()) {
+            try {
+                addDominion(Cards.getCardById(id), overrideDom);
+            } catch (Exception e) {
+                System.err.println(e.getMessage());
+            }
+        }
     }
 
     public void addDominion(Card domCard, boolean overrideDom) {
-        // TODO: implement this
+        if (domCard.getCategory() == CardCategory.DOMINION_ALPHA) {
+            if (alphaDominion != null && !overrideDom) {
+                System.err.println("WARNING: "
+                        + (!name.isEmpty() ? "deck " + name + ": " : "")
+                        + "Ignoring additional alpha dominion " + domCard.getName()
+                        + " (" + alphaDominion.getName() + " already in deck)");
+            } else {
+                if (alphaDominion != null) {
+                    System.err.println("WARNING: "
+                            + (!name.isEmpty() ? "deck " + name + ": " : "")
+                            + "Overriding alpha dominion " + alphaDominion.getName()
+                            + " by " + domCard.getName());
+                }
+                alphaDominion = domCard;
+            }
+        } else {
+            System.err.println("WARNING: "
+                    + (!name.isEmpty() ? "deck " + name + ": " : "")
+                    + "Ignoring non-dominion card " + domCard.getName());
+        }
     }
 
     public void shuffle(Random random) {
@@ -391,7 +418,48 @@ public class Deck implements Cloneable {
     }
 
     public void showUpgrades(StringBuilder sb, Card card, int cardMaxLevel, String leadingChars) {
-        // TODO: implement this
+
+        sb.append(leadingChars);
+        sb.append(card.toString());
+        sb.append("\n");
+
+        if (upgradePoints == 0 || card.getLevel() == cardMaxLevel)
+            return;
+
+        if (Main.debug_print < 2 && deckType != DeckType.RAID) {
+            while (card.getLevel() != cardMaxLevel)
+                card = card.upgraded();
+
+            sb.append(leadingChars);
+            sb.append("-> ");
+            sb.append(card.toString());
+            sb.append("\n");
+            return;
+        }
+
+        // nCm * p^m / q^(n-m)
+        double p = 1.0d * upgradePoints / upgradeOpportunities;
+        double q = 1.0d - p;
+        int n = cardMaxLevel - card.getLevel();
+        int m = 0;
+        double prob = 100.0d * Math.pow(q, n);
+
+        sb.append(leadingChars);
+        sb.append(Utils.formatPercentage(prob, 5));
+        sb.append("% no up\n");
+
+        while (card.getLevel() != cardMaxLevel) {
+            card = card.upgraded();
+            m++;
+            prob = prob * (n + 1 - m) / m * p / q;
+
+            sb.append(leadingChars);
+            sb.append(Utils.formatPercentage(prob, 5));
+            sb.append("% -> ");
+            sb.append(card.toString());
+            sb.append("\n");
+        }
+
     }
 
     public void resolve() {
@@ -521,17 +589,13 @@ public class Deck implements Cloneable {
     public int getId() { return id; }
 
     public Card getAlphaDominion() { return alphaDominion; }
+
     public void setAlphaDominion(Card alphaDominion) {
         this.alphaDominion = alphaDominion;
     }
     
     public Set<Integer> getVipCards() {
         return vipCards;
-    }
-    
-    private void getSize() {
-        
-    
     }
 
 }

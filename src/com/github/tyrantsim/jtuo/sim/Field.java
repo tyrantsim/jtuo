@@ -10,7 +10,7 @@ import java.util.*;
 public class Field {
 
     private static final int PLAYER_INDEX_ATTACKER = 0;
-    private static final int PLAYER_INDEX_DEFFENDER = 1;
+    private static final int PLAYER_INDEX_DEFENDER = 1;
 
     boolean end;
     Random random;
@@ -125,7 +125,7 @@ public class Field {
     }
 
     public Hand getDefender() {
-        return getPlayer(PLAYER_INDEX_DEFFENDER);
+        return getPlayer(PLAYER_INDEX_DEFENDER);
     }
 
     public void setTapi(int tapi) {
@@ -187,7 +187,7 @@ public class Field {
     public int[] getBGEffects(int playerIndex) {
         if (playerIndex == PLAYER_INDEX_ATTACKER) {
             return yourBGEffects;
-        } else if (playerIndex == PLAYER_INDEX_DEFFENDER) {
+        } else if (playerIndex == PLAYER_INDEX_DEFENDER) {
             return enemyBGEffects;
         } else {
             throw new AssertionError("Unknown playerIndex: " + playerIndex);
@@ -197,7 +197,7 @@ public class Field {
     public List<SkillSpec> getBGSkills(int playerIndex) {
         if (playerIndex == PLAYER_INDEX_ATTACKER) {
             return yourBGSkills;
-        } else if (playerIndex == PLAYER_INDEX_DEFFENDER) {
+        } else if (playerIndex == PLAYER_INDEX_DEFENDER) {
             return enemyBGSkills;
         } else {
             throw new AssertionError("Unknown playerIndex: " + playerIndex);

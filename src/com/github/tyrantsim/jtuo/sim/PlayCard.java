@@ -2,10 +2,8 @@ package com.github.tyrantsim.jtuo.sim;
 
 import com.github.tyrantsim.jtuo.cards.Card;
 import com.github.tyrantsim.jtuo.cards.CardType;
-import com.github.tyrantsim.jtuo.optimizer.TyrantOptimize;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class PlayCard {

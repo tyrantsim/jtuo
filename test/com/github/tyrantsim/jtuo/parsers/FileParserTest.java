@@ -1,6 +1,7 @@
 package com.github.tyrantsim.jtuo.parsers;
 
 import com.github.tyrantsim.jtuo.decks.Deck;
+import com.github.tyrantsim.jtuo.util.Utils;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
