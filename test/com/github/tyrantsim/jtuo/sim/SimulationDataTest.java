@@ -24,12 +24,20 @@ public class SimulationDataTest {
         yourDeck.setCommander(CardsParser.getCardCopy(1000));
         yourDeck.setCards(Arrays.asList(
                 CardsParser.getCardCopy(1),
+                CardsParser.getCardCopy(1),
+                CardsParser.getCardCopy(1),
+                CardsParser.getCardCopy(1),
+                CardsParser.getCardCopy(1),
                 CardsParser.getCardCopy(1)
         ));
 
         Deck enemyDeck = new Deck();
         enemyDeck.setCommander(CardsParser.getCardCopy(1000));
-        enemyDeck.setCards(Collections.emptyList()); // Hope we can win that way!
+        enemyDeck.setCards(Arrays.asList(
+                CardsParser.getCardCopy(1),
+                CardsParser.getCardCopy(1),
+                CardsParser.getCardCopy(1)
+        )); // Hope we can win that way!
 
         SimulationData sim = new SimulationData(random);
         sim.setDecks(yourDeck, Collections.singletonList(enemyDeck));
