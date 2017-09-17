@@ -8,6 +8,7 @@ import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.skills.SkillTrigger;
 import com.github.tyrantsim.jtuo.skills.SkillUtils;
 import com.github.tyrantsim.jtuo.util.Pair;
+import com.github.tyrantsim.jtuo.util.Utils;
 
 import java.text.MessageFormat;
 import java.util.List;
@@ -871,10 +872,36 @@ public class FieldSimulator {
             }
 
             // Skill: Coalition
+            // TODO: Someone check this part PLS!!
             int coalitionBase = attStatus.skill(Skill.COALITION);
             if (coalitionBase > 0) {
-                // TODO: Implement this
+                byte factionsBitmap = 0;
+                for (CardStatus status: attAssaults) {
+                    if (!status.isAlive()) continue;
+                    factionsBitmap |= (1 << status.getCard().getFaction().ordinal());
+                }
+                int uniqFactions = Integer.bitCount(factionsBitmap);
+                int coalitionValue = coalitionBase * uniqFactions;
+                attDmg += coalitionValue;
             }
+
+            /*
+            // Skill: Coalition
+            unsigned coalition_base = att_status->skill(Skill::coalition);
+            if (__builtin_expect(coalition_base, false))
+            {
+                uint8_t factions_bitmap = 0;
+                for (CardStatus * status : att_assaults.m_indirect)
+                {
+                    if (! is_alive(status)) { continue; }
+                    factions_bitmap |= (1 << (status->m_card->m_faction));
+                }
+                _DEBUG_ASSERT(factions_bitmap);
+                unsigned uniq_factions = byte_bits_count(factions_bitmap);
+                unsigned coalition_value = coalition_base * uniq_factions;
+                att_dmg += coalition_value;
+            }
+             */
 
             // Skill: Rupture
             int ruptureValue = attStatus.skill(Skill.RUPTURE);
@@ -1469,7 +1496,7 @@ public class FieldSimulator {
     }
     
 //    public static void fillSkillTable() {
-//        Skill skillLambda = (skill) .get { perform_targetted_hostile_fast(skill); };  
+//        Skill skillLambda = (skill) .get { perform_targetted_hostile_fast(skill); };
 //        skill_table[Skill.BESIEGE.ordinal()] = perform_targetted_hostile_fast(Skill.BESIEGE);
 //        skill_table[Skill.ENFEEBLE.ordinal()] = perform_targetted_hostile_fast<Skill.enfeeble>;
 //        skill_table[Skill.ENHANCE.ordinal()] = perform_targetted_allied_fast<Skill.enhance>;
