@@ -1418,7 +1418,7 @@ public class FieldSimulator {
 //        return n_selected;
 //    }
     
-    void debugSelection(String format, Field fd, String... args) {                                     
+    void debugSelection(String format, Field fd, Object... args) {
         if(Main.debug_print >= 2) {
             debug(2, MessageFormat.format("Possible targets of " + format + ":\n", args));
                 for(CardStatus c: fd.selectionArray) {
