@@ -1428,13 +1428,6 @@ public class FieldSimulator {
     }
 
     private static void debug(int v, String format, Object... args) {
-        String[] strs = new String[args.length];
-        for (int i = 0; i < args.length; i++)
-            strs[i] = args[i].toString();
-        debug(v, format, strs);
-    }
-
-    private static void debug(int v, String format, String... args) {
         if (Main.debug_print >= v) {
             if (Main.debug_line) {
                 System.out.println(MessageFormat.format("%i - " + format, args));
