@@ -227,4 +227,6 @@ public class Field {
     void setBloodlustValue(int bloodlustValue) {
         this.bloodlustValue = bloodlustValue;
     }
+
+
 }

@@ -722,7 +722,116 @@ public class FieldSimulator {
         }
         damageDependantPreOA(field, attStatus, defStatus);
 
-        // TODO: implement skills
+        // Resolve On-Attacked skills
+        for (SkillSpec ss: defStatus.getCard().getSkillsOnAttacked()) {
+            debug(1, "On Attacked %s: Preparing (tail) skill %s\n", defStatus.description(), ss.description());
+            field.skillQueue.addLast(new Pair<>(defStatus, ss));
+            resolveSkill(field);
+        }
+
+        // Enemy Skill: Counter
+        if (defStatus.hasSkill(Skill.COUNTER)) {
+            // perform skill counter
+            int counterDmg = getCounterDamage(field, attStatus, defStatus);
+            debug(1, "%s takes %d counter damage from %s\n", attStatus.description(),
+                    String.valueOf(counterDmg), defStatus.description());
+            removeHP(field, attStatus, counterDmg);
+            prependOnDeath(field);
+            resolveSkill(field);
+
+            // Passive BGE: Counterflux
+            if (field.hasBGEffect(field.tapi, PassiveBGE.COUNTERFLUX)
+                    && cardType == CardType.ASSAULT && defStatus.isAlive()) {
+                int fluxDenominator = field.getBGEffectValue(field.tapi, PassiveBGE.COUNTERFLUX) > 0
+                        ? field.getBGEffectValue(field.tapi, PassiveBGE.COUNTERFLUX) : 4;
+                int fluxValue = (defStatus.skill(Skill.COUNTER) - 1) / fluxDenominator + 1;
+                debug(1, "Counterflux: %s heals itself and berserks for %d\n",
+                        defStatus.description(), String.valueOf(fluxValue));
+                defStatus.addHP(fluxValue);
+                if (!defStatus.isSundered())
+                    defStatus.addPermAttackBuff(fluxValue);
+            }
+
+            // Is attacker dead?
+            if (!attStatus.isAlive())
+                return attDmg;
+        }
+
+        // Skill: Corrosive
+        int corrosiveValue = defStatus.skill(Skill.CORROSIVE);
+        if (corrosiveValue > attStatus.getCorrodedRate()) {
+            // perform skill corrosive
+            debug(1, "%s corrodes %s by %d\n", defStatus.description(),
+                    attStatus.description(), String.valueOf(corrosiveValue));
+            attStatus.setCorrodedRate(corrosiveValue);
+        }
+
+        // Skill: Berserk
+        int berserkValue = attStatus.skill(Skill.BERSERK);
+        if (!attStatus.isSundered() && berserkValue > 0) {
+            // perform skill berserk
+            attStatus.addPermAttackBuff(berserkValue);
+
+            // Passive BGE: Enduring Rage
+            if (field.hasBGEffect(field.tapi, PassiveBGE.ENDURINGRAGE)) {
+                int bgeDenominator = field.getBGEffectValue(field.tapi, PassiveBGE.ENDURINGRAGE) > 0
+                        ? field.getBGEffectValue(field.tapi, PassiveBGE.ENDURINGRAGE) : 2;
+                int bgeValue = (berserkValue - 1) / bgeDenominator + 1;
+                debug(1, "EnduringRage: %s heals and protects itself for %d\n",
+                        attStatus.description(), String.valueOf(bgeValue));
+                attStatus.addHP(bgeValue);
+                attStatus.setProtectedBy(attStatus.getProtectedBy() + bgeValue);
+            }
+        }
+
+        // Skill: Leech
+        int leechValue = Math.min(attDmg, attStatus.skill(Skill.LEECH));
+        if (leechValue > 0 && skillCheck(field, Skill.LEECH, attStatus, null)) {
+            debug(1, "%s leeches %d health\n", attStatus.description(), String.valueOf(leechValue));
+            attStatus.addHP(leechValue);
+        }
+
+        // Passive BGE: Heroism
+        int valorValue;
+        if (field.hasBGEffect(field.tapi, PassiveBGE.HEROISM)
+                && (valorValue = attStatus.skill(Skill.VALOR)) > 0
+                && !attStatus.isSundered()
+                && cardType == CardType.ASSAULT
+                && defStatus.getHP() <= 0) {
+            debug(1, "Heroism: %s gain %d attack\n", attStatus.description(), String.valueOf(valorValue));
+            attStatus.addPermAttackBuff(valorValue);
+        }
+
+        // Passive BGE: Devour
+        int leechDevourValue;
+        if (field.hasBGEffect(field.tapi, PassiveBGE.DEVOUR)
+                && (leechDevourValue = attStatus.skill(Skill.LEECH) + attStatus.skill(Skill.REFRESH)) > 0
+                && cardType == CardType.ASSAULT) {
+
+            int bgeDenominator = field.getBGEffectValue(field.tapi, PassiveBGE.DEVOUR) > 0
+                    ? field.getBGEffectValue(field.tapi, PassiveBGE.DEVOUR) : 4;
+            int bgeValue = (leechDevourValue - 1) / bgeDenominator + 1;
+            if (!attStatus.isSundered()) {
+                debug(1, "Devour: %s gains %d attack\n", attStatus.description(), String.valueOf(bgeValue));
+                attStatus.addPermAttackBuff(bgeValue);
+            }
+            debug(1, "Devour: %s extends max hp / heals itself for %d\n",
+                    attStatus.description(), String.valueOf(bgeValue));
+            attStatus.extHP(bgeValue);
+        }
+
+        // Skill: Subdue
+        int subdueValue = defStatus.skill(Skill.SUBDUE);
+        if (subdueValue > 0) {
+            debug(1, "%s subdues %s by %d\n", defStatus.description(),
+                    attStatus.description(), String.valueOf(subdueValue));
+            attStatus.setSubdued(attStatus.getSubdued() + subdueValue);
+            if (attStatus.getHP() > attStatus.getMaxHP()) {
+                debug(1, "%s loses %d HP due to subdue (max hp: %d)\n",
+                        attStatus.description(), attStatus.getHP() - attStatus.getMaxHP(), attStatus.getMaxHP());
+                attStatus.setHP(attStatus.getMaxHP());
+            }
+        }
 
         return attDmg;
     }
@@ -793,7 +902,6 @@ public class FieldSimulator {
         int armorValue = 0;
         if (defStatus.getCard().getType() == CardType.ASSAULT) {
             // PassiveBGE: Fortification (adj step -> 1 (1 left, host, 1 right)
-            // TODO: C++ code says tapi but probably should be tipi.. Test this
             int adjSize = field.hasBGEffect(field.tapi, PassiveBGE.FORTIFICATION) ? 1 : 0;
             int hostIdx = defStatus.getIndex();
             int fromIdx = safeMinus(hostIdx, adjSize);
@@ -845,21 +953,21 @@ public class FieldSimulator {
         int poisonValue = Math.max(attStatus.skill(Skill.POISON), attStatus.skill(Skill.VENOM));
         if (poisonValue > defStatus.getPoisoned() && skillCheck(field, Skill.POISON, attStatus, defStatus)) {
             // Perform skill poison
-            debug(1, "%s poisons %s by %d\n", attStatus.description(), defStatus.description(), String.valueOf(poisonValue));
+            debug(1, "%s poisons %s by %d\n", attStatus.description(), defStatus.description(), poisonValue);
             defStatus.setPoisoned(poisonValue);
         }
 
         // Damage-Dependant Skill: Inhibit
         int inhibitValue = attStatus.skill(Skill.INHIBIT);
         if (inhibitValue > defStatus.getInhibited() && skillCheck(field, Skill.INHIBIT, attStatus, defStatus)) {
-            debug(1, "%s inhibits %s by %d\n", attStatus.description(), defStatus.description(), String.valueOf(inhibitValue));
+            debug(1, "%s inhibits %s by %d\n", attStatus.description(), defStatus.description(), inhibitValue);
             defStatus.setInhibited(inhibitValue);
         }
 
         // Damage-Dependant Skill: Sabotage
         int sabotagedValue = attStatus.skill(Skill.SABOTAGE);
         if (sabotagedValue > defStatus.getSabotaged() && skillCheck(field, Skill.SABOTAGE, attStatus, defStatus)) {
-            debug(1, "%s sabotages %s by %d\n", attStatus.description(), defStatus.description(), String.valueOf(sabotagedValue));
+            debug(1, "%s sabotages %s by %d\n", attStatus.description(), defStatus.description(), sabotagedValue);
             defStatus.setSabotaged(sabotagedValue);
         }
     }
@@ -1029,6 +1137,10 @@ public class FieldSimulator {
             }
         }
         return null;
+    }
+
+    private static int getCounterDamage(Field field, CardStatus att, CardStatus def) {
+        return safeMinus(def.skill(Skill.COUNTER) + att.getEnfeebled(), att.getProtectedBy());
     }
 
     private static int opponent(int player) {
@@ -1313,6 +1425,13 @@ public class FieldSimulator {
                     debug(2, "+ %s\n", c.description());
                 }
         }                                                              
+    }
+
+    private static void debug(int v, String format, Object... args) {
+        String[] strs = new String[args.length];
+        for (int i = 0; i < args.length; i++)
+            strs[i] = args[i].toString();
+        debug(v, format, strs);
     }
 
     private static void debug(int v, String format, String... args) {
