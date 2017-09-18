@@ -15,7 +15,7 @@ public class DeckParserTest {
     public void testParseDeck() {
         String deck = "Cyrus, Infantry-1, Infantry-2, Infantry";
         Map<String, Double> deckMap = DeckParser.expandDeckToList(deck);
-        assertEquals(1, deckMap.keySet().size());
+        assertEquals(1, deckMap.size());
         assertEquals((Object) 1.0, deckMap.get("Cyrus, Infantry-1, Infantry-2, Infantry"));
     }
 
