@@ -60,6 +60,7 @@ public class Field {
         this.enemyBGSkills = enemyBGSkills;
         this.assaultBloodlusted = false;
         this.selectionArray = new ArrayList<>();
+        this.random = new Random();
     }
 
     public void prepareAction() {
@@ -205,6 +206,8 @@ public class Field {
             throw new AssertionError("Unknown playerIndex: " + playerIndex);
         }
     }
+
+    public Random getRandom() { return random; }
 
     Deque<Pair<CardStatus, SkillSpec>> getSkillQueue() {
         return skillQueue;

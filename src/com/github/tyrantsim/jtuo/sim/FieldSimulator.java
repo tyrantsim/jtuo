@@ -7,11 +7,11 @@ import com.github.tyrantsim.jtuo.skills.Skill;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.skills.SkillTrigger;
 import com.github.tyrantsim.jtuo.skills.SkillUtils;
-import com.github.tyrantsim.jtuo.util.Functor;
 import com.github.tyrantsim.jtuo.util.Pair;
-import com.github.tyrantsim.jtuo.util.Utils;
 
 import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import static com.github.tyrantsim.jtuo.util.Utils.safeMinus;
@@ -289,9 +289,12 @@ public class FieldSimulator {
                 modifiedSkill.setX(modifiedSkill.getX() + enhancedValue);
 
             // Perform skill (if it is still applicable)
-            if (!(SkillUtils.isActivationSkillWithX(modifiedSkill.getId()) && modifiedSkill.getX() == 0))
-            {}//TODO: WTF is skill_table??? from original code: void(*skill_table[Skill.num_skills])(Field*, CardStatus* src, const SkillSpec&);
-
+            if (SkillUtils.isActivationSkillWithX(modifiedSkill.getId()) && modifiedSkill.getX() == 0) {
+                debug(2, "%s failed to %s because its X value is zeroed (sabotaged).\n",
+                        status.description(), ss.description());
+            } else {
+                autoPerformSkill(modifiedSkill.getId(), field, status, modifiedSkill);
+            }
         }
     }
 
@@ -463,8 +466,10 @@ public class FieldSimulator {
     }
 
     private static int evaluateBrawlScore(Field field, int player) {
-        // TODO: implement this
-        return -1;
+        return 55
+                + field.getPlayer(opponent(player)).getDeck().getCards().size()
+                + field.getPlayer(player).getDeck().getShuffledCards().size()
+                - ((field.turn + 7) / 8);
     }
 
     private static void turnEndPhase(Field field) {
@@ -1156,24 +1161,56 @@ public class FieldSimulator {
         return ((player + 1) % 2);
     }
 
-    private static void pefrormTargettedHostileFast(Skill skillId, Field field, CardStatus src, SkillSpec s) {
+    /**
+     * @return number of selected targets
+     */
+    private static int selectTargets(Skill skillId, Field field, CardStatus src, SkillSpec s) {
+        int numCandidates;
+        switch (skillId) {
+            case BESIEGE:
+                numCandidates = selectFast(Skill.SIEGE, field, src, skillTargets(Skill.SIEGE, field, src), s);
+                if (numCandidates == 0)
+                    numCandidates = selectFast(Skill.STRIKE, field, src, skillTargets(Skill.STRIKE, field, src), s);
+                break;
+            default:
+                numCandidates = selectFast(skillId, field, src, skillTargets(skillId, field, src), s);
+        }
 
+        // (false-loop)
+        int numSelected = numCandidates;
+        do {
+            // no candidates
+            if (numCandidates == 0) break;
 
+            // show candidates (debug)
+            debugSelection("%s", field, skillId.getDescription());
 
+            // analyze targets count / skill
+            int numTargets = s.getN() > 0 ? s.getN() : 1;
+            if (s.isAll() || numTargets >= numCandidates || skillId == Skill.MEND) // target all or mend
+                break;
 
+            // shuffle
+            for (int i = 0; i < numTargets; i++) {
+                int pos = field.getRandom().nextInt(numCandidates - 1);
+                CardStatus temp = field.selectionArray.get(i);
+                field.selectionArray.set(i, field.selectionArray.get(pos));
+                field.selectionArray.set(pos, temp);
+            }
 
+            // trim
+            if (field.selectionArray.size() > numTargets)
+                field.selectionArray.subList(numTargets, field.selectionArray.size()).clear();
 
+            // sort
+            if (numTargets > 1)
+                field.selectionArray.sort(Comparator.comparingInt(CardStatus::getIndex));
 
+            numSelected = numTargets;
 
+        } while (false); // (end)
 
-
-
-
-
-    }
-
-    private static void selectTargets(Skill skillId, Field field, CardStatus src, SkillSpec s) {
-
+        return numSelected;
     }
 
     private static int selectFast(Skill skillId, Field field, CardStatus src, List<CardStatus> cards, SkillSpec s) {
@@ -1461,11 +1498,54 @@ public class FieldSimulator {
                 break;
 
             case MIMIC:
-                // TODO: Implement this
+
+                List<SkillSpec> mimickableSkills = new ArrayList<>(dst.getCard().getSkills().size());
+                debug(2, " * Mimickable skills of %s\n", dst.description());
+                for (SkillSpec ss: dst.getCard().getSkills()) {
+
+                    // get skill
+                    Skill mimickableSkillId = ss.getId();
+
+                    // skip non-activation skills and Mimic (Mimic can't be mimicked)
+                    if (!SkillUtils.isActivationSkill(mimickableSkillId) || mimickableSkillId == Skill.MIMIC)
+                        continue;
+
+                    // skip mend for non-assault mimickers
+                    if (mimickableSkillId == Skill.MEND && src.getCard().getType() != CardType.ASSAULT)
+                        continue;
+
+                    mimickableSkills.add(ss.clone());
+                    debug(2, "  + %s\n", ss.description());
+
+                }
+
+                // select skill
+                int mimIdx = 0;
+                switch (mimickableSkills.size()) {
+                    case 0: assert(false); break;
+                    case 1: break;
+                    default: mimIdx = (field.getRandom().nextInt(mimickableSkills.size()));
+                }
+
+                final SkillSpec mimSS = mimickableSkills.get(mimIdx);
+                Skill mimSkillId = mimSS.getId();
+                int skillValue = (int) s.getX() + src.getEnhanced(mimSkillId);
+                SkillSpec mimickedSS = new SkillSpec(mimSkillId, skillValue, Faction.ALL_FACTIONS, mimSS.getN(), 0,
+                        mimSS.getS(), mimSS.getS2(), mimSS.isAll(), mimSS.getCardId(), SkillTrigger.ACTIVATE);
+                debug(1, " * Mimicked skill: %s\n", mimickedSS.description());
+                performTargettedHostileFast(Skill.MIMIC, field, src, mimickedSS);
                 break;
 
             default: assert(false);
         }
+    }
+
+    private static void performTargettedHostileFast(Skill skillId, Field field, CardStatus src, SkillSpec s) {
+
+    }
+
+    private static void performTargettedAlliedFast(Skill skillId, Field field, CardStatus src, SkillSpec s) {
+
     }
 
 //    void perform_targetted_hostile_fast(Skill skill_id, Field fd, CardStatus src, SkillSpec s) {
@@ -1739,7 +1819,7 @@ public class FieldSimulator {
 //        return n_selected;
 //    }
 
-    void debugSelection(String format, Field fd, Object... args) {
+    private static void debugSelection(String format, Field fd, Object... args) {
         if(Main.debug_print >= 2) {
             debug(2, MessageFormat.format("Possible targets of " + format + ":\n", args));
                 for(CardStatus c: fd.selectionArray) {
@@ -1761,55 +1841,55 @@ public class FieldSimulator {
         }
     }
 
-    List<CardStatus> skillTargets(Skill skill, Field fd, CardStatus src) {
+    private static List<CardStatus> skillTargets(Skill skill, Field fd, CardStatus src) {
         switch (skill) {
-        
-        case ENFEEBLE:
-        case JAM:
-        case SIEGE:
-        case STRIKE:
-        case SUNDER:
-        case WEAKEN:
-        case MIMIC:
-            return fd.getPlayers()[opponent(src.getPlayer())].getAssaults(); // .getassaults.m_indirect)
-        case ENHANCE:
-        case EVOLVE:
-        case HEAL:
-        case MEND:
-        case OVERLOAD:
-        case PROTECT:
-        case RALLY:
-        case ENRAGE:
-        case ENTRAP:
-        case RUSH:
-            return fd.getPlayers()[src.getPlayer()].getAssaults(); // .getIndirect()
-        default:
-            System.err.println("skill_targets: Error: no specialization for " + skill.getDescription() + "\n");
-            throw new RuntimeException();
+            case ENFEEBLE:
+            case JAM:
+            case SIEGE:
+            case STRIKE:
+            case SUNDER:
+            case WEAKEN:
+            case MIMIC:
+                return fd.getPlayers()[opponent(src.getPlayer())].getAssaults(); // .getassaults.m_indirect)
+            case ENHANCE:
+            case EVOLVE:
+            case HEAL:
+            case MEND:
+            case OVERLOAD:
+            case PROTECT:
+            case RALLY:
+            case ENRAGE:
+            case ENTRAP:
+            case RUSH:
+                return fd.getPlayers()[src.getPlayer()].getAssaults(); // .getIndirect()
+            default:
+                System.err.println("skill_targets: Error: no specialization for " + skill.getDescription() + "\n");
+                throw new RuntimeException();
         }
     }
-    
-//    public static void fillSkillTable() {
-//        Skill skillLambda = (skill) .get { perform_targetted_hostile_fast(skill); };
-//        skill_table[Skill.BESIEGE.ordinal()] = perform_targetted_hostile_fast(Skill.BESIEGE);
-//        skill_table[Skill.ENFEEBLE.ordinal()] = perform_targetted_hostile_fast<Skill.enfeeble>;
-//        skill_table[Skill.ENHANCE.ordinal()] = perform_targetted_allied_fast<Skill.enhance>;
-//        skill_table[Skill.EVOLVE.ordinal()] = perform_targetted_allied_fast<Skill.evolve>;
-//        skill_table[Skill.HEAL.ordinal()] = perform_targetted_allied_fast<Skill.heal>;
-//        skill_table[Skill.JAM.ordinal()] = perform_targetted_hostile_fast<Skill.jam>;
-//        skill_table[Skill.MEND.ordinal()] = perform_targetted_allied_fast<Skill.mend>;
-//        skill_table[Skill.OVERLOAD.ordinal()] = perform_targetted_allied_fast<Skill.overload>;
-//        skill_table[Skill.PROTECT.ordinal()] = perform_targetted_allied_fast<Skill.protect>;
-//        skill_table[Skill.RALLY.ordinal()] = perform_targetted_allied_fast<Skill.rally>;
-//        skill_table[Skill.ENRAGE.ordinal()] = perform_targetted_allied_fast<Skill.enrage>;
-//        skill_table[Skill.ENTRAP.ordinal()] = perform_targetted_allied_fast<Skill.entrap>;
-//        skill_table[Skill.RUSH.ordinal()] = perform_targetted_allied_fast_rush;
-//        skill_table[Skill.SIEGE.ordinal()] = perform_targetted_hostile_fast<Skill.siege>;
-//        skill_table[Skill.STRIKE.ordinal()] = perform_targetted_hostile_fast<Skill.strike>;
-//        skill_table[Skill.SUNDER.ordinal()] = perform_targetted_hostile_fast<Skill.sunder>;
-//        skill_table[Skill.WEAKEN.ordinal()] = perform_targetted_hostile_fast<Skill.weaken>;
-//        skill_table[Skill.MIMIC.ordinal()] = perform_targetted_hostile_fast<Skill.mimic>;
-//
-//    }
+
+    private static void autoPerformSkill(Skill skill, Field field, CardStatus status, SkillSpec ss) {
+        switch (skill) {
+            case BESIEGE: performTargettedHostileFast(skill, field, status, ss); break;
+            case ENFEEBLE: performTargettedHostileFast(skill, field, status, ss); break;
+            case ENHANCE: performTargettedAlliedFast(skill, field, status, ss); break;
+            case EVOLVE: performTargettedAlliedFast(skill, field, status, ss); break;
+            case HEAL: performTargettedAlliedFast(skill, field, status, ss); break;
+            case JAM: performTargettedHostileFast(skill, field, status, ss); break;
+            case MEND: performTargettedAlliedFast(skill, field, status, ss); break;
+            case OVERLOAD: performTargettedAlliedFast(skill, field, status, ss); break;
+            case PROTECT: performTargettedAlliedFast(skill, field, status, ss); break;
+            case RALLY: performTargettedAlliedFast(skill, field, status, ss); break;
+            case ENRAGE: performTargettedAlliedFast(skill, field, status, ss); break;
+            case ENTRAP: performTargettedAlliedFast(skill, field, status, ss); break;
+            case RUSH: performTargettedAlliedFast(skill, field, status, ss); break;
+            case SIEGE: performTargettedHostileFast(skill, field, status, ss); break;
+            case STRIKE: performTargettedHostileFast(skill, field, status, ss); break;
+            case SUNDER: performTargettedHostileFast(skill, field, status, ss); break;
+            case WEAKEN: performTargettedHostileFast(skill, field, status, ss); break;
+            case MIMIC: performTargettedHostileFast(skill, field, status, ss); break;
+            default: throw new AssertionError("Unknown skill: " + skill.toString());
+        }
+    }
 
 }
