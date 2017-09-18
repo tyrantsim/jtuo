@@ -52,4 +52,7 @@ public class Pair<A, B> {
     public void setSecond(B second) {
         this.second = second;
     }
+
+    public static Pair swap(Pair pair) { return new Pair<>(pair.getSecond(), pair.getFirst()); }
+
 }

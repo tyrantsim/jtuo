@@ -3,6 +3,7 @@ package com.github.tyrantsim.jtuo.sim;
 import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.skills.Skill;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
+import com.github.tyrantsim.jtuo.util.Functor;
 import com.github.tyrantsim.jtuo.util.Pair;
 
 import java.util.*;
@@ -58,6 +59,7 @@ public class Field {
         this.yourBGSkills = yourBGSkills;
         this.enemyBGSkills = enemyBGSkills;
         this.assaultBloodlusted = false;
+        this.selectionArray = new ArrayList<>();
     }
 
     public void prepareAction() {
@@ -228,5 +230,18 @@ public class Field {
         this.bloodlustValue = bloodlustValue;
     }
 
+    /**
+     * @param cards = list of cards to select from
+     * @param f = functor that holds the condition of adding selection
+     * @return new selection array size
+     */
+    int makeSelectionArray(List<CardStatus> cards, Functor f) {
+        selectionArray.clear();
+        for (CardStatus c: cards) {
+            if (f.match(c))
+                selectionArray.add(c);
+        }
+        return selectionArray.size();
+    }
 
 }

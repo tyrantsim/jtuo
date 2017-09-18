@@ -1630,7 +1630,7 @@ public class TyrantOptimize {
                 System.err.println("WARNING: Too many cards in your deck. Trimmed.\n");
             }
         }
-        // TODO: prüfen, ob nicht anders gesetzt werden soll 
+        // TODO: prï¿½fen, ob nicht anders gesetzt werden soll 
         freezed_cards = Math.min(freezed_cards, your_deck.getCards().size());
 
         if (Main.debug_print >= 0) {
@@ -1683,7 +1683,7 @@ public class TyrantOptimize {
 //            }
         }
         
-        // TODO: nicht mehr nötig?
+        // TODO: nicht mehr nï¿½tig?
 
 //        Process p(opt_num_threads, all_cards, decks, your_deck, enemy_decks, enemy_decks_factors, gamemode,
 //            opt_bg_effects[0], opt_bg_effects[1], opt_bg_skills[0], opt_bg_skills[1]);

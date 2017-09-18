@@ -7,7 +7,6 @@ import com.github.tyrantsim.jtuo.skills.Skill;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.skills.SkillTrigger;
 import com.github.tyrantsim.jtuo.skills.SkillUtils;
-import com.github.tyrantsim.jtuo.util.Utils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -120,6 +119,8 @@ public class CardStatus implements Cloneable {
         this.permAttackBuff += incBy;
     }
 
+    void addTempAttackBuff(int incBy) { this.tempAttackBuff += incBy; }
+
     void addProtection(int protection) {
         this.protectedBy += protection;
     }
@@ -170,6 +171,15 @@ public class CardStatus implements Cloneable {
 
     void clearEnhancedValue() {
         Arrays.fill(enhancedValue, 0);
+    }
+
+    public boolean isGilian() {
+        return (card.getId() >= 25054 && card.getId() <= 25063) // Gilian Commander
+                || (card.getId() >= 38348 && card.getId() <= 38388); // Gilian assaults plus the Gil's Shard
+    }
+
+    public boolean isAliveGilian() {
+        return isAlive() && isGilian();
     }
 
     @Override
@@ -311,6 +321,8 @@ public class CardStatus implements Cloneable {
         return protectedByStasis;
     }
 
+    public int[] getPrimarySkillOffset() { return primarySkillOffset; }
+
     public void setEnraged(int enranged) {
         this.enraged = enranged;
     }
@@ -413,14 +425,19 @@ public class CardStatus implements Cloneable {
         this.primarySkillOffset = primarySkillOffset;
     }
 
+    public void setPrimarySkillOffset(int skillPosition, int offset) { primarySkillOffset[skillPosition] = offset; }
+
     public void setEvolvedSkillOffset(int[] evolvedSkillOffset) {
         this.evolvedSkillOffset = evolvedSkillOffset;
     }
+
+    public void setEvolvedSkillOffset(int skillPosition, int offset) { evolvedSkillOffset[skillPosition] = offset; }
 
     public void setEnhancedValue(int[] enhancedValue) {
         this.enhancedValue = enhancedValue;
     }
 
+    public void addEnhancedValue(int skillPosition, int inc) { enhancedValue[skillPosition] += inc; }
 
     public void setRushAttempted(boolean rushAttempted) {
         this.rushAttempted = rushAttempted;

@@ -7,6 +7,7 @@ import com.github.tyrantsim.jtuo.skills.Skill;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
 import com.github.tyrantsim.jtuo.skills.SkillTrigger;
 import com.github.tyrantsim.jtuo.skills.SkillUtils;
+import com.github.tyrantsim.jtuo.util.Functor;
 import com.github.tyrantsim.jtuo.util.Pair;
 import com.github.tyrantsim.jtuo.util.Utils;
 
@@ -872,7 +873,6 @@ public class FieldSimulator {
             }
 
             // Skill: Coalition
-            // TODO: Someone check this part PLS!!
             int coalitionBase = attStatus.skill(Skill.COALITION);
             if (coalitionBase > 0) {
                 byte factionsBitmap = 0;
@@ -884,24 +884,6 @@ public class FieldSimulator {
                 int coalitionValue = coalitionBase * uniqFactions;
                 attDmg += coalitionValue;
             }
-
-            /*
-            // Skill: Coalition
-            unsigned coalition_base = att_status->skill(Skill::coalition);
-            if (__builtin_expect(coalition_base, false))
-            {
-                uint8_t factions_bitmap = 0;
-                for (CardStatus * status : att_assaults.m_indirect)
-                {
-                    if (! is_alive(status)) { continue; }
-                    factions_bitmap |= (1 << (status->m_card->m_faction));
-                }
-                _DEBUG_ASSERT(factions_bitmap);
-                unsigned uniq_factions = byte_bits_count(factions_bitmap);
-                unsigned coalition_value = coalition_base * uniq_factions;
-                att_dmg += coalition_value;
-            }
-             */
 
             // Skill: Rupture
             int ruptureValue = attStatus.skill(Skill.RUPTURE);
@@ -1174,6 +1156,318 @@ public class FieldSimulator {
         return ((player + 1) % 2);
     }
 
+    private static void pefrormTargettedHostileFast(Skill skillId, Field field, CardStatus src, SkillSpec s) {
+
+
+
+
+
+
+
+
+
+
+
+
+
+    }
+
+    private static void selectTargets(Skill skillId, Field field, CardStatus src, SkillSpec s) {
+
+    }
+
+    private static int selectFast(Skill skillId, Field field, CardStatus src, List<CardStatus> cards, SkillSpec s) {
+        switch (skillId) {
+            case MEND:
+
+                field.selectionArray.clear();
+                boolean criticalReach = field.hasBGEffect(field.tapi, PassiveBGE.CRITICALREACH);
+                List<CardStatus> assaults = field.getPlayer(src.getPlayer()).getAssaults();
+                int adjSize = 1 + (criticalReach ? 1 : 0);
+                int hostIdx = src.getIndex();
+                int fromIdx = safeMinus(hostIdx, adjSize);
+                int tillIdx = Math.min(hostIdx + adjSize, safeMinus(assaults.size(), 1));
+                for (; fromIdx <= tillIdx; fromIdx++) {
+                    if (fromIdx == hostIdx) continue;
+                    CardStatus adjStatus = assaults.get(fromIdx);
+                    if (!adjStatus.isAlive()) continue;
+                    if (skillPredicate(Skill.MEND, field, src, adjStatus, s))
+                        field.selectionArray.add(adjStatus);
+                }
+                return field.selectionArray.size();
+
+            default:
+
+                if (s.getY() == Faction.ALL_FACTIONS
+                        || field.hasBGEffect(field.tapi, PassiveBGE.METAMORPHOSIS)
+                        || field.hasBGEffect(field.tapi, PassiveBGE.MEGAMORPHOSIS)) {
+                    return field.makeSelectionArray(cards, (c) -> skillPredicate(skillId, field, src, c, s));
+                } else {
+                    return field.makeSelectionArray(cards, (c) ->
+                            ((c.getCard().getFaction() == s.getY() || c.getCard().getFaction() == Faction.PROGENITOR)
+                                    && skillPredicate(skillId, field, src, c, s)));
+                }
+        }
+    }
+
+    private static boolean skillPredicate(Skill skillId, Field field, CardStatus src, CardStatus dst, SkillSpec s) {
+        switch (skillId) {
+
+            case ENHANCE:
+
+                if (!dst.isAlive()) return false;
+                if (!dst.hasSkill(s.getS())) return false;
+                if (dst.isActive()) return true;
+                if (SkillUtils.isDefensiveSkill(s.getS())) return true;
+
+                /* Strange Transmission [Gilians]: strange gillian's behavior implementation:
+                 * The Gillian commander and assaults can enhance any skills on any assaults
+                 * regardless of jammed/delayed states. But what kind of behavior is in the case
+                 * when gilians are played among standard assaults, I don't know. :)
+                 */
+                return src.isAliveGilian();
+
+            case EVOLVE:
+
+                if (!dst.isAlive()) return false;
+                if (!dst.hasSkill(s.getS())) return false;
+                if (dst.hasSkill(s.getS2())) return false;
+                if (dst.isActive()) return true;
+                if (SkillUtils.isDefensiveSkill(s.getS2())) return true;
+
+                /* Strange Transmission [Gilians]: strange gillian's behavior implementation:
+                 * The Gillian commander and assaults can enhance any skills on any assaults
+                 * regardless of jammed/delayed states. But what kind of behavior is in the case
+                 * when gilians are played among standard assaults, I don't know. :)
+                 */
+                return src.isAliveGilian();
+
+            case MIMIC:
+
+                // skip dead units
+                if (!dst.isAlive()) return false;
+
+                // scan all enemy skills until first activation
+                for (SkillSpec ss: dst.getCard().getSkills()) {
+                    // get skill
+                    Skill mimickedSkillId = ss.getId();
+
+                    // skip non-activation skills and Mimic (Mimic can't be mimicked)
+                    if (!SkillUtils.isActivationSkill(mimickedSkillId) || mimickedSkillId == Skill.MIMIC)
+                        continue;
+
+                    // skip mend for non-assault mimickers
+                    if (mimickedSkillId == Skill.MEND && src.getCard().getType() != CardType.ASSAULT)
+                        continue;
+
+                    // enemy has at least one activation skill that can be mimicked, so enemy is eligible target for Mimic
+                    return true;
+                }
+
+                // found nothing (enemy has no skills to be mimicked, so enemy isn't eligible target for Mimic)
+                return false;
+
+            case OVERLOAD:
+
+                // basic skill check
+                if (!skillCheck(field, Skill.OVERLOAD, dst, src))
+                    return false;
+
+                // check skills
+                boolean inhibitedSearched = false;
+                for (SkillSpec ss: dst.getCard().getSkills()) {
+
+                    // skip cooldown skills
+                    if (dst.getSkillCd(ss.getId()) > 0)
+                        continue;
+
+                    // get evolved skill
+                    Skill evolvedSkillId = Skill.values()[ss.getId().ordinal() + dst.getEvolvedSkillOffset(ss.getId())];
+
+                    // unit with an activation hostile skill is always valid target for OL
+                    if (SkillUtils.isActivationHostileSkill(evolvedSkillId))
+                        return true;
+
+                    // unit with an activation helpful skill is valid target only when there are inhibited units
+                    if (evolvedSkillId != Skill.MEND
+                            && SkillUtils.isActivationHelpfulSkill(evolvedSkillId)
+                            && !inhibitedSearched) {
+                        for (CardStatus c: field.getPlayer(dst.getPlayer()).getAssaults()) {
+                            if (c.isAlive() && c.getInhibited() > 0)
+                                return true;
+                        }
+                        inhibitedSearched = true;
+                    }
+                }
+                return false;
+
+            case RALLY:
+
+                return (skillCheck(field, Skill.RALLY, dst, src) // basic skill check
+                        && field.tapi == dst.getPlayer()) // is target on the active side
+                        ? dst.isActive() && !dst.hasAttacked() // normal case
+                        : dst.isActiveNextTurn(); // diverted case / on-death activation
+
+            case ENRAGE:
+
+                return (field.tapi == dst.getPlayer() // is target on the active side?
+                        ? dst.isActive() && dst.getStep() == CardStep.NONE // normal case
+                        : dst.isActiveNextTurn()) // on-death activation
+                        && dst.getAttackPower() > 0; // card can perform direct attack
+
+            case RUSH:
+
+                return !src.isRushAttempted()
+                        && dst.getDelay()
+                        >= ((src.getCard().getType() == CardType.ASSAULT && dst.getIndex() < src.getIndex()) ? 2 : 1);
+
+            case WEAKEN:
+            case SUNDER:
+
+                if (dst.getAttackPower() == 0) return false;
+
+                // active player performs Weaken (normal case)
+                if (field.tapi == src.getPlayer())
+                    return dst.isActiveNextTurn();
+
+                // inactive player performs Weaken (inverted case (on-death activation))
+                return dst.isActive() && !dst.hasAttacked();
+
+            default: return skillCheck(field, skillId, dst, src);
+        }
+    }
+
+    private static void performSkill(Skill skillId, Field field, CardStatus src, CardStatus dst, SkillSpec s) {
+        switch (skillId) {
+
+            case ENFEEBLE:
+
+                dst.setEnfeebled(dst.getEnfeebled() + (int) s.getX());
+                break;
+
+            case ENHANCE:
+
+                dst.addEnhancedValue(s.getS().ordinal() + dst.getPrimarySkillOffset()[s.getS().ordinal()], (int) s.getX());
+                break;
+
+            case EVOLVE:
+
+                int primaryS1 = dst.getPrimarySkillOffset()[s.getS().ordinal()] + s.getS().ordinal();
+                int primaryS2 = dst.getPrimarySkillOffset()[s.getS2().ordinal()] + s.getS2().ordinal();
+                dst.setPrimarySkillOffset(s.getS().ordinal(), primaryS2 - s.getS().ordinal());
+                dst.setPrimarySkillOffset(s.getS2().ordinal(), primaryS1 - s.getS2().ordinal());
+                dst.setEvolvedSkillOffset(primaryS1, s.getS2().ordinal() - primaryS1);
+                dst.setEvolvedSkillOffset(primaryS2, s.getS().ordinal() - primaryS2);
+                break;
+
+            case HEAL:
+
+                dst.addHP((int) s.getX());
+
+                // Passive BGE: Zealot's Preservation
+                if (field.hasBGEffect(field.tapi, PassiveBGE.ZEALOTSPRESERVATION)
+                        && src.getCard().getType() == CardType.ASSAULT) {
+                    int bgeValue = (int) ((s.getX() + 1) / 2);
+                    debug(1, "Zealot's Preservation: %s Protect %d on %s\n",
+                            src.description(), bgeValue, dst.description());
+                    dst.setProtectedBy(dst.getProtectedBy() + bgeValue);
+                }
+                break;
+
+            case JAM:
+
+                dst.setJammed(true);
+                break;
+
+            case MEND:
+
+                dst.addHP((int) s.getX());
+                break;
+
+            case BESIEGE:
+
+                if (dst.getCard().getType() == CardType.STRUCTURE) {
+                    removeHP(field, dst, (int) s.getX());
+                } else {
+                    int strikeDmg = safeMinus((int) ((s.getX() + 1) / 2 + dst.getEnfeebled()),
+                            src.isOverloaded() ? 0 : dst.protectedValue());
+                    removeHP(field, dst, strikeDmg);
+                }
+                break;
+
+            case OVERLOAD:
+
+                dst.setOverloaded(true);
+                break;
+
+            case PROTECT:
+
+                dst.setProtectedBy(dst.getProtectedBy() + (int) s.getX());
+                break;
+
+            case RALLY:
+
+                dst.addTempAttackBuff((int) s.getX());
+                break;
+
+            case ENRAGE:
+
+                dst.setEnraged(dst.getEnraged() + (int) s.getX());
+
+                // Passive BGE: Furiosity
+                if (field.hasBGEffect(field.tapi, PassiveBGE.FURIOSITY) && dst.canBeHealed()) {
+                    int bgeValue = (int) s.getX();
+                    debug(1, "Furiosity: %s Heals %s for %d\n",
+                            src.description(), dst.description(), bgeValue);
+                    dst.addHP(bgeValue);
+                }
+                break;
+
+            case ENTRAP:
+
+                dst.setEntrapped(dst.getEntrapped() + (int) s.getX());
+                break;
+
+            case RUSH:
+
+                dst.setDelay(dst.getDelay() - Math.min(Math.max((int) s.getX(), 1), dst.getDelay()));
+                if (dst.getDelay() == 0) {
+                    checkAndPerformValor(field, dst);
+                    checkAndPerformSummon(field, dst);
+                }
+                break;
+
+            case SIEGE:
+
+                removeHP(field, dst, (int) s.getX());
+                break;
+
+            case STRIKE:
+
+                int strikeDmg = safeMinus((int) ((s.getX() + 1) / 2 + dst.getEnfeebled()),
+                        src.isOverloaded() ? 0 : dst.protectedValue());
+                removeHP(field, dst, strikeDmg);
+                break;
+
+            case WEAKEN:
+
+                dst.addTempAttackBuff(-Math.min((int) s.getX(), dst.getAttackPower()));
+                break;
+
+            case SUNDER:
+
+                dst.setSundered(true);
+                performSkill(Skill.WEAKEN, field, src, dst, s);
+                break;
+
+            case MIMIC:
+                // TODO: Implement this
+                break;
+
+            default: assert(false);
+        }
+    }
+
 //    void perform_targetted_hostile_fast(Skill skill_id, Field fd, CardStatus src, SkillSpec s) {
 //        select_targets(skill_id, fd, src, s);
 //        List<CardStatus> paybackers;
@@ -1444,7 +1738,7 @@ public class FieldSimulator {
 //
 //        return n_selected;
 //    }
-    
+
     void debugSelection(String format, Field fd, Object... args) {
         if(Main.debug_print >= 2) {
             debug(2, MessageFormat.format("Possible targets of " + format + ":\n", args));
@@ -1467,7 +1761,7 @@ public class FieldSimulator {
         }
     }
 
-    List<CardStatus> skill_targets(Skill skill, Field fd, CardStatus src) {
+    List<CardStatus> skillTargets(Skill skill, Field fd, CardStatus src) {
         switch (skill) {
         
         case ENFEEBLE:
