@@ -119,7 +119,6 @@ public class XmlBasedParser {
         }
         NodeList raids = document.getElementsByTagName("raid");
         for (int i = 0; i < raids.getLength(); i++) {
-            // raid_node = raid_node->next_sibling("raid"))
             Node raid = raids.item(i);
             NodeList childes = raid.getChildNodes(); //
             int id = 0;
@@ -135,16 +134,11 @@ public class XmlBasedParser {
                     id = idString != null ? Integer.parseInt(idString) : 0;
                 }
                 if (childe_node.getNodeName().equals("name")) {
-                    // System.out.println(childe_node.getTextContent());
                     String nameString = childe_node.getTextContent();
-                    // int id = childe_node.getTextContent() != null ?
-                    // Integer.parseInt(childe_node.getTextContent()) : 0;
                     deck_name = nameString;
                     System.out.println("" + idString + "");
                     System.out.println(deck_name);
                 }
-                // xml_node<>* name_node(raid_node->first_node("name"));
-
             }
             readDeck((Element) raid, DeckType.RAID, id, deck_name);
             // int id = id_node ? Integer.parseInt(id_node.getNodeValue()) : 0;
@@ -192,15 +186,13 @@ public class XmlBasedParser {
 
     private static Deck readDeck(Element raidElement, DeckType raid2, int id, String base_deck_name) {
         // TODO: implement Raid parser
-
-        // int id =
-        // Integer.parseInt(element.getElementsByTagName("id").item(0).getTextContent());
+        // int id = Integer.parseInt(element.getElementsByTagName("id").item(0).getTextContent());
         String name = raidElement.getElementsByTagName("name").item(0).getTextContent();
 
         Deck deck = new Deck();
         String deckName = "";
         int levels = Integer.parseInt(raidElement.getElementsByTagName("levels").item(0).getTextContent());
-        Card commander_card;
+        Card commander_card = null;
         try {
             commander_card = Cards.getCardById(Integer.parseInt(raidElement.getElementsByTagName("commander").item(0).getTextContent()));
             int commander_max_level = commander_card.getTopLevelCard().getLevel();
@@ -259,7 +251,16 @@ public class XmlBasedParser {
             }
         }
 
+        // // Fixed cards (<always_include> ... </always_include>)
+        // unsigned replicates(card_node->first_attribute("replicates") ?
+        // atoi(card_node->first_attribute("replicates")->value()) : 1);
+        // while (replicates --)
+        // {
+        // }
+        // }
+        List<Card> always_cards = new ArrayList<>();
         Element deckElement = (Element) raidElement.getElementsByTagName("deck").item(0);
+        int upgrade_opportunities = 0;
         if (raidElement.getElementsByTagName("always_include").getLength() > 0) {
             NodeList alwaysIncludeCardsNodeList = ((Element) deckElement.getElementsByTagName("always_include").item(0)).getElementsByTagName("card");
             for (int i = 0; i < alwaysIncludeCardsNodeList.getLength(); i++) {
@@ -268,6 +269,10 @@ public class XmlBasedParser {
                     Integer replicates = 1;
                     if (alwaysIncludeCardsNodeList.item(i).getAttributes().getNamedItem("replicates") != null) {
                         replicates = Integer.parseInt(alwaysIncludeCardsNodeList.item(i).getAttributes().getNamedItem("replicates").getTextContent());
+                    }
+                    for (int j = 0; j < replicates; j++) {
+                        always_cards.add(alwaysIncludeCard);
+                        upgrade_opportunities += alwaysIncludeCard.getTopLevelCard().getLevel() - alwaysIncludeCard.getLevel();
                     }
                     System.out.println(alwaysIncludeCard.getName() + "-" + replicates);
                 } catch (Exception e) {
@@ -292,16 +297,13 @@ public class XmlBasedParser {
 
             }
         }
-        // std::vector<const Card*> always_cards;
-        // std::vector<std::tuple<unsigned, unsigned, std::vector<const Card*>>>
-        // some_forts;
-        // std::vector<std::tuple<unsigned, unsigned, std::vector<const Card*>>>
-        // some_cards;
-        // xml_node<>* levels_node(node->first_node("levels"));
-        // xml_node<>* effects_node(node->first_node("effects"));
-        // xml_node<>* deck_node(node->first_node("deck"));
-        // unsigned max_level = levels_node ? atoi(levels_node->value()) : 10;
-        //
+        Deck raidDeck = new Deck(DeckType.RAID, id, deckName);
+        raidDeck.setCommander(commander_card);
+        raidDeck.setCards(always_cards);
+        
+        // std::vector<std::tuple<unsigned, unsigned, std::vector<const Card*>>> some_forts;
+        // std::vector<std::tuple<unsigned, unsigned, std::vector<const Card*>>> some_cards;
+
         // // Effectes (skill based BGEs; assuming that X is a floating point
         // number (multiplier))
         // std::vector<SkillSpecXMult> effects;
@@ -376,23 +378,7 @@ public class XmlBasedParser {
         // pool_replicates / cards_from_pool.size();
         // }
         //
-        // // Fixed cards (<always_include> ... </always_include>)
-        // xml_node<>* always_node{deck_node->first_node("always_include")};
-        // for (xml_node<>* card_node = (always_node ? always_node :
-        // deck_node)->first_node("card");
-        // card_node;
-        // card_node = card_node->next_sibling("card"))
-        // {
-        // card = all_cards.by_id(atoi(card_node->value()));
-        // unsigned replicates(card_node->first_attribute("replicates") ?
-        // atoi(card_node->first_attribute("replicates")->value()) : 1);
-        // while (replicates --)
-        // {
-        // always_cards.push_back(card);
-        // upgrade_opportunities += card->m_top_level_card->m_level -
-        // card->m_level;
-        // }
-        // }
+
         //
         // // Variable cards (<card_pool amount="x" replicates="y"> ...
         // </card_pool>)
