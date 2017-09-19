@@ -20,19 +20,6 @@ public class FieldSimulator {
 
     public static int turnLimit = Constants.DEFAULT_TURN_LIMIT;
 
-    SkillTableElement[] skill_table = new SkillTableElement[Skill.values().length];
-    
-    private static class SkillTableElement {
-        public Field field;
-        public CardStatus src; 
-        public SkillSpec spec;
-        public SkillTableElement(Field field, CardStatus src, SkillSpec spec){
-            this.field = field;
-            this.src = src;            
-            this.spec = spec;
-        }
-    }
-    
     public static Results play(Field field) {
         field.getPlayer(0).getCommander().setPlayer(0);
         field.getPlayer(1).getCommander().setPlayer(1);
@@ -100,10 +87,12 @@ public class FieldSimulator {
                 break;
             }
 
-            int oldTapi = field.getTapi();
-            int oldTipi = field.getTipi();
-            field.setTapi(oldTipi);
-            field.setTipi(oldTapi);
+            debug(1, "TURN %d ends for %s\n", field.getTurn(), field.tap.getCommander().description());
+
+            // Swap hand and player index
+            int tmpTapi = field.getTapi();
+            field.setTapi(field.getTipi());
+            field.setTipi(tmpTapi);
 
             Hand tmpHand = field.getTip();
             field.setTip(field.getTap());
@@ -411,7 +400,42 @@ public class FieldSimulator {
     }
 
     private static void evaluatePassiveBGEHeroismSkills(Field field) {
-        // TODO: implement this
+        if (field.hasBGEffect(field.tapi, PassiveBGE.HEROISM)) {
+            for (CardStatus dst: field.tap.getAssaults()) {
+                int bgeValue = (dst.skill(Skill.VALOR) + 1) / 2;
+                if (bgeValue <= 0) continue;
+                SkillSpec ssProtect = new SkillSpec(Skill.PROTECT, bgeValue, Faction.ALL_FACTIONS, 0, 0,
+                        Skill.NO_SKILL, Skill.NO_SKILL, false, 0, SkillTrigger.ACTIVATE);
+
+                if (dst.getInhibited() > 0) {
+                    debug(1, "Heroism: %s on %s but it is inhibited\n", ssProtect.description(), dst.description());
+                    dst.setInhibited(dst.getInhibited() - 1);
+
+                    // Passive BGE: Divert
+                    if (field.hasBGEffect(field.tapi, PassiveBGE.DIVERT)) {
+
+                        SkillSpec divertedSS = ssProtect.clone();
+                        divertedSS.setY(Faction.ALL_FACTIONS);
+                        divertedSS.setN(1);
+                        divertedSS.setAll(false);
+
+                        selectTargets(Skill.PROTECT, field, field.tip.getCommander(), divertedSS);
+                        for (CardStatus dstProtect : field.selectionArray) {
+                            if (dstProtect.getInhibited() > 0) {
+                                debug(1, "Heroism: %s (Diverted) on %s but it is inhibited\n",
+                                        divertedSS.description(), dstProtect.description());
+                                dstProtect.setInhibited(dstProtect.getInhibited() - 1);
+                                continue;
+                            }
+                            debug(1, "Heroism: %s (Diverted) on %s\n",
+                                    divertedSS.description(), dstProtect.description());
+                            performSkill(Skill.PROTECT, field, field.tap.getCommander(), dst, divertedSS); // XXX: the caster
+                        }
+                    }
+                }
+                checkAndPerformSkill(Skill.PROTECT, field, field.tap.getCommander(), dst, ssProtect, false);
+            }
+        }
     }
 
     private static void evaluateCommander(Field field) {
@@ -440,8 +464,21 @@ public class FieldSimulator {
             Boolean attacked = false;
 
             if (!currentStatus.isAlive()) {
+                debug(2, "%s cannot take action.\n", currentStatus.description());
                 // Passive BGE: Halted orders
-                // TODO: implement this
+                int inhibitValue;
+                if (field.hasBGEffect(field.tapi, PassiveBGE.HALTEDORDERS)
+                        && currentStatus.getDelay() > 0 // still frozen
+                        && field.getCurrentCI() < field.tip.getAssaults().size() // across slot isn't empty
+                        && field.tip.getAssaults().get(field.getCurrentCI()).isAlive() // across assault is alive
+                        && (inhibitValue = currentStatus.skill(Skill.INHIBIT))
+                        > field.tip.getAssaults().get(field.getCurrentCI()).getInhibited()) // inhibit/re-inhibit(if higher)
+                {
+                    CardStatus acrossStatus = field.tip.getAssaults().get(field.getCurrentCI());
+                    debug(1, "Halted Orders: %s inhibits %s by %u\n",
+                            currentStatus.description(), acrossStatus.description(), inhibitValue);
+                    acrossStatus.setInhibited(inhibitValue);
+                }
             } else {
                 currentStatus.setProtectedByStasis(0);
                 field.setAssaultBloodlusted(false);
@@ -620,13 +657,26 @@ public class FieldSimulator {
                         src.description(), s.description(), dst.description());
                 return false;
             }
+            debug(1, "%s %s on %s\n", src.description(), s.description(), dst.description());
+            performSkill(skillId, field, src, dst, s);
+            if (s.getC() > 0)
+                src.setSkillCd(skillId, s.getC());
 
-            // TODO: Implement this
+            // Skill: Tribute
+            if (skillCheck(field, Skill.TRIBUTE, dst, src)
+                    // only activation helpful skills can be tributed (* except Evolve, Enhance, and Rush)
+                    && SkillUtils.isActivationHelpfulSkill(s.getId()) && s.getId() != Skill.EVOLVE
+                    && s.getId() != Skill.ENHANCE && s.getId() != Skill.RUSH
+                    && dst.getTributed() < dst.skill(Skill.TRIBUTE)
+                    && skillCheck(field, skillId, src, src)) {
 
-
+                dst.setTributed(dst.getTributed() + 1);
+                debug(1, "%s tributes %s back to %s\n", dst.description(), s.description(), src.description());
+                performSkill(skillId, field, src, src, s);
+            }
+            return true;
         }
-
-
+        debug(1, "(CANCELLED) %s %s on %s\n", src.description(), s.description(), dst.description());
         return false;
     }
 
