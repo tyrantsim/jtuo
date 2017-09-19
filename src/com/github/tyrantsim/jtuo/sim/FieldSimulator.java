@@ -467,7 +467,7 @@ public class FieldSimulator {
 
     private static int evaluateBrawlScore(Field field, int player) {
         return 55
-                + field.getPlayer(opponent(player)).getDeck().getCards().size()
+                + field.getPlayer(opponent(player)).getTotalCardsDestroyed()
                 + field.getPlayer(player).getDeck().getShuffledCards().size()
                 - ((field.turn + 7) / 8);
     }
@@ -603,7 +603,31 @@ public class FieldSimulator {
             }
         }
 
+
         return null;
+    }
+
+    /**
+     * @return true if skill is actually performed
+     */
+    private static boolean checkAndPerformSkill(Skill skillId, Field field, CardStatus src, CardStatus dst,
+                                             SkillSpec s, boolean isEvadable) {
+
+        if (skillCheck(field, skillId, dst, src)) {
+            if (isEvadable && dst.getEvaded() < dst.skill(Skill.EVADE)) {
+                dst.setEvaded(dst.getEvaded() + 1);
+                debug(1, "%s %s on %s but it evades\n",
+                        src.description(), s.description(), dst.description());
+                return false;
+            }
+
+            // TODO: Implement this
+
+
+        }
+
+
+        return false;
     }
 
     private static void evaluateSkills(Field field, CardStatus card, List<SkillSpec> skills) {
@@ -1540,284 +1564,203 @@ public class FieldSimulator {
         }
     }
 
-    private static void performTargettedHostileFast(Skill skillId, Field field, CardStatus src, SkillSpec s) {
-
-    }
-
     private static void performTargettedAlliedFast(Skill skillId, Field field, CardStatus src, SkillSpec s) {
 
+        selectTargets(skillId, field, src, s);
+        int numInhibited = 0;
+        for (CardStatus dst: field.selectionArray) {
+            if (dst.getInhibited() > 0 && !src.isOverloaded()) {
+                debug(1, "%s %s on %s but it is inhibited\n", src.description(),
+                        s.description(), dst.description());
+                dst.setInhibited(dst.getInhibited() - 1);
+                numInhibited++;
+                continue;
+            }
+            checkAndPerformSkill(skillId, field, src, dst, s, false);
+        }
+
+        // Passive BGE: Divert
+        if (field.hasBGEffect(field.tapi, PassiveBGE.DIVERT) && numInhibited > 0) {
+
+            SkillSpec divertedSS = s.clone();
+            divertedSS.setY(Faction.ALL_FACTIONS);
+            divertedSS.setN(1);
+            divertedSS.setAll(false);
+
+            for (int i = 0; i < numInhibited; i++) {
+                selectTargets(skillId, field, field.getTip().getCommander(), divertedSS);
+                for (CardStatus dst: field.selectionArray) {
+                    if (dst.getInhibited() > 0) {
+                        debug(1, "%s %s (Diverted) on %s but it is inhibited\n", src.description(),
+                                divertedSS.description(), dst.description());
+                        dst.setInhibited(dst.getInhibited() - 1);
+                        continue;
+                    }
+                    debug(1, "%s %s (Diverted) on %s\n", src.description(),
+                            divertedSS.description(), dst.description());
+                    performSkill(skillId, field, src, dst, divertedSS);
+                }
+            }
+        }
+
     }
 
-//    void perform_targetted_hostile_fast(Skill skill_id, Field fd, CardStatus src, SkillSpec s) {
-//        select_targets(skill_id, fd, src, s);
-//        List<CardStatus> paybackers;
-//        boolean has_turningtides = (fd.getBGEffects(fd.getTapi())[PassiveBGE.TURNINGTIDES] != null && (skill_id == Skill.WEAKEN || skill_id == Skill.SUNDER));
-//        int turningtides_value= 0, old_attack = 0;
-//
-//        // apply skill to each target(dst)
-//        int selection_array_len = fd.selectionArray.size();
-//        //ArrayList<CardStatus> selection_array = new ArrayList<CardStatus> new CardStatus[selection_array_len];
-//        //std.memcpy(selection_array, fd.getselection_array[0], selection_array_len * sizeof(CardStatus *));
-//        ArrayList<CardStatus> selection_array = (ArrayList<CardStatus>)fd.selectionArray.clone();
-//        for (CardStatus dst: selection_array) {
-//            // TurningTides
-//            if (__builtin_expect(has_turningtides, false))
-//            {
-//                old_attack = dst.getAttackPower();
-//            }
-//
-//            // check & apply skill to target(dst)
-//            if (check_and_perform_skill<skill_id>(fd, src, dst, s, ! src.getm_overloaded)) {
-//                // TurningTides: get max attack decreasing
-//                if (has_turningtides) {
-//                    turningtides_value = Math.max(turningtides_value, safe_minus(old_attack, dst.getAttackPower()));
-//                }
-//
-//                // Payback/Revenge: collect paybackers/revengers
-//                int payback_value = dst.getSkillCd(Skill.PAYBACK) + dst.getSkillCd(Skill.REVENGE); // dst.getskill(Skill.PAYBACK) + dst.getskill(Skill.REVENGE);
-//                if ((s.getId() != Skill.MIMIC) && (dst.getPaybacked() < payback_value) && skill_check<Skill.payback>(fd, dst, src)) {
-//                    paybackers.reserve(selection_array_len);
-//                    paybackers.push_back(dst);
-//                }
-//            }
-//        }
-//
-//        // apply TurningTides
-//        if (has_turningtides && turningtides_value > 0) {
-//            SkillSpec ss_rally{Skill.rally, turningtides_value, allfactions, 0, 0, Skill.no_skill, Skill.no_skill, s.all, 0,};
-//            debug(1, "TurningTides %u!\n", turningtides_value);
-//            perform_targetted_allied_fast<Skill.rally>(fd, &fd.getplayers[src.getm_player].getcommander, ss_rally);
-//        }
-//
-//        prepend_on_death(fd);  // skills
-//
-//        // Payback/Revenge
-//        for (CardStatus pb_status: paybackers)
-//        {
-//            turningtides_value = 0;
-//
-//            // apply Revenge
-//            if (pb_status.getSkillCd(Skill.REVENGE))
-//            {
-//                int revenged_count = 0;
-//                for (int case_index = 0; case_index < 3; ++ case_index)
-//                {
-//                    CardStatus * target_status;
-//                    const char * target_desc;
-//                    switch (case_index)
-//                    {
-//                    // revenge to left
-//                    case 0:
-//                        if (!(target_status = fd.getleft_assault(src))) { continue; }
-//                        target_desc = "left";
-//                        break;
-//
-//                    // revenge to core
-//                    case 1:
-//                        target_status = src;
-//                        target_desc = "core";
-//                        break;
-//
-//                    // revenge to right
-//                    case 2:
-//                        if (!(target_status = fd.getright_assault(src))) { continue; }
-//                        target_desc = "right";
-//                        break;
-//
-//                    // wtf?
-//                    default:
-//                        __builtin_unreachable();
-//                    }
-//
-//                    // skip illegal target
-//                    if (!skill_predicate<skill_id>(fd, target_status, target_status, s))
-//                    {
-//                        continue;
-//                    }
-//
-//                    // skip dead target
-//                    if (!is_alive(target_status))
-//                    {
-//                        debug(1, "(CANCELLED: target unit dead) %s Revenge (to %s) %s on %s\n",
-//                            status_description(pb_status).c_str(), target_desc,
-//                            skill_short_description(fd.getcards, s).c_str(), status_description(target_status).c_str());
-//                        continue;
-//                    }
-//
-//                    // TurningTides
-//                    if (__builtin_expect(has_turningtides, false))
-//                    {
-//                        old_attack = target_status.getattack_power();
-//                    }
-//
-//                    // apply revenged skill
-//                    debug(1, "%s Revenge (to %s) %s on %s\n",
-//                        status_description(pb_status).c_str(), target_desc,
-//                        skill_short_description(fd.getcards, s).c_str(), status_description(target_status).c_str());
-//                    perform_skill<skill_id>(fd, pb_status, target_status, s);
-//                    ++ revenged_count;
-//
-//                    // revenged TurningTides: get max attack decreasing
-//                    if (__builtin_expect(has_turningtides, false))
-//                    {
-//                        turningtides_value = std.max(turningtides_value, safe_minus(old_attack, target_status.getattack_power()));
-//                    }
-//                }
-//                if (revenged_count)
-//                {
-//                    // consume remaining payback/revenge
-//                    ++ pb_status.getm_paybacked;
-//
-//                    // apply TurningTides
-//                    if (__builtin_expect(has_turningtides, false) && (turningtides_value > 0))
-//                    {
-//                        SkillSpec ss_rally{Skill.rally, turningtides_value, allfactions, 0, 0, Skill.no_skill, Skill.no_skill, false, 0,};
-//                        debug(1, "Paybacked TurningTides %u!\n", turningtides_value);
-//                        perform_targetted_allied_fast<Skill.rally>(fd, &fd.getplayers[pb_status.getm_player].getcommander, ss_rally);
-//                    }
-//                }
-//            }
-//            // apply Payback
-//            else
-//            {
-//                // skip illegal target(src)
-//                if (!skill_predicate<skill_id>(fd, src, src, s))
-//                {
-//                    continue;
-//                }
-//
-//                // skip dead target(src)
-//                if (!is_alive(src))
-//                {
-//                    debug(1, "(CANCELLED: src unit dead) %s Payback %s on %s\n",
-//                        status_description(pb_status).c_str(), skill_short_description(fd.getcards, s).c_str(),
-//                        status_description(src).c_str());
-//                    continue;
-//                }
-//
-//                // TurningTides
-//                if (__builtin_expect(has_turningtides, false))
-//                {
-//                    old_attack = src.getattack_power();
-//                }
-//
-//                // apply paybacked skill
-//                debug(1, "%s Payback %s on %s\n",
-//                    status_description(pb_status).c_str(), skill_short_description(fd.getcards, s).c_str(), status_description(src).c_str());
-//                perform_skill<skill_id>(fd, pb_status, src, s);
-//                ++ pb_status.getm_paybacked;
-//
-//                // handle paybacked TurningTides
-//                if (has_turningtides) {
-//                    turningtides_value = Math.max(turningtides_value, safe_minus(old_attack, src.getattack_power()));
-//                    if (turningtides_value > 0) {
-//                        SkillSpec ss_rally{Skill.rally, turningtides_value, allfactions, 0, 0, Skill.no_skill, Skill.no_skill, false, 0,};
-//                        debug(1, "Paybacked TurningTides %u!\n", turningtides_value);
-//                        perform_targetted_allied_fast<Skill.rally>(fd, &fd.getplayers[pb_status.getm_player].getcommander, ss_rally);
-//                    }
-//                }
-//            }
-//        }
-//
-//        prepend_on_death(fd);  // paybacked skills
-//    }
-//    interface Skill {
-//        public double perform_targetted_hostile_fast(Skill skill);
-//    }
+    private static void performTargettedAlliedFastRush(Field field, CardStatus src, SkillSpec s) {
+        if (src.getCard().getType() == CardType.COMMANDER) {
+            // Passive BGE skills are casted as by commander
+            performTargettedAlliedFast(Skill.RUSH, field, src, s);
+            return;
+        }
+        if (src.isRushAttempted()) {
+            debug(2, "%s does not check Rush again.\n", src.description());
+            return;
+        }
+        debug(1, "%s attempts to activate Rush.\n", src.description());
+        performTargettedAlliedFast(Skill.RUSH, field, src, s);
+        src.setRushAttempted(true);
+    }
 
-//    private int select_fast(Skill skill, Field fd, CardStatus src, List<CardStatus> cards, SkillSpec s) {
-//        switch (skill) {
-//        case MEND:
-//            fd.selectionArray.clear();
-//            boolean critical_reach = fd.getBGEffects(fd.getTapi())[PassiveBGE.CRITICALREACH.ordinal()] != null;
-//            List<CardStatus> assaults = fd.getPlayers()[src.getPlayer()].getAssaults();
-//            int adj_size = 1 + (critical_reach ? 1 : 0);
-//            int host_idx = src.getm_index;
-//            int from_idx = safe_minus(host_idx, adj_size);
-//            int till_idx = std::min(host_idx + adj_size, safe_minus(assaults.size(), 1));
-//            for (; from_idx <= till_idx; ++ from_idx)
-//            {
-//                if (from_idx == host_idx) { continue; }
-//                CardStatus* adj_status = &assaults[from_idx];
-//                if (!is_alive(adj_status)) { continue; }
-//                if (skill_predicate<Skill::mend>(fd, src, adj_status, s))
-//                {
-//                    fd.getselection_array.push_back(adj_status);
-//                }
-//            }
-//            return fd.getselection_array.size();
-//        default:
-//            if ((s.y == allfactions)
-//                    || fd.getbg_effects[fd.gettapi][PassiveBGE::metamorphosis]
-//                    || fd.getbg_effects[fd.gettapi][PassiveBGE::megamorphosis])
-//                {
-//                    auto pred = [fd, src, s](CardStatus* c) {
-//                        return(skill_predicate<skill_id>(fd, src, c, s));
-//                    };
-//                    return fd.getmake_selection_array(cards.begin(), cards.end(), pred);
-//                }
-//                else
-//                {
-//                    auto pred = [fd, src, s](CardStatus* c) {
-//                        return ((c.getm_card.getm_faction == s.y || c.getm_card.getm_faction == progenitor) && skill_predicate<skill_id>(fd, src, c, s));
-//                    };
-//                    return fd.getmake_selection_array(cards.begin(), cards.end(), pred);
-//                }
-//            break;
-//        }
-//    }
-//
-//    private long select_targets(Skill skill_id, Field fd, CardStatus src, SkillSpec s) {
-//        long n_candidates;
-//        switch (skill_id) {
-//        case BESIEGE:
-//            n_candidates = select_fast(Skill.SIEGE, fd, src, skill_targets(Skill.SIEGE, fd, src), s);
-//            if (n_candidates == 0) {
-//                n_candidates = select_fast(Skill.STRIKE, fd, src, skill_targets(Skill.STRIKE, fd, src), s);
-//            }
-//            break;
-//        default:
-//            n_candidates = select_fast(skill_id, fd, src, skill_targets(skill_id, fd, src), s);
-//            break;
-//        }
-//
-//        // (false-loop)
-//        long n_selected = n_candidates;
-//        do
-//        {
-//            // no candidates
-//            if (n_candidates == 0)
-//            { break; }
-//
-//            // show candidates (debug)
-//            debugSelection("%s", skill_id.getDescription().c_str());
-//
-//            // analyze targets count / skill
-//            int n_targets = s.n > 0 ? s.n : 1;
-//            if (s.all || n_targets >= n_candidates || skill_id == Skill.mend)  // target all or mend
-//            { break; }
-//
-//            // shuffle & trim
-//            for (int i = 0; i < n_targets; ++i)
-//            {
-//                std.swap(fd.getselection_array[i], fd.getselection_array[fd.getrand(i, n_candidates - 1)]);
-//            }
-//            fd.getselection_array.resize(n_targets);
-//            if (n_targets > 1) {
-//                Collections.sort(fd.selectionArray, new Comparator<CardStatus>() {
-//                    @Override
-//                    public int compare(CardStatus o1, CardStatus o2) {
-//                        return o1.getIndex() - o2.getIndex();
-//                        //return 0;
-//                    }});
-////                std.sort(fd.getselection_array.begin(), fd.getselection_array.end(),
-////                    [](const CardStatus * a, const CardStatus * b) { return a.getm_index < b.getm_index; });
-//            }
-//            n_selected = n_targets;
-//        } while (false); // (end)
-//
-//        return n_selected;
-//    }
+    private static void performTargettedHostileFast(Skill skillId, Field field, CardStatus src, SkillSpec s) {
+
+        selectTargets(skillId, field, src, s);
+        List<CardStatus> paybackers = new ArrayList<>();
+        boolean hasTurningTides = field.hasBGEffect(field.tapi, PassiveBGE.TURNINGTIDES)
+                && (skillId == Skill.WEAKEN || skillId == Skill.SUNDER);
+        int turningTidesValue = 0, oldAttack = 0;
+
+        // apply skill to each target(dst)
+        for (CardStatus dst: field.selectionArray) {
+
+            // TurningTides
+            if (hasTurningTides) oldAttack = dst.getAttackPower();
+
+            // check & apply skill to target(dst)
+            if (checkAndPerformSkill(skillId, field, src, dst, s, !src.isOverloaded())) {
+                // TurningTides: get max attack decreasing
+                turningTidesValue = Math.max(turningTidesValue, safeMinus(oldAttack, dst.getAttackPower()));
+
+                // Payback/Revenge: collect paybackers/revengers
+                int paybackValue = dst.skill(Skill.PAYBACK) + dst.skill(Skill.REVENGE);
+                if (s.getId() != Skill.MIMIC && dst.getPaybacked() < paybackValue && skillCheck(field, Skill.PAYBACK, dst, src))
+                    paybackers.add(dst);
+            }
+        }
+
+        // apply TurningTides
+        if (hasTurningTides && turningTidesValue > 0) {
+            SkillSpec ssRally = new SkillSpec(Skill.RALLY, turningTidesValue, Faction.ALL_FACTIONS, 0, 0,
+                    Skill.NO_SKILL, Skill.NO_SKILL, s.isAll(), 0, SkillTrigger.ACTIVATE);
+            debug(1, "TurningTides %d!\n", turningTidesValue);
+            performTargettedAlliedFast(Skill.RALLY, field, field.getPlayer(src.getPlayer()).getCommander(), ssRally);
+        }
+
+        prependOnDeath(field); // skills
+
+        // Payback/Revenge
+        for (CardStatus pbStatus: paybackers) {
+            turningTidesValue = 0;
+
+            // Apply Revenge
+            if (pbStatus.skill(Skill.REVENGE) > 0) {
+                int revengedCount = 0;
+                for (int caseIdx = 0; caseIdx < 3; caseIdx++) {
+                    // Get revenge target
+                    CardStatus targetStatus = null;
+                    switch (caseIdx) {
+                        case 0:
+                            // Revenge to left
+                            if ((targetStatus = field.getLeftAssault(src)) == null)
+                                continue;
+                            break;
+                        case 1:
+                            // Revenge to core
+                            targetStatus = src;
+                            break;
+                        case 2:
+                            // Revenge to right
+                            if ((targetStatus = field.getRightAssault(src)) == null)
+                                continue;
+                            break;
+                    }
+
+                    // Skip illegal target
+                    if (!skillPredicate(skillId, field, targetStatus, targetStatus, s))
+                        continue;
+
+                    // Skip dead target
+                    if (!targetStatus.isAlive()) {
+                        debug(1, "(CANCELLED: target unit dead) %s Revenge (to %s) %s on %s\n",
+                                pbStatus.description(), caseIdx == 0 ? "left" : caseIdx == 1 ? "core" : "right",
+                                s.description(), targetStatus.description());
+                        continue;
+                    }
+
+                    // TurningTides
+                    if (hasTurningTides) oldAttack = targetStatus.getAttackPower();
+
+                    // Apply revenged skill
+                    debug(1, "%s Revenge (to %s) %s on %s\n",
+                            pbStatus.description(), caseIdx == 0 ? "left" : caseIdx == 1 ? "core" : "right",
+                            s.description(), targetStatus.description());
+                    performSkill(skillId, field, pbStatus, targetStatus, s);
+                    revengedCount++;
+
+                    // Revenged TurningTides: get max attack decreasing
+                    if (hasTurningTides)
+                        turningTidesValue = Math.max(turningTidesValue,
+                                safeMinus(oldAttack, targetStatus.getAttackPower()));
+                }
+
+                if (revengedCount > 0) {
+
+                    // Consume remaining Payback/Revenge
+                    pbStatus.setPaybacked(pbStatus.getPaybacked() + 1);
+
+                    // Apply TurningTides
+                    if (hasTurningTides && turningTidesValue > 0) {
+                        SkillSpec ssRally = new SkillSpec(Skill.RALLY, turningTidesValue, Faction.ALL_FACTIONS,
+                                0, 0, Skill.NO_SKILL, Skill.NO_SKILL, false, 0, SkillTrigger.ACTIVATE);
+                        debug(1, "Paybacked TurningTides %d!\n", turningTidesValue);
+                        performTargettedAlliedFast(Skill.RALLY, field,
+                                field.getPlayer(pbStatus.getPlayer()).getCommander(), ssRally);
+                    }
+                }
+            } else { // Apply Payback
+
+                // Skip illegal target
+                if (!skillPredicate(skillId, field, src, src, s))
+                    continue;
+
+                // Skip dead target
+                if (src.isAlive()) {
+                    debug(1, "(CANCELLED: src unit dead) %s Payback %s on %s\n",
+                            pbStatus.description(), s.description(), src.description());
+                    continue;
+                }
+
+                // TurningTides
+                if (hasTurningTides) oldAttack = src.getAttackPower();
+
+                // Apply paybacked skill
+                debug(1, "%s Payback %s on %s\n", pbStatus.description(), s.description(), src.description());
+                performSkill(skillId, field, pbStatus, src, s);
+                pbStatus.setPaybacked(pbStatus.getPaybacked() + 1);
+
+                // handle paybacked TurningTides
+                if (hasTurningTides) {
+                    turningTidesValue = Math.max(turningTidesValue, safeMinus(oldAttack, src.getAttackPower()));
+                    if (turningTidesValue > 0) {
+                        SkillSpec ssRally = new SkillSpec(Skill.RALLY, turningTidesValue, Faction.ALL_FACTIONS,
+                                0, 0, Skill.NO_SKILL, Skill.NO_SKILL, false, 0, SkillTrigger.ACTIVATE);
+                        debug(1, "Paybacked TurningTides %d!\n", turningTidesValue);
+                        performTargettedAlliedFast(Skill.RALLY, field,
+                                field.getPlayer(pbStatus.getPlayer()).getCommander(), ssRally);
+                    }
+                }
+            }
+        }
+        prependOnDeath(field);
+    }
 
     private static void debugSelection(String format, Field fd, Object... args) {
         if(Main.debug_print >= 2) {
@@ -1882,13 +1825,15 @@ public class FieldSimulator {
             case RALLY: performTargettedAlliedFast(skill, field, status, ss); break;
             case ENRAGE: performTargettedAlliedFast(skill, field, status, ss); break;
             case ENTRAP: performTargettedAlliedFast(skill, field, status, ss); break;
-            case RUSH: performTargettedAlliedFast(skill, field, status, ss); break;
+            case RUSH: performTargettedAlliedFastRush(field, status, ss); break;
             case SIEGE: performTargettedHostileFast(skill, field, status, ss); break;
             case STRIKE: performTargettedHostileFast(skill, field, status, ss); break;
             case SUNDER: performTargettedHostileFast(skill, field, status, ss); break;
             case WEAKEN: performTargettedHostileFast(skill, field, status, ss); break;
             case MIMIC: performTargettedHostileFast(skill, field, status, ss); break;
-            default: throw new AssertionError("Unknown skill: " + skill.toString());
+            default:
+                System.err.println("autoPerformSkill: Error: no specialization for " + skill.getDescription() + "\n");
+                throw new RuntimeException();
         }
     }
 

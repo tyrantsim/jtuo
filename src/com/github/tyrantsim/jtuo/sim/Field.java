@@ -1,12 +1,13 @@
 package com.github.tyrantsim.jtuo.sim;
 
+import com.github.tyrantsim.jtuo.cards.Card;
 import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.skills.Skill;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
-import com.github.tyrantsim.jtuo.util.Functor;
 import com.github.tyrantsim.jtuo.util.Pair;
 
 import java.util.*;
+import java.util.function.Predicate;
 
 public class Field {
 
@@ -105,6 +106,8 @@ public class Field {
         int dmg = damagedUnitsToItems.getOrDefault(status, 0) + 1;
         damagedUnitsToItems.put(status, dmg);
     }
+
+
 
     // Getters & Setters
     public Hand[] getPlayers() {
@@ -233,15 +236,42 @@ public class Field {
         this.bloodlustValue = bloodlustValue;
     }
 
+    public CardStatus getLeftAssault(CardStatus status) {
+        return getLeftAssault(status, 1);
+    }
+
+    public CardStatus getLeftAssault(CardStatus status, int n) {
+        if (status.getIndex() >= n) {
+            CardStatus leftAssault = players[status.getPlayer()].getAssaults().get(status.getIndex() - n);
+            if (leftAssault.isAlive())
+                return leftAssault;
+        }
+        return null;
+    }
+
+    public CardStatus getRightAssault(CardStatus status) {
+        return getRightAssault(status, 1);
+    }
+
+    public CardStatus getRightAssault(CardStatus status, int n) {
+        List<CardStatus> assaults = players[status.getPlayer()].getAssaults();
+        if (status.getIndex() + n < assaults.size()) {
+            CardStatus rightAssault = assaults.get(status.getIndex() + n);
+            if (rightAssault.isAlive())
+                return rightAssault;
+        }
+        return null;
+    }
+
     /**
      * @param cards = list of cards to select from
      * @param f = functor that holds the condition of adding selection
      * @return new selection array size
      */
-    int makeSelectionArray(List<CardStatus> cards, Functor f) {
+    int makeSelectionArray(List<CardStatus> cards, Predicate<CardStatus> pred) {
         selectionArray.clear();
         for (CardStatus c: cards) {
-            if (f.match(c))
+            if (pred.test(c))
                 selectionArray.add(c);
         }
         return selectionArray.size();
