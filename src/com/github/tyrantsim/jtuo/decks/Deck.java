@@ -105,6 +105,10 @@ public class Deck implements Cloneable {
     public void setAllCards(Cards allCards) {
         this.allCards = allCards;
     }
+
+    public void set(Pair<List<Integer>, Map<Integer, Boolean>> idMarks) {
+        set(idMarks.getFirst(), idMarks.getSecond());
+    }
     
     public void set(List<Integer> ids, Map<Integer, Boolean> marks) {
 
@@ -467,7 +471,7 @@ public class Deck implements Cloneable {
             return;
 
         Pair<List<Integer>, Map<Integer, Boolean>> idMarks = DeckParser.stringToIds(deckString, shortDescription());
-        set(idMarks.getFirst(), idMarks.getSecond());
+        set(idMarks);
         deckString = "";
 
     }
@@ -589,6 +593,7 @@ public class Deck implements Cloneable {
     public int getId() { return id; }
 
     public Card getAlphaDominion() { return alphaDominion; }
+
     public void setAlphaDominion(Card alphaDominion) {
         this.alphaDominion = alphaDominion;
     }
@@ -605,6 +610,5 @@ public class Deck implements Cloneable {
     public String toString() {
         return getCards().toString();
     }
-    
 
 }

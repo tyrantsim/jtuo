@@ -44,4 +44,8 @@ public class Results {
         return points;
     }
 
+    @Override
+    public String toString() {
+        return "Results: [wins = " + wins + ", losses = " + losses + ", draws = " + draws + ", points = " + points + "]";
+    }
 }

@@ -32,6 +32,9 @@ public class FieldSimulator {
         playDominionAndFortresses(field);
 
         while (field.getTurn() <= turnLimit && !field.isEnd()) {
+
+            debug(1, "TURN %d begins for %s", field.getTurn(), field.tap.getCommander().description());
+
             field.setCurrentPhase(FieldPhase.PLAYCARD_PHASE);
 
             // Initialize stuff, remove dead cards
@@ -87,7 +90,7 @@ public class FieldSimulator {
                 break;
             }
 
-            debug(1, "TURN %d ends for %s\n", field.getTurn(), field.tap.getCommander().description());
+            debug(1, "TURN %d ends for %s", field.getTurn(), field.tap.getCommander().description());
 
             // Swap hand and player index
             int tmpTapi = field.getTapi();
@@ -201,6 +204,7 @@ public class FieldSimulator {
             CardStatus status = assaults.get(index);
             status.setIndex(index);
             if (status.getDelay() > 0) {
+                debug(1, "%s reduces its timer\n", status.description());
                 status.reduceDelay();
                 if (status.getDelay() == 0) {
                     checkAndPerformValor(field, status);
@@ -243,11 +247,16 @@ public class FieldSimulator {
     }
 
     private static void resolveSkill(Field field) {
-        while (!field.skillQueue.isEmpty()) {
+
+        debug(2, "Skills in queue: %d", field.getSkillQueue().size());
+
+        while (!field.getSkillQueue().isEmpty()) {
 
             Pair<CardStatus, SkillSpec> skillInstance = field.skillQueue.pop();
             CardStatus status = skillInstance.getFirst();
             SkillSpec ss = skillInstance.getSecond();
+
+            debug(2, "%s resolving skill: %s", status.description(), ss.description());
 
             if (status.getCard().getSkillTrigger()[ss.getId().ordinal()] == SkillTrigger.ACTIVATE) {
                 if (!status.isAlive() || status.isJammed())
@@ -279,7 +288,7 @@ public class FieldSimulator {
 
             // Perform skill (if it is still applicable)
             if (SkillUtils.isActivationSkillWithX(modifiedSkill.getId()) && modifiedSkill.getX() == 0) {
-                debug(2, "%s failed to %s because its X value is zeroed (sabotaged).\n",
+                debug(2, "%s failed to %s because its X value is zeroed (sabotaged).",
                         status.description(), ss.description());
             } else {
                 autoPerformSkill(modifiedSkill.getId(), field, status, modifiedSkill);
@@ -308,6 +317,7 @@ public class FieldSimulator {
             default:
                 throw new RuntimeException("Unknown card type: " + playedCard.getType());
         }
+        debug(2, "Play card: %s", playedStatus.description());
         resolveSkill(field); // resolve postponed skills recursively
 
         // End 'Play Card' phase action
@@ -408,7 +418,7 @@ public class FieldSimulator {
                         Skill.NO_SKILL, Skill.NO_SKILL, false, 0, SkillTrigger.ACTIVATE);
 
                 if (dst.getInhibited() > 0) {
-                    debug(1, "Heroism: %s on %s but it is inhibited\n", ssProtect.description(), dst.description());
+                    debug(1, "Heroism: %s on %s but it is inhibited", ssProtect.description(), dst.description());
                     dst.setInhibited(dst.getInhibited() - 1);
 
                     // Passive BGE: Divert
@@ -422,12 +432,12 @@ public class FieldSimulator {
                         selectTargets(Skill.PROTECT, field, field.tip.getCommander(), divertedSS);
                         for (CardStatus dstProtect : field.selectionArray) {
                             if (dstProtect.getInhibited() > 0) {
-                                debug(1, "Heroism: %s (Diverted) on %s but it is inhibited\n",
+                                debug(1, "Heroism: %s (Diverted) on %s but it is inhibited",
                                         divertedSS.description(), dstProtect.description());
                                 dstProtect.setInhibited(dstProtect.getInhibited() - 1);
                                 continue;
                             }
-                            debug(1, "Heroism: %s (Diverted) on %s\n",
+                            debug(1, "Heroism: %s (Diverted) on %s",
                                     divertedSS.description(), dstProtect.description());
                             performSkill(Skill.PROTECT, field, field.tap.getCommander(), dst, divertedSS); // XXX: the caster
                         }
@@ -464,7 +474,7 @@ public class FieldSimulator {
             Boolean attacked = false;
 
             if (!currentStatus.isAlive()) {
-                debug(2, "%s cannot take action.\n", currentStatus.description());
+                debug(2, "%s cannot take action.", currentStatus.description());
                 // Passive BGE: Halted orders
                 int inhibitValue;
                 if (field.hasBGEffect(field.tapi, PassiveBGE.HALTEDORDERS)
@@ -475,7 +485,7 @@ public class FieldSimulator {
                         > field.tip.getAssaults().get(field.getCurrentCI()).getInhibited()) // inhibit/re-inhibit(if higher)
                 {
                     CardStatus acrossStatus = field.tip.getAssaults().get(field.getCurrentCI());
-                    debug(1, "Halted Orders: %s inhibits %s by %u\n",
+                    debug(1, "Halted Orders: %s inhibits %s by %u",
                             currentStatus.description(), acrossStatus.description(), inhibitValue);
                     acrossStatus.setInhibited(inhibitValue);
                 }
@@ -576,8 +586,8 @@ public class FieldSimulator {
     private static void cooldownSkills(CardStatus status) {
         for (SkillSpec skill: status.getCard().getSkills()) {
             if (status.getSkillCd(skill.getId()) > 0) {
-                debug(2, "%s reduces timer (%d) of skill %s\n",
-                        status.description(), String.valueOf(status.getSkillCd(skill.getId())), skill.getId().toString());
+                debug(2, "%s reduces timer (%d) of skill %s",
+                        status.description(), status.getSkillCd(skill.getId()), skill.getId().toString());
                 status.cooldownSkillCd(skill.getId());
             }
         }
@@ -597,14 +607,14 @@ public class FieldSimulator {
                     ? opponentPlayer.getAssaults().get(src.getIndex()) : null;
 
             if (dst == null || dst.getHP() <= 0) {
-                debug(1, "%s loses Valor (no blocker)\n", src.description());
+                debug(1, "%s loses Valor (no blocker)", src.description());
                 return false;
             } else if (dst.getAttackPower() <= src.getAttackPower()) {
-                debug(1, "%s loses Valor (weak blocker %s)\n", src.description(), dst.description());
+                debug(1, "%s loses Valor (weak blocker %s)", src.description(), dst.description());
                 return false;
             }
 
-            debug(1, "%s activates Valor %d\n", src.description(), String.valueOf(valorValue));
+            debug(1, "%s activates Valor %d", src.description(), valorValue);
             src.setPermAttackBuff(src.getPermAttackBuff() + valorValue);
             return true;
         }
@@ -627,19 +637,18 @@ public class FieldSimulator {
                 return null;
             }
 
-            debug(1, "%s summons %s\n", status.description(), summonedCard.getName());
+            debug(1, "%s summons %s", status.description(), summonedCard.getName());
 
             switch (summonedCard.getType()) {
                 case ASSAULT:
                 case STRUCTURE:
                     return new PlayCard(summonedCard, field, status.getPlayer(), status).op();
                 default:
-                    debug(0, "Unknown card type: #%d %s: %s\n", String.valueOf(summonedCard.getId()),
+                    debug(0, "Unknown card type: #%d %s: %s", summonedCard.getId(),
                             summonedCard.getName(), summonedCard.getType().toString());
                     throw new AssertionError();
             }
         }
-
 
         return null;
     }
@@ -653,11 +662,11 @@ public class FieldSimulator {
         if (skillCheck(field, skillId, dst, src)) {
             if (isEvadable && dst.getEvaded() < dst.skill(Skill.EVADE)) {
                 dst.setEvaded(dst.getEvaded() + 1);
-                debug(1, "%s %s on %s but it evades\n",
+                debug(1, "%s %s on %s but it evades",
                         src.description(), s.description(), dst.description());
                 return false;
             }
-            debug(1, "%s %s on %s\n", src.description(), s.description(), dst.description());
+            debug(1, "%s %s on %s", src.description(), s.description(), dst.description());
             performSkill(skillId, field, src, dst, s);
             if (s.getC() > 0)
                 src.setSkillCd(skillId, s.getC());
@@ -671,12 +680,12 @@ public class FieldSimulator {
                     && skillCheck(field, skillId, src, src)) {
 
                 dst.setTributed(dst.getTributed() + 1);
-                debug(1, "%s tributes %s back to %s\n", dst.description(), s.description(), src.description());
+                debug(1, "%s tributes %s back to %s", dst.description(), s.description(), src.description());
                 performSkill(skillId, field, src, src, s);
             }
             return true;
         }
-        debug(1, "(CANCELLED) %s %s on %s\n", src.description(), s.description(), dst.description());
+        debug(1, "(CANCELLED) %s %s on %s", src.description(), s.description(), dst.description());
         return false;
     }
 
@@ -692,10 +701,11 @@ public class FieldSimulator {
         for (int actionIndex = 0; actionIndex < numActions; actionIndex++) {
             field.prepareAction();
 
-            for (SkillSpec ss : skills) {
+            for (SkillSpec ss: skills) {
+                debug(2, "Skill: %s", ss.description());
                 if (!SkillUtils.isActivationSkill(ss.getId())) continue;
                 if (status.getSkillCd(ss.getId()) > 0) continue;
-                field.getSkillQueue().add(new Pair<>(status, ss));
+                field.addSkillToQueue(status, ss);
                 resolveSkill(field);
             }
 
@@ -805,7 +815,7 @@ public class FieldSimulator {
 
         // Resolve On-Attacked skills
         for (SkillSpec ss: defStatus.getCard().getSkillsOnAttacked()) {
-            debug(1, "On Attacked %s: Preparing (tail) skill %s\n", defStatus.description(), ss.description());
+            debug(1, "On Attacked %s: Preparing (tail) skill %s", defStatus.description(), ss.description());
             field.skillQueue.addLast(new Pair<>(defStatus, ss));
             resolveSkill(field);
         }
@@ -814,8 +824,8 @@ public class FieldSimulator {
         if (defStatus.hasSkill(Skill.COUNTER)) {
             // perform skill counter
             int counterDmg = getCounterDamage(field, attStatus, defStatus);
-            debug(1, "%s takes %d counter damage from %s\n", attStatus.description(),
-                    String.valueOf(counterDmg), defStatus.description());
+            debug(1, "%s takes %d counter damage from %s", attStatus.description(),
+                    counterDmg, defStatus.description());
             removeHP(field, attStatus, counterDmg);
             prependOnDeath(field);
             resolveSkill(field);
@@ -826,8 +836,8 @@ public class FieldSimulator {
                 int fluxDenominator = field.getBGEffectValue(field.tapi, PassiveBGE.COUNTERFLUX) > 0
                         ? field.getBGEffectValue(field.tapi, PassiveBGE.COUNTERFLUX) : 4;
                 int fluxValue = (defStatus.skill(Skill.COUNTER) - 1) / fluxDenominator + 1;
-                debug(1, "Counterflux: %s heals itself and berserks for %d\n",
-                        defStatus.description(), String.valueOf(fluxValue));
+                debug(1, "Counterflux: %s heals itself and berserks for %d",
+                        defStatus.description(), fluxValue);
                 defStatus.addHP(fluxValue);
                 if (!defStatus.isSundered())
                     defStatus.addPermAttackBuff(fluxValue);
@@ -842,8 +852,8 @@ public class FieldSimulator {
         int corrosiveValue = defStatus.skill(Skill.CORROSIVE);
         if (corrosiveValue > attStatus.getCorrodedRate()) {
             // perform skill corrosive
-            debug(1, "%s corrodes %s by %d\n", defStatus.description(),
-                    attStatus.description(), String.valueOf(corrosiveValue));
+            debug(1, "%s corrodes %s by %d", defStatus.description(),
+                    attStatus.description(), corrosiveValue);
             attStatus.setCorrodedRate(corrosiveValue);
         }
 
@@ -858,8 +868,8 @@ public class FieldSimulator {
                 int bgeDenominator = field.getBGEffectValue(field.tapi, PassiveBGE.ENDURINGRAGE) > 0
                         ? field.getBGEffectValue(field.tapi, PassiveBGE.ENDURINGRAGE) : 2;
                 int bgeValue = (berserkValue - 1) / bgeDenominator + 1;
-                debug(1, "EnduringRage: %s heals and protects itself for %d\n",
-                        attStatus.description(), String.valueOf(bgeValue));
+                debug(1, "EnduringRage: %s heals and protects itself for %d",
+                        attStatus.description(), bgeValue);
                 attStatus.addHP(bgeValue);
                 attStatus.setProtectedBy(attStatus.getProtectedBy() + bgeValue);
             }
@@ -868,7 +878,7 @@ public class FieldSimulator {
         // Skill: Leech
         int leechValue = Math.min(attDmg, attStatus.skill(Skill.LEECH));
         if (leechValue > 0 && skillCheck(field, Skill.LEECH, attStatus, null)) {
-            debug(1, "%s leeches %d health\n", attStatus.description(), String.valueOf(leechValue));
+            debug(1, "%s leeches %d health", attStatus.description(), leechValue);
             attStatus.addHP(leechValue);
         }
 
@@ -879,7 +889,7 @@ public class FieldSimulator {
                 && !attStatus.isSundered()
                 && cardType == CardType.ASSAULT
                 && defStatus.getHP() <= 0) {
-            debug(1, "Heroism: %s gain %d attack\n", attStatus.description(), String.valueOf(valorValue));
+            debug(1, "Heroism: %s gain %d attack", attStatus.description(), valorValue);
             attStatus.addPermAttackBuff(valorValue);
         }
 
@@ -893,22 +903,22 @@ public class FieldSimulator {
                     ? field.getBGEffectValue(field.tapi, PassiveBGE.DEVOUR) : 4;
             int bgeValue = (leechDevourValue - 1) / bgeDenominator + 1;
             if (!attStatus.isSundered()) {
-                debug(1, "Devour: %s gains %d attack\n", attStatus.description(), String.valueOf(bgeValue));
+                debug(1, "Devour: %s gains %d attack", attStatus.description(), bgeValue);
                 attStatus.addPermAttackBuff(bgeValue);
             }
-            debug(1, "Devour: %s extends max hp / heals itself for %d\n",
-                    attStatus.description(), String.valueOf(bgeValue));
+            debug(1, "Devour: %s extends max hp / heals itself for %d",
+                    attStatus.description(), bgeValue);
             attStatus.extHP(bgeValue);
         }
 
         // Skill: Subdue
         int subdueValue = defStatus.skill(Skill.SUBDUE);
         if (subdueValue > 0) {
-            debug(1, "%s subdues %s by %d\n", defStatus.description(),
-                    attStatus.description(), String.valueOf(subdueValue));
+            debug(1, "%s subdues %s by %d", defStatus.description(),
+                    attStatus.description(), subdueValue);
             attStatus.setSubdued(attStatus.getSubdued() + subdueValue);
             if (attStatus.getHP() > attStatus.getMaxHP()) {
-                debug(1, "%s loses %d HP due to subdue (max hp: %d)\n",
+                debug(1, "%s loses %d HP due to subdue (max hp: %d)",
                         attStatus.description(), attStatus.getHP() - attStatus.getMaxHP(), attStatus.getMaxHP());
                 attStatus.setHP(attStatus.getMaxHP());
             }
@@ -1018,12 +1028,12 @@ public class FieldSimulator {
         // Final Attack Damage
         attDmg = safeMinus(attDmg, reducedDmg);
 
-        debug(1, "%s attacks %s for %d damage\n",
-                attStatus.description(), defStatus.description(), String.valueOf(preModifierDmg));
+        debug(1, "%s attacks %s for %d damage",
+                attStatus.description(), defStatus.description(), preModifierDmg);
 
         // PassiveBGE: Brigade
         if (field.hasBGEffect(field.tapi, PassiveBGE.BRIGADE) && legionValue > 0 && attStatus.canBeHealed()) {
-            debug(1, "Brigade: %s heals itself for %d\n", attStatus.description(), String.valueOf(legionValue));
+            debug(1, "Brigade: %s heals itself for %d", attStatus.description(), legionValue);
             attStatus.addHP(legionValue);
         }
 
@@ -1031,9 +1041,24 @@ public class FieldSimulator {
     }
 
     private static void attackDamage(Field field, CardType cardType, CardStatus attStatus, CardStatus defStatus, int attDmg) {
-        removeHP(field, defStatus, attDmg);
-        prependOnDeath(field);
-        resolveSkill(field);
+        switch (cardType) {
+            case COMMANDER:
+                removeCommanderHP(field, defStatus, attDmg);
+                break;
+            default:
+                removeHP(field, defStatus, attDmg);
+                prependOnDeath(field);
+                resolveSkill(field);
+        }
+    }
+
+    private static void removeCommanderHP(Field field, CardStatus status, int attDmg) {
+        debug(2, "%s takes %d damage", status.description(), attDmg);
+        status.setHP(safeMinus(status.getHP(), attDmg));
+        if (status.getHP() == 0) {
+            debug(1, "%s dies -> GAME OVER", status.description());
+            field.setEnd(true);
+        }
     }
 
     private static void damageDependantPreOA(Field field, CardStatus attStatus, CardStatus defStatus) {
@@ -1041,35 +1066,39 @@ public class FieldSimulator {
         int poisonValue = Math.max(attStatus.skill(Skill.POISON), attStatus.skill(Skill.VENOM));
         if (poisonValue > defStatus.getPoisoned() && skillCheck(field, Skill.POISON, attStatus, defStatus)) {
             // Perform skill poison
-            debug(1, "%s poisons %s by %d\n", attStatus.description(), defStatus.description(), poisonValue);
+            debug(1, "%s poisons %s by %d", attStatus.description(), defStatus.description(), poisonValue);
             defStatus.setPoisoned(poisonValue);
         }
 
         // Damage-Dependant Skill: Inhibit
         int inhibitValue = attStatus.skill(Skill.INHIBIT);
         if (inhibitValue > defStatus.getInhibited() && skillCheck(field, Skill.INHIBIT, attStatus, defStatus)) {
-            debug(1, "%s inhibits %s by %d\n", attStatus.description(), defStatus.description(), inhibitValue);
+            debug(1, "%s inhibits %s by %d", attStatus.description(), defStatus.description(), inhibitValue);
             defStatus.setInhibited(inhibitValue);
         }
 
         // Damage-Dependant Skill: Sabotage
         int sabotagedValue = attStatus.skill(Skill.SABOTAGE);
         if (sabotagedValue > defStatus.getSabotaged() && skillCheck(field, Skill.SABOTAGE, attStatus, defStatus)) {
-            debug(1, "%s sabotages %s by %d\n", attStatus.description(), defStatus.description(), sabotagedValue);
+            debug(1, "%s sabotages %s by %d", attStatus.description(), defStatus.description(), sabotagedValue);
             defStatus.setSabotaged(sabotagedValue);
         }
     }
 
     private static void removeHP(Field field, CardStatus status, int dmg) {
         if (dmg == 0) return;
+        debug(2, "%s takes %d damage", status.description(), dmg);
         status.setHP(safeMinus(status.getHP(), dmg));
         if (field.getCurrentPhase().ordinal() < FieldPhase.END_PHASE.ordinal() && status.hasSkill(Skill.BARRIER)) {
             field.incDamagedUnitsToTimes(status);
+            debug(2, "%s damaged %d times\n", status.description(), field.getDamagedUnitsToTimes(status));
         }
         if (status.getHP() == 0) {
+            debug(1, "%s dies", status.description());
             field.killedUnits.add(status);
-            field.players[status.getPlayer()].incTotalCardsDestroyed();
+            field.getPlayer(status.getPlayer()).incTotalCardsDestroyed();
             if (status.getPlayer() == 0) {
+
                 boolean isVip = false;
                 for (Integer card : field.getPlayer(0).getDeck().getVipCards()) {
                     if (card == status.getCard().getId()) {
@@ -1141,8 +1170,8 @@ public class FieldSimulator {
                     if (Math.abs(fromIdx - hostIdx) > 1)
                         avengeValue = (avengeValue + 1) / 2;
 
-                    debug(1, "%s%s activates Avenge %d\n", Math.abs(fromIdx - hostIdx) > 1
-                            ? "BGE BloodVengeance: " : "", adjStatus.description(), String.valueOf(avengeValue));
+                    debug(1, "%s%s activates Avenge %d", Math.abs(fromIdx - hostIdx) > 1
+                            ? "BGE BloodVengeance: " : "", adjStatus.description(), avengeValue);
 
                     if (!adjStatus.isSundered())
                         adjStatus.setPermAttackBuff(adjStatus.getPermAttackBuff() + avengeValue);
@@ -1163,20 +1192,20 @@ public class FieldSimulator {
 
                     if (status.getPoisoned() > 0) {
                         if (leftVirulenceVictim != null) {
-                            debug(1, "Virulence: %s spreads left poison +%d to %s\n", status.description(),
-                                    String.valueOf(status.getPoisoned()), leftVirulenceVictim.description());
+                            debug(1, "Virulence: %s spreads left poison +%d to %s", status.description(),
+                                    status.getPoisoned(), leftVirulenceVictim.description());
                             leftVirulenceVictim.setPoisoned(leftVirulenceVictim.getPoisoned() + status.getPoisoned());
                         }
                         stackedPoisonValue += status.getPoisoned();
-                        debug(1, "Virulence: %s spreads right poison +%d = %d\n", status.description(),
-                                String.valueOf(status.getPoisoned()), String.valueOf(stackedPoisonValue));
+                        debug(1, "Virulence: %s spreads right poison +%d = %d", status.description(),
+                                status.getPoisoned(), stackedPoisonValue);
                     }
 
                     if (status.getIndex() < assaults.size()) {
                         CardStatus rightStatus = assaults.get(status.getIndex() + 1);
                         if (rightStatus.isAlive()) {
-                            debug(1, "Virulence: spreads stacked poison +%d to %s\n",
-                                    String.valueOf(stackedPoisonValue), rightStatus.description());
+                            debug(1, "Virulence: spreads stacked poison +%d to %s",
+                                    stackedPoisonValue, rightStatus.description());
                             rightStatus.setPoisoned(rightStatus.getPoisoned() + stackedPoisonValue);
                         }
                     }
@@ -1196,7 +1225,7 @@ public class FieldSimulator {
                 SkillSpec ssRally = new SkillSpec(Skill.RALLY, field.getBGEffectValue(field.tapi, PassiveBGE.REVENGE),
                         Faction.ALL_FACTIONS, 0, 0, Skill.NO_SKILL, Skill.NO_SKILL, true, 0, SkillTrigger.ACTIVATE);
                 CardStatus commander = field.getPlayer(status.getPlayer()).getCommander();
-                debug(2, "Revenge: Preparing (head) skills  %s and %s\n", ssHeal.description(), ssRally.description());
+                debug(2, "Revenge: Preparing (head) skills  %s and %s", ssHeal.description(), ssRally.description());
                 field.skillQueue.addFirst(new Pair<>(commander.clone(), ssRally));
                 field.skillQueue.addFirst(new Pair<>(commander.clone(), ssHeal)); // +1: keep ss_heal at first place
             }
@@ -1265,12 +1294,7 @@ public class FieldSimulator {
                 break;
 
             // shuffle
-            for (int i = 0; i < numTargets; i++) {
-                int pos = field.getRandom().nextInt(numCandidates - 1);
-                CardStatus temp = field.selectionArray.get(i);
-                field.selectionArray.set(i, field.selectionArray.get(pos));
-                field.selectionArray.set(pos, temp);
-            }
+            field.shuffleSelection();
 
             // trim
             if (field.selectionArray.size() > numTargets)
@@ -1479,7 +1503,7 @@ public class FieldSimulator {
                 if (field.hasBGEffect(field.tapi, PassiveBGE.ZEALOTSPRESERVATION)
                         && src.getCard().getType() == CardType.ASSAULT) {
                     int bgeValue = (int) ((s.getX() + 1) / 2);
-                    debug(1, "Zealot's Preservation: %s Protect %d on %s\n",
+                    debug(1, "Zealot's Preservation: %s Protect %d on %s",
                             src.description(), bgeValue, dst.description());
                     dst.setProtectedBy(dst.getProtectedBy() + bgeValue);
                 }
@@ -1528,7 +1552,7 @@ public class FieldSimulator {
                 // Passive BGE: Furiosity
                 if (field.hasBGEffect(field.tapi, PassiveBGE.FURIOSITY) && dst.canBeHealed()) {
                     int bgeValue = (int) s.getX();
-                    debug(1, "Furiosity: %s Heals %s for %d\n",
+                    debug(1, "Furiosity: %s Heals %s for %d",
                             src.description(), dst.description(), bgeValue);
                     dst.addHP(bgeValue);
                 }
@@ -1574,7 +1598,7 @@ public class FieldSimulator {
             case MIMIC:
 
                 List<SkillSpec> mimickableSkills = new ArrayList<>(dst.getCard().getSkills().size());
-                debug(2, " * Mimickable skills of %s\n", dst.description());
+                debug(2, " * Mimickable skills of %s", dst.description());
                 for (SkillSpec ss: dst.getCard().getSkills()) {
 
                     // get skill
@@ -1589,7 +1613,7 @@ public class FieldSimulator {
                         continue;
 
                     mimickableSkills.add(ss.clone());
-                    debug(2, "  + %s\n", ss.description());
+                    debug(2, "  + %s", ss.description());
 
                 }
 
@@ -1606,7 +1630,7 @@ public class FieldSimulator {
                 int skillValue = (int) s.getX() + src.getEnhanced(mimSkillId);
                 SkillSpec mimickedSS = new SkillSpec(mimSkillId, skillValue, Faction.ALL_FACTIONS, mimSS.getN(), 0,
                         mimSS.getS(), mimSS.getS2(), mimSS.isAll(), mimSS.getCardId(), SkillTrigger.ACTIVATE);
-                debug(1, " * Mimicked skill: %s\n", mimickedSS.description());
+                debug(1, " * Mimicked skill: %s", mimickedSS.description());
                 performTargettedHostileFast(Skill.MIMIC, field, src, mimickedSS);
                 break;
 
@@ -1620,7 +1644,7 @@ public class FieldSimulator {
         int numInhibited = 0;
         for (CardStatus dst: field.selectionArray) {
             if (dst.getInhibited() > 0 && !src.isOverloaded()) {
-                debug(1, "%s %s on %s but it is inhibited\n", src.description(),
+                debug(1, "%s %s on %s but it is inhibited", src.description(),
                         s.description(), dst.description());
                 dst.setInhibited(dst.getInhibited() - 1);
                 numInhibited++;
@@ -1641,12 +1665,12 @@ public class FieldSimulator {
                 selectTargets(skillId, field, field.getTip().getCommander(), divertedSS);
                 for (CardStatus dst: field.selectionArray) {
                     if (dst.getInhibited() > 0) {
-                        debug(1, "%s %s (Diverted) on %s but it is inhibited\n", src.description(),
+                        debug(1, "%s %s (Diverted) on %s but it is inhibited", src.description(),
                                 divertedSS.description(), dst.description());
                         dst.setInhibited(dst.getInhibited() - 1);
                         continue;
                     }
-                    debug(1, "%s %s (Diverted) on %s\n", src.description(),
+                    debug(1, "%s %s (Diverted) on %s", src.description(),
                             divertedSS.description(), dst.description());
                     performSkill(skillId, field, src, dst, divertedSS);
                 }
@@ -1662,10 +1686,10 @@ public class FieldSimulator {
             return;
         }
         if (src.isRushAttempted()) {
-            debug(2, "%s does not check Rush again.\n", src.description());
+            debug(2, "%s does not check Rush again.", src.description());
             return;
         }
-        debug(1, "%s attempts to activate Rush.\n", src.description());
+        debug(1, "%s attempts to activate Rush.", src.description());
         performTargettedAlliedFast(Skill.RUSH, field, src, s);
         src.setRushAttempted(true);
     }
@@ -1700,7 +1724,7 @@ public class FieldSimulator {
         if (hasTurningTides && turningTidesValue > 0) {
             SkillSpec ssRally = new SkillSpec(Skill.RALLY, turningTidesValue, Faction.ALL_FACTIONS, 0, 0,
                     Skill.NO_SKILL, Skill.NO_SKILL, s.isAll(), 0, SkillTrigger.ACTIVATE);
-            debug(1, "TurningTides %d!\n", turningTidesValue);
+            debug(1, "TurningTides %d!", turningTidesValue);
             performTargettedAlliedFast(Skill.RALLY, field, field.getPlayer(src.getPlayer()).getCommander(), ssRally);
         }
 
@@ -1739,7 +1763,7 @@ public class FieldSimulator {
 
                     // Skip dead target
                     if (!targetStatus.isAlive()) {
-                        debug(1, "(CANCELLED: target unit dead) %s Revenge (to %s) %s on %s\n",
+                        debug(1, "(CANCELLED: target unit dead) %s Revenge (to %s) %s on %s",
                                 pbStatus.description(), caseIdx == 0 ? "left" : caseIdx == 1 ? "core" : "right",
                                 s.description(), targetStatus.description());
                         continue;
@@ -1749,7 +1773,7 @@ public class FieldSimulator {
                     if (hasTurningTides) oldAttack = targetStatus.getAttackPower();
 
                     // Apply revenged skill
-                    debug(1, "%s Revenge (to %s) %s on %s\n",
+                    debug(1, "%s Revenge (to %s) %s on %s",
                             pbStatus.description(), caseIdx == 0 ? "left" : caseIdx == 1 ? "core" : "right",
                             s.description(), targetStatus.description());
                     performSkill(skillId, field, pbStatus, targetStatus, s);
@@ -1770,7 +1794,7 @@ public class FieldSimulator {
                     if (hasTurningTides && turningTidesValue > 0) {
                         SkillSpec ssRally = new SkillSpec(Skill.RALLY, turningTidesValue, Faction.ALL_FACTIONS,
                                 0, 0, Skill.NO_SKILL, Skill.NO_SKILL, false, 0, SkillTrigger.ACTIVATE);
-                        debug(1, "Paybacked TurningTides %d!\n", turningTidesValue);
+                        debug(1, "Paybacked TurningTides %d!", turningTidesValue);
                         performTargettedAlliedFast(Skill.RALLY, field,
                                 field.getPlayer(pbStatus.getPlayer()).getCommander(), ssRally);
                     }
@@ -1783,7 +1807,7 @@ public class FieldSimulator {
 
                 // Skip dead target
                 if (src.isAlive()) {
-                    debug(1, "(CANCELLED: src unit dead) %s Payback %s on %s\n",
+                    debug(1, "(CANCELLED: src unit dead) %s Payback %s on %s",
                             pbStatus.description(), s.description(), src.description());
                     continue;
                 }
@@ -1792,7 +1816,7 @@ public class FieldSimulator {
                 if (hasTurningTides) oldAttack = src.getAttackPower();
 
                 // Apply paybacked skill
-                debug(1, "%s Payback %s on %s\n", pbStatus.description(), s.description(), src.description());
+                debug(1, "%s Payback %s on %s", pbStatus.description(), s.description(), src.description());
                 performSkill(skillId, field, pbStatus, src, s);
                 pbStatus.setPaybacked(pbStatus.getPaybacked() + 1);
 
@@ -1802,7 +1826,7 @@ public class FieldSimulator {
                     if (turningTidesValue > 0) {
                         SkillSpec ssRally = new SkillSpec(Skill.RALLY, turningTidesValue, Faction.ALL_FACTIONS,
                                 0, 0, Skill.NO_SKILL, Skill.NO_SKILL, false, 0, SkillTrigger.ACTIVATE);
-                        debug(1, "Paybacked TurningTides %d!\n", turningTidesValue);
+                        debug(1, "Paybacked TurningTides %d!", turningTidesValue);
                         performTargettedAlliedFast(Skill.RALLY, field,
                                 field.getPlayer(pbStatus.getPlayer()).getCommander(), ssRally);
                     }
@@ -1814,9 +1838,9 @@ public class FieldSimulator {
 
     private static void debugSelection(String format, Field fd, Object... args) {
         if(Main.debug_print >= 2) {
-            debug(2, MessageFormat.format("Possible targets of " + format + ":\n", args));
+            debug(2, MessageFormat.format("Possible targets of " + format + ":", args));
                 for(CardStatus c: fd.selectionArray) {
-                    debug(2, "+ %s\n", c.description());
+                    debug(2, "+ %s", c.description());
                 }
         }                                                              
     }
@@ -1824,7 +1848,8 @@ public class FieldSimulator {
     private static void debug(int v, String format, Object... args) {
         if (Main.debug_print >= v) {
             if (Main.debug_line) {
-                System.out.println(MessageFormat.format("%i - " + format, args));
+                System.out.printf("debug: " + format, args);
+                //System.out.println(MessageFormat.format("%i - " + format, args));
             } else if (Main.debug_cached > 0) {
                 Main.debug_str.append(MessageFormat.format(format, args));
             } else {
@@ -1856,7 +1881,7 @@ public class FieldSimulator {
             case RUSH:
                 return fd.getPlayers()[src.getPlayer()].getAssaults(); // .getIndirect()
             default:
-                System.err.println("skill_targets: Error: no specialization for " + skill.getDescription() + "\n");
+                System.err.println("skill_targets: Error: no specialization for " + skill.getDescription() + "");
                 throw new RuntimeException();
         }
     }
@@ -1882,7 +1907,7 @@ public class FieldSimulator {
             case WEAKEN: performTargettedHostileFast(skill, field, status, ss); break;
             case MIMIC: performTargettedHostileFast(skill, field, status, ss); break;
             default:
-                System.err.println("autoPerformSkill: Error: no specialization for " + skill.getDescription() + "\n");
+                System.err.println("autoPerformSkill: Error: no specialization for " + skill.getDescription() + "");
                 throw new RuntimeException();
         }
     }

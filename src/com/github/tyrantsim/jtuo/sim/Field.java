@@ -1,6 +1,5 @@
 package com.github.tyrantsim.jtuo.sim;
 
-import com.github.tyrantsim.jtuo.cards.Card;
 import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.skills.Skill;
 import com.github.tyrantsim.jtuo.skills.SkillSpec;
@@ -33,7 +32,7 @@ public class Field {
     // They are stored in this, and cleared after all have been performed.
     Deque<Pair<CardStatus, SkillSpec>> skillQueue = new LinkedList<>();
     List<CardStatus> killedUnits = new ArrayList<>();
-    Map<CardStatus, Integer> damagedUnitsToItems = new HashMap<>();
+    Map<CardStatus, Integer> damagedUnitsToTimes = new HashMap<>();
 
     // the current phase of the turn: starts with PLAYCARD_PHASE, then COMMANDER_PHASE, STRUCTURES_PHASE, and ASSAULTS_PHASE
     FieldPhase currentPhase;
@@ -61,16 +60,30 @@ public class Field {
         this.enemyBGSkills = enemyBGSkills;
         this.assaultBloodlusted = false;
         this.selectionArray = new ArrayList<>();
-        this.random = new Random();
+    }
+
+    public Field(Random random, Cards cards, Hand yourHand, Hand enemyHand, GameMode gameMode,
+                 OptimizationMode optimizationMode, List<SkillSpec> yourBGSkills, List<SkillSpec> enemyBGSkills) {
+        this.end = false;
+        this.random = random;
+        this.cards = cards;
+        this.players = new Hand[]{ yourHand, enemyHand };
+        this.turn = 1;
+        this.gameMode = gameMode;
+        this.optimizationMode = optimizationMode;
+        this.yourBGSkills = yourBGSkills;
+        this.enemyBGSkills = enemyBGSkills;
+        this.assaultBloodlusted = false;
+        this.selectionArray = new ArrayList<>();
     }
 
     public void prepareAction() {
-        damagedUnitsToItems.clear();
+        damagedUnitsToTimes.clear();
     }
 
     public void finalizeAction() {
-        for (CardStatus dmgStatus : damagedUnitsToItems.keySet()) {
-            int dmg = damagedUnitsToItems.get(dmgStatus);
+        for (CardStatus dmgStatus : damagedUnitsToTimes.keySet()) {
+            int dmg = damagedUnitsToTimes.get(dmgStatus);
 
             if (dmg == 0 || !dmgStatus.isAlive()) continue;
 
@@ -103,11 +116,13 @@ public class Field {
     }
 
     void incDamagedUnitsToTimes(CardStatus status) {
-        int dmg = damagedUnitsToItems.getOrDefault(status, 0) + 1;
-        damagedUnitsToItems.put(status, dmg);
+        int dmg = damagedUnitsToTimes.getOrDefault(status, 0) + 1;
+        damagedUnitsToTimes.put(status, dmg);
     }
 
-
+    public int getDamagedUnitsToTimes(CardStatus status) {
+        return damagedUnitsToTimes.getOrDefault(status, 0);
+    }
 
     // Getters & Setters
     public Hand[] getPlayers() {
@@ -263,9 +278,11 @@ public class Field {
         return null;
     }
 
+    public void shuffleSelection() { Collections.shuffle(selectionArray, random); }
+
     /**
      * @param cards = list of cards to select from
-     * @param f = functor that holds the condition of adding selection
+     * @param pred = functor that holds the condition of adding selection
      * @return new selection array size
      */
     int makeSelectionArray(List<CardStatus> cards, Predicate<CardStatus> pred) {
