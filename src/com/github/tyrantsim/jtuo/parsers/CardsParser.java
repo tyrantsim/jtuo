@@ -151,7 +151,6 @@ public class CardsParser {
             
             recognizeCardType(baseCard);
             Card topLevelCard = baseCard.clone();
-            baseCard.setTopLevelCard(topLevelCard);
             
             //System.out.println(baseCard.toString());
             
@@ -180,6 +179,8 @@ public class CardsParser {
                 topLevelCard = card;
                 //System.out.println(card.toString());
             }
+
+            baseCard.setTopLevelCard(topLevelCard);
         }
         return cards;
     }
@@ -281,7 +282,7 @@ public class CardsParser {
             if (id == 43451 || id == 43452) {
                 baseCard.setCategory(CardCategory.DOMINION_MATERIAL);
             }
-            break;
+            if (id < 50238) break; // Dominions start at 50238
         case 51:
         case 52:
         case 53:

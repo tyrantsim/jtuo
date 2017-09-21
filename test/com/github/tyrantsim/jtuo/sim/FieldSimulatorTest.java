@@ -16,8 +16,8 @@ import java.util.Random;
 
 public class FieldSimulatorTest {
 
-    private static final String yourDeckString = "Nexor the Farseer, Broodmother's Nexus, Azure Carver #2, Towering Titan #2";
-    private static final String enemyDeckString = "Octane Optimized, Alpha Replicant, Vile Darter #5";
+    private static final String yourDeckString = "Daedalus Enraged, Broodmother's Nexus, Azure Carver #2, Towering Titan #2";
+    private static final String enemyDeckString = "Octane Optimized, Alpha Replicant, Shieldwolf #5";
     private static final Random random = new Random();
     private static List<Deck> enemyDecks = new ArrayList<>();
 
@@ -89,9 +89,10 @@ public class FieldSimulatorTest {
     @Test
     public void testCardSkills() throws Exception {
 
-        for (Card c: Cards.allCards) {
-            System.out.println(Cards.cardDescription(c));
-        }
+        //for (Card c: Cards.allCards) System.out.println(Cards.cardDescription(c));
+        Card nexor = Cards.getCardByName("Octane Optimized").clone();
+        System.out.println(Cards.cardDescription(nexor));
+
     }
 
 }

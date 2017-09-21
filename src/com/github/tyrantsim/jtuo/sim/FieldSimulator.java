@@ -12,6 +12,7 @@ import com.github.tyrantsim.jtuo.util.Pair;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 
 import static com.github.tyrantsim.jtuo.util.Utils.safeMinus;
@@ -43,8 +44,6 @@ public class FieldSimulator {
             turnStartPhase(field); // summon may postpone skills tp be resolved
             resolveSkill(field); // resolve postponed skills recursively
             field.finalizeAction();
-
-            boolean bgeMegamorphosis = field.hasBGEffect(field.getTapi(), PassiveBGE.MEGAMORPHOSIS);
 
             // Play a card
             Card playedCard = field.getTap().getDeck().next();
@@ -1479,12 +1478,12 @@ public class FieldSimulator {
 
             case ENFEEBLE:
 
-                dst.setEnfeebled(dst.getEnfeebled() + (int) s.getX());
+                dst.setEnfeebled(dst.getEnfeebled() + s.getX());
                 break;
 
             case ENHANCE:
 
-                dst.addEnhancedValue(s.getS().ordinal() + dst.getPrimarySkillOffset()[s.getS().ordinal()], (int) s.getX());
+                dst.addEnhancedValue(s.getS().ordinal() + dst.getPrimarySkillOffset()[s.getS().ordinal()], s.getX());
                 break;
 
             case EVOLVE:
@@ -1499,12 +1498,12 @@ public class FieldSimulator {
 
             case HEAL:
 
-                dst.addHP((int) s.getX());
+                dst.addHP(s.getX());
 
                 // Passive BGE: Zealot's Preservation
                 if (field.hasBGEffect(field.tapi, PassiveBGE.ZEALOTSPRESERVATION)
                         && src.getCard().getType() == CardType.ASSAULT) {
-                    int bgeValue = (int) ((s.getX() + 1) / 2);
+                    int bgeValue = (int) (((float) s.getX() + 1) / 2);
                     debug(1, "Zealot's Preservation: %s Protect %d on %s",
                             src.description(), bgeValue, dst.description());
                     dst.setProtectedBy(dst.getProtectedBy() + bgeValue);
@@ -1518,15 +1517,15 @@ public class FieldSimulator {
 
             case MEND:
 
-                dst.addHP((int) s.getX());
+                dst.addHP(s.getX());
                 break;
 
             case BESIEGE:
 
                 if (dst.getCard().getType() == CardType.STRUCTURE) {
-                    removeHP(field, dst, (int) s.getX());
+                    removeHP(field, dst, s.getX());
                 } else {
-                    int strikeDmg = safeMinus((int) ((s.getX() + 1) / 2 + dst.getEnfeebled()),
+                    int strikeDmg = safeMinus((int) (((float) s.getX() + 1) / 2 + dst.getEnfeebled()),
                             src.isOverloaded() ? 0 : dst.protectedValue());
                     removeHP(field, dst, strikeDmg);
                 }
@@ -1539,21 +1538,21 @@ public class FieldSimulator {
 
             case PROTECT:
 
-                dst.setProtectedBy(dst.getProtectedBy() + (int) s.getX());
+                dst.setProtectedBy(dst.getProtectedBy() + s.getX());
                 break;
 
             case RALLY:
 
-                dst.addTempAttackBuff((int) s.getX());
+                dst.addTempAttackBuff(s.getX());
                 break;
 
             case ENRAGE:
 
-                dst.setEnraged(dst.getEnraged() + (int) s.getX());
+                dst.setEnraged(dst.getEnraged() + s.getX());
 
                 // Passive BGE: Furiosity
                 if (field.hasBGEffect(field.tapi, PassiveBGE.FURIOSITY) && dst.canBeHealed()) {
-                    int bgeValue = (int) s.getX();
+                    int bgeValue = s.getX();
                     debug(1, "Furiosity: %s Heals %s for %d",
                             src.description(), dst.description(), bgeValue);
                     dst.addHP(bgeValue);
@@ -1562,12 +1561,12 @@ public class FieldSimulator {
 
             case ENTRAP:
 
-                dst.setEntrapped(dst.getEntrapped() + (int) s.getX());
+                dst.setEntrapped(dst.getEntrapped() + s.getX());
                 break;
 
             case RUSH:
 
-                dst.setDelay(dst.getDelay() - Math.min(Math.max((int) s.getX(), 1), dst.getDelay()));
+                dst.setDelay(dst.getDelay() - Math.min(Math.max(s.getX(), 1), dst.getDelay()));
                 if (dst.getDelay() == 0) {
                     checkAndPerformValor(field, dst);
                     checkAndPerformSummon(field, dst);
@@ -1576,19 +1575,19 @@ public class FieldSimulator {
 
             case SIEGE:
 
-                removeHP(field, dst, (int) s.getX());
+                removeHP(field, dst, s.getX());
                 break;
 
             case STRIKE:
 
-                int strikeDmg = safeMinus((int) ((s.getX() + 1) / 2 + dst.getEnfeebled()),
+                int strikeDmg = safeMinus((int) (((float) s.getX() + 1) / 2 + dst.getEnfeebled()),
                         src.isOverloaded() ? 0 : dst.protectedValue());
                 removeHP(field, dst, strikeDmg);
                 break;
 
             case WEAKEN:
 
-                dst.addTempAttackBuff(-Math.min((int) s.getX(), dst.getAttackPower()));
+                dst.addTempAttackBuff(-Math.min(s.getX(), dst.getAttackPower()));
                 break;
 
             case SUNDER:
@@ -1629,11 +1628,11 @@ public class FieldSimulator {
 
                 final SkillSpec mimSS = mimickableSkills.get(mimIdx);
                 Skill mimSkillId = mimSS.getId();
-                int skillValue = (int) s.getX() + src.getEnhanced(mimSkillId);
+                int skillValue = s.getX() + src.getEnhanced(mimSkillId);
                 SkillSpec mimickedSS = new SkillSpec(mimSkillId, skillValue, Faction.ALL_FACTIONS, mimSS.getN(), 0,
                         mimSS.getS(), mimSS.getS2(), mimSS.isAll(), mimSS.getCardId(), SkillTrigger.ACTIVATE);
                 debug(1, " * Mimicked skill: %s", mimickedSS.description());
-                performTargettedHostileFast(Skill.MIMIC, field, src, mimickedSS);
+                performTargettedHostileFast(mimSkillId, field, src, mimickedSS);
                 break;
 
             default: assert(false);
