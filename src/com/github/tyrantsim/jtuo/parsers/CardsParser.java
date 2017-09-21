@@ -5,7 +5,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -20,6 +19,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -105,49 +105,28 @@ public class CardsParser {
         }
     }
 
-    private static Map<Integer, Card> readCards(Document parse) {
+    private static Map<Integer, Card> readCards(Document document) {
         TreeMap<Integer, Card> cards = new TreeMap<>();
-        NodeList units = parse.getElementsByTagName("unit");
+        NodeList units = document.getElementsByTagName("unit");
+        
         for (int i = 0; i < units.getLength(); i++) {
-            Node unit = units.item(i);
-            NodeList unitChilds = unit.getChildNodes();
-            String name = "";
-            String baseId = "";
-            Integer baseIdInt = null;
-            Integer idInt = null;
+            Element unit = (Element) units.item(i);
+            
+            String name = unit.getElementsByTagName("name").item(0).getTextContent();
+            Integer baseIdInt = Integer.parseInt(unit.getElementsByTagName("id").item(0).getTextContent());
             Card baseCard = new Card();
-            Card upgradeCard = null;
-            Map<Integer, Card> upgrades = new TreeMap<>();
+            baseCard.setBaseId(baseIdInt);
+            baseCard.setId(baseIdInt);
+            baseCard.setName(name);
+
+            cards.put(baseIdInt, baseCard);
+
+            baseCard.setRarity(Integer.parseInt(unit.getElementsByTagName("rarity").item(0).getTextContent()));
+            baseCard.setFaction(Faction.values()[Integer.parseInt(unit.getElementsByTagName("type").item(0).getTextContent())]);
+
+            NodeList unitChilds = unit.getChildNodes();
             for (int j = 0; j < unitChilds.getLength(); j++) {
                 Node unitChild = unitChilds.item(j);
-                //System.out.println(unitChild.getNodeName());
-                if (unitChild.getNodeName().equals("id")) {
-                    if (unitChild.getFirstChild().getNodeValue() != null) {
-                        baseId = unitChild.getFirstChild().getNodeValue();
-                        baseIdInt = Integer.parseInt(baseId);
-                    }
-                    baseCard.setBaseId(baseIdInt);
-                    baseCard.setId(baseIdInt);
-                }
-
-                if (unitChild.getNodeName().equals("name")) {
-                    if (unitChild.getFirstChild().getNodeValue() != null) {
-                        name = unitChild.getFirstChild().getNodeValue();
-                        baseCard.setName(name);
-                    }
-                }
-
-                if (unitChild.getNodeName().equals("rarity")) {
-                    if (unitChild.getFirstChild().getNodeValue() != null) {
-                        baseCard.setRarity(Integer.parseInt(unitChild.getFirstChild().getNodeValue()));
-                    }
-                }
-                
-                if (unitChild.getNodeName().equals("type")) {
-                    if (unitChild.getFirstChild().getNodeValue() != null) {
-                        baseCard.setFaction(Faction.values()[Integer.parseInt(unitChild.getFirstChild().getNodeValue())]);
-                    }
-                }
                 if (unitChild.getNodeName().equals("fortress_type")) {
                     if (unitChild.getFirstChild().getNodeValue() != null) {
                         switch (Integer.parseInt(unitChild.getFirstChild().getNodeValue())) {
@@ -161,63 +140,41 @@ public class CardsParser {
                         }
                     }
                 }
-                
                 if (unitChild.getNodeName().equals("set")) {
                     if (unitChild.getFirstChild().getNodeValue() != null) {
                         int set = Integer.parseInt(unitChild.getFirstChild().getNodeValue());
                         baseCard.setSet(set);
                     }
                 }
-
-                if (baseCard != null) {
-                    updateSameCardAttributes(unitChild, baseCard);
-                }
-                
-                if (baseIdInt != null && name != null && !name.isEmpty()) {
-                    cards.put(baseIdInt, baseCard);
-
-                    // System.out.println("" + name);
-                    if (unitChild.getNodeName().equals("upgrade")) {
-                        if (upgradeCard == null)
-                            upgradeCard = baseCard.clone();
-                        Card card = upgradeCard;
-                        NodeList upgradeChilds = unitChild.getChildNodes();
-                        String id = "";
-                        //card.clearAllSkills();
-                        for (int l = 0; l < upgradeChilds.getLength(); l++) {
-                            Node upgradeChild = upgradeChilds.item(l);
-                            if (upgradeChild.getNodeName().equals("level")) {
-                                String level = upgradeChild.getFirstChild().getNodeValue();
-                                if (level != null) {
-                                    card.setLevel(Integer.parseInt(level));
-                                }
-                            }
-                            if (upgradeChild.getNodeName().equals("card_id")) {
-                                id = upgradeChild.getFirstChild().getNodeValue();
-                                idInt = Integer.parseInt(id);
-                                card.setId(idInt);
-                            }
-                            if (upgradeChild.getNodeName().equals("name")) {
-                                if (upgradeChild.getFirstChild().getNodeValue() != null) {
-                                    name = upgradeChild.getFirstChild().getNodeValue();
-                                    card.setName(name);
-                                }
-                            }
-                            updateSameCardAttributes(upgradeChild, card);
-                        }
-
-                        if (id != null) {
-                            upgrades.put(card.getLevel(), card);
-                            card.setId(idInt);
-                            cards.put(idInt, card);
-                        }
-
-                        upgradeCard = card.clone();
-                    }
-                }
+                updateSameCardAttributes(unitChild, baseCard, false);
             }
+            
+            updateSkills(baseCard);
             recognizeCardType(baseCard);
-            Card topLevelCard = baseCard.clone();
+            Card topLevelCard = baseCard;
+
+            Map<Integer, Card> upgrades = new TreeMap<>();
+
+            NodeList upgradeChilds = unit.getElementsByTagName("upgrade");
+            for (int l = 0; l < upgradeChilds.getLength(); l++) {
+                Card card = baseCard.clone();
+                Element upgradeChild = (Element) upgradeChilds.item(l);
+                Integer idInt = Integer.parseInt(upgradeChild.getElementsByTagName("card_id").item(0).getTextContent());
+                card.setId(idInt);
+                card.setLevel(Integer.parseInt(upgradeChild.getElementsByTagName("level").item(0).getTextContent()));
+
+                upgrades.put(card.getLevel(), card);
+                cards.put(idInt, card);
+                NodeList nameList = upgradeChild.getElementsByTagName("name");
+                if (nameList.getLength() > 0) {
+                    card.setName(nameList.item(0).getTextContent());
+                }
+                for (int j = 0; j < upgradeChild.getChildNodes().getLength(); j++) {
+                    updateSameCardAttributes(upgradeChild.getChildNodes().item(j), card, true);
+                }
+                updateSkills(card);
+            }
+
             for (Card card : upgrades.values()) {
                 if (card.getLevel() > topLevelCard.getLevel()) {
                     topLevelCard = card;
@@ -237,11 +194,12 @@ public class CardsParser {
         return cards;
     }
 
-    private static void updateSkills(Card card, ArrayList<SkillSpec> skillSpecs) throws AssertionError {
-        card.setSkills(skillSpecs);
+    private static void updateSkills(Card card) throws AssertionError {
         card.setSkillsOnPlay(new ArrayList<>());
+        card.setSkillsOnAttacked(new ArrayList<>());
         card.setSkillsOnDeath(new ArrayList<>());
-        for (SkillSpec skillSpec : skillSpecs) {
+        
+        for (SkillSpec skillSpec : card.getSkills()) {
             if (skillSpec.getTrigger() != null) {
                 // add a new one
                 switch (skillSpec.getTrigger()) {
@@ -332,7 +290,7 @@ public class CardsParser {
         case 26:
         case 27:
         case 28:
-        case 29:            
+        case 29:
             baseCard.setType(CardType.COMMANDER);
             break;
         case 30:
@@ -366,8 +324,8 @@ public class CardsParser {
         case 53:
         case 54:
             // Nexus start at 50238
-//          // [50001 .. 55000]
-//          else if (card->m_id < 55001)
+            // // [50001 .. 55000]
+            // else if (card->m_id < 55001)
             baseCard.setType(CardType.STRUCTURE);
             baseCard.setCategory(CardCategory.DOMINION_ALPHA);
             break;
@@ -376,7 +334,7 @@ public class CardsParser {
             baseCard.setType(CardType.ASSAULT);
             break;
         }
-        
+
         // fortresses
         if (baseCard.getSet() == 8000) {
             if (baseCard.getType() != CardType.STRUCTURE) {
@@ -390,8 +348,7 @@ public class CardsParser {
 
     }
 
-    private static void updateSameCardAttributes(Node unitChild, Card card) {
-
+    private static void updateSameCardAttributes(Node unitChild, Card card, boolean upgrade) {
         if (unitChild.getNodeName().equals("cost") && unitChild.getFirstChild() != null) {
             String cost = unitChild.getFirstChild().getNodeValue();
             card.setDelay(Integer.parseInt(cost));
@@ -444,5 +401,4 @@ public class CardsParser {
 
         }
     }
-
 }

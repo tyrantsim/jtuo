@@ -224,9 +224,9 @@ public class XmlBasedParser {
                 if (skillNode.getAttributes().getNamedItem("all") != null) {
                     all = Boolean.parseBoolean(skillNode.getAttributes().getNamedItem("all").getTextContent());
                 }
-                Float x = null;
+                Integer x = null;
                 if (skillNode.getAttributes().getNamedItem("x") != null) {
-                    x = Float.parseFloat(skillNode.getAttributes().getNamedItem("x").getTextContent());
+                    x = Integer.parseInt(skillNode.getAttributes().getNamedItem("x").getTextContent());
                 }
                 try {
                     SkillSpec skillSpec = new SkillSpec(Skill.valueOf(skillId.toUpperCase()), x, Faction.ALL_FACTIONS, 0, 0, null, null, all, 0, SkillTrigger.PLAY);                    
@@ -501,7 +501,7 @@ public class XmlBasedParser {
     private static void setSkillSpec(Card card, String x, String y, String all, String c, String card_id, String trigger, SkillSpec new_skill, String n, String s, String s2) {
         new_skill.setAll(all != null && all.equals("1"));
         if (!x.isEmpty()) {
-            new_skill.setX(Float.parseFloat(x));
+            new_skill.setX(Integer.parseInt(x));
         }
         if (!y.isEmpty()) {
             new_skill.setY(Faction.values()[Integer.parseInt(y)]);

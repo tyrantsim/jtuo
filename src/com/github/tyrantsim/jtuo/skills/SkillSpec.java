@@ -6,7 +6,7 @@ import com.github.tyrantsim.jtuo.cards.Faction;
 public class SkillSpec implements Cloneable {
 
     Skill id;
-    float x;
+    int x;
     Faction y;
     int n;
     int c;
@@ -16,7 +16,7 @@ public class SkillSpec implements Cloneable {
     int cardId;
     SkillTrigger trigger;
 
-    public SkillSpec(Skill id, float x, Faction y, int n, int c, Skill s, Skill s2, boolean all, int cardId, SkillTrigger trigger) {
+    public SkillSpec(Skill id, int x, Faction y, int n, int c, Skill s, Skill s2, boolean all, int cardId, SkillTrigger trigger) {
         super();
         this.id = id;
         this.x = x;
@@ -41,11 +41,11 @@ public class SkillSpec implements Cloneable {
         this.id = id;
     }
 
-    public float getX() {
+    public int getX() {
         return x;
     }
 
-    public void setX(float x) {
+    public void setX(int x) {
         this.x = x;
     }
 
@@ -133,7 +133,6 @@ public class SkillSpec implements Cloneable {
     }
 
     public String description() {
-
         return ((trigger == SkillTrigger.PLAY) ? "(On Play)"
                 : (trigger == SkillTrigger.ATTACKED) ? "(On Attacked)"
                 : (trigger == SkillTrigger.DEATH) ? "(On Death)" : "")
@@ -143,13 +142,13 @@ public class SkillSpec implements Cloneable {
                 + (y == Faction.ALL_FACTIONS ? "" : " " + y.toString())
                 + (s == Skill.NO_SKILL ? "" : " " + s.toString())
                 + (s2 == Skill.NO_SKILL ? "" : " " + s2.toString())
-                + (x == 0 ? "" : " " + (int) x)
+                + (x == 0 ? "" : " " + x)
                 + (c == 0 ? "" : " every " + c);
     }
     
     @Override
     public String toString() {
-        return id + " " + trigger + "-" + cardId;
+        return id + "-" + x + (trigger == null ? "" : trigger + "-" + cardId);
     }
 
 }
