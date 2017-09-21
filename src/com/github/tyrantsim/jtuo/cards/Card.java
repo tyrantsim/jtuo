@@ -102,7 +102,7 @@ public class Card implements Cloneable {
         this.usedForCards = card.usedForCards;
     }
 
-    void addSkill(SkillTrigger trigger, Skill id, int x, Faction y, int n, int c, Skill s, Skill s2, boolean all, int cardId) {
+    public void addSkill(SkillTrigger trigger, Skill id, int x, Faction y, int n, int c, Skill s, Skill s2, boolean all, int cardId) {
         SkillSpec spec = new SkillSpec(id, x, y, n, c, s, s2, all, cardId, trigger);
 
         // remove previous copy of such skill.id
@@ -143,7 +143,7 @@ public class Card implements Cloneable {
         skillTrigger[id.ordinal()] = trigger;
     }
 
-    void addSkill(SkillTrigger trigger, Skill id, int x, Faction y, int n, int c, Skill s) {
+    public void addSkill(SkillTrigger trigger, Skill id, int x, Faction y, int n, int c, Skill s) {
         addSkill(trigger, id, x, y, n, c, s, Skill.NO_SKILL, false, 0);
     }
 
@@ -171,13 +171,38 @@ public class Card implements Cloneable {
         this.usedForCards.put(usedFor, amount);
     }
 
+    public void clearAllSkills() {
+        skills.clear();
+        skillsOnPlay.clear();
+        skillsOnAttacked.clear();
+        skillsOnDeath.clear();
+        skillValue = new int[Skill.values().length];
+    }
+
     @Override
     public Card clone() {
         try {
             Card copy = (Card) super.clone();
+            copy.id = this.id;
+            copy.baseId = this.baseId;
+            copy.type = this.type;
+            copy.category = this.category;
+            copy.name = this.name;
+            copy.level = this.level;
+            copy.faction = this.faction;
+            copy.rarity = this.rarity;
+            copy.fusionLevel = this.fusionLevel;
+            copy.set = this.set;
+            copy.attack = this.attack;
+            copy.health = this.health;
+            copy.delay = this.delay;
             copy.skills = new ArrayList<>(this.skills);
             copy.skillsOnPlay = new ArrayList<>(this.skillsOnPlay);
             copy.skillsOnDeath = new ArrayList<>(this.skillsOnDeath);
+            copy.skillValue = this.skillValue.clone();
+            copy.skillTrigger = this.skillTrigger.clone();
+            copy.topLevelCard = this.topLevelCard;
+            copy.recipeCost = this.recipeCost;
             copy.recipeCards = new HashMap<>(this.recipeCards);
             copy.usedForCards = new HashMap<>(this.usedForCards);
             return copy;

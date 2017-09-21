@@ -5,6 +5,17 @@ import com.github.tyrantsim.jtuo.cards.Faction;
 
 public class SkillSpec implements Cloneable {
 
+    Skill id;
+    float x;
+    Faction y;
+    int n;
+    int c;
+    Skill s;
+    Skill s2;
+    boolean all;
+    int cardId;
+    SkillTrigger trigger;
+
     public SkillSpec(Skill id, float x, Faction y, int n, int c, Skill s, Skill s2, boolean all, int cardId, SkillTrigger trigger) {
         super();
         this.id = id;
@@ -21,18 +32,6 @@ public class SkillSpec implements Cloneable {
 
     public SkillSpec() {
     }
-
-    Skill id;
-    float x;
-    Faction y;
-    int n;
-    int c;
-    Skill s;
-    Skill s2;
-    boolean all;
-    int cardId;
-    SkillTrigger trigger;
-
 
     public Skill getId() {
         return id;
@@ -138,13 +137,13 @@ public class SkillSpec implements Cloneable {
         return ((trigger == SkillTrigger.PLAY) ? "(On Play)"
                 : (trigger == SkillTrigger.ATTACKED) ? "(On Attacked)"
                 : (trigger == SkillTrigger.DEATH) ? "(On Death)" : "")
-                + id.toString()
+                + id.getDescription()
                 + (cardId == 0 ? "" : " " + Cards.getCardNameByIdSafe(cardId) + " id[" + cardId + "]")
                 + (all ? " all" : n == 0 ? "" : " " + n)
                 + (y == Faction.ALL_FACTIONS ? "" : " " + y.toString())
                 + (s == Skill.NO_SKILL ? "" : " " + s.toString())
                 + (s2 == Skill.NO_SKILL ? "" : " " + s2.toString())
-                + (x == 0 ? "" : " " + x)
+                + (x == 0 ? "" : " " + (int) x)
                 + (c == 0 ? "" : " every " + c);
     }
     

@@ -1,9 +1,12 @@
 package com.github.tyrantsim.jtuo.sim;
 
+import com.github.tyrantsim.jtuo.cards.Card;
+import com.github.tyrantsim.jtuo.cards.Cards;
 import com.github.tyrantsim.jtuo.decks.Deck;
 import com.github.tyrantsim.jtuo.decks.Decks;
 import com.github.tyrantsim.jtuo.parsers.CardsParser;
 import com.github.tyrantsim.jtuo.parsers.DeckParser;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -18,10 +21,13 @@ public class FieldSimulatorTest {
     private static final Random random = new Random();
     private static List<Deck> enemyDecks = new ArrayList<>();
 
+    @BeforeClass
+    public static void loadCards() throws Exception {
+        CardsParser.initialize();
+    }
+
     @Test
     public void testFieldSim() throws Exception {
-
-        CardsParser.initialize();
 
         Deck yourDeck = null;
 
@@ -80,4 +86,13 @@ public class FieldSimulatorTest {
         System.out.println("done");
     }
 
+    @Test
+    public void testCardSkills() throws Exception {
+
+        for (Card c: Cards.allCards) {
+            System.out.println(Cards.cardDescription(c));
+        }
+    }
+
 }
+

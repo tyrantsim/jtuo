@@ -116,7 +116,7 @@ public class CardsParser {
             Integer baseIdInt = null;
             Integer idInt = null;
             Card baseCard = new Card();
-            ArrayList<SkillSpec> skillSpecs = new ArrayList<>();
+            Card upgradeCard = null;
             Map<Integer, Card> upgrades = new TreeMap<>();
             for (int j = 0; j < unitChilds.getLength(); j++) {
                 Node unitChild = unitChilds.item(j);
@@ -129,6 +129,7 @@ public class CardsParser {
                     baseCard.setBaseId(baseIdInt);
                     baseCard.setId(baseIdInt);
                 }
+
                 if (unitChild.getNodeName().equals("name")) {
                     if (unitChild.getFirstChild().getNodeValue() != null) {
                         name = unitChild.getFirstChild().getNodeValue();
@@ -151,7 +152,7 @@ public class CardsParser {
                     if (unitChild.getFirstChild().getNodeValue() != null) {
                         switch (Integer.parseInt(unitChild.getFirstChild().getNodeValue())) {
                         case 1:
-                            baseCard.setCategory(CardCategory.FORTRESS_DEFENSE);                            
+                            baseCard.setCategory(CardCategory.FORTRESS_DEFENSE);
                             break;
                         case 2:
                             baseCard.setCategory(CardCategory.FORTRESS_SIEGE);
@@ -167,8 +168,9 @@ public class CardsParser {
                         baseCard.setSet(set);
                     }
                 }
+
                 if (baseCard != null) {
-                    updateSameCardAttributes(unitChild, baseCard, skillSpecs);
+                    updateSameCardAttributes(unitChild, baseCard);
                 }
                 
                 if (baseIdInt != null && name != null && !name.isEmpty()) {
@@ -176,12 +178,12 @@ public class CardsParser {
 
                     // System.out.println("" + name);
                     if (unitChild.getNodeName().equals("upgrade")) {
-                        // Card card = (Card)baseCard.clone();
-                        ArrayList<SkillSpec> skillSpecsUpgraded = new ArrayList<>(); 
-                        Card card = baseCard.clone();
+                        if (upgradeCard == null)
+                            upgradeCard = baseCard.clone();
+                        Card card = upgradeCard;
                         NodeList upgradeChilds = unitChild.getChildNodes();
                         String id = "";
-                        card.setSkills(new ArrayList<SkillSpec>());
+                        //card.clearAllSkills();
                         for (int l = 0; l < upgradeChilds.getLength(); l++) {
                             Node upgradeChild = upgradeChilds.item(l);
                             if (upgradeChild.getNodeName().equals("level")) {
@@ -195,31 +197,27 @@ public class CardsParser {
                                 idInt = Integer.parseInt(id);
                                 card.setId(idInt);
                             }
-                            if (unitChild.getNodeName().equals("name")) {
-                                if (unitChild.getFirstChild().getNodeValue() != null) {
-                                    name = unitChild.getFirstChild().getNodeValue();
+                            if (upgradeChild.getNodeName().equals("name")) {
+                                if (upgradeChild.getFirstChild().getNodeValue() != null) {
+                                    name = upgradeChild.getFirstChild().getNodeValue();
                                     card.setName(name);
                                 }
                             }
-                            updateSameCardAttributes(unitChild, card, skillSpecsUpgraded);
+                            updateSameCardAttributes(upgradeChild, card);
                         }
-                        if (!skillSpecsUpgraded.isEmpty()) {
-                            card.setSkills(skillSpecsUpgraded);
-                            updateSkills(card, skillSpecsUpgraded);
-                            skillSpecs = skillSpecsUpgraded;
-                        }
+
                         if (id != null) {
                             upgrades.put(card.getLevel(), card);
                             card.setId(idInt);
                             cards.put(idInt, card);
                         }
 
+                        upgradeCard = card.clone();
                     }
                 }
             }
-            updateSkills(baseCard, skillSpecs);
             recognizeCardType(baseCard);
-            Card topLevelCard = baseCard;
+            Card topLevelCard = baseCard.clone();
             for (Card card : upgrades.values()) {
                 if (card.getLevel() > topLevelCard.getLevel()) {
                     topLevelCard = card;
@@ -392,10 +390,11 @@ public class CardsParser {
 
     }
 
-    private static void updateSameCardAttributes(Node unitChild, Card card, List<SkillSpec> skillSpecs) {
+    private static void updateSameCardAttributes(Node unitChild, Card card) {
+
         if (unitChild.getNodeName().equals("cost") && unitChild.getFirstChild() != null) {
             String cost = unitChild.getFirstChild().getNodeValue();
-            card.setRecipeCost(Integer.parseInt(cost));
+            card.setDelay(Integer.parseInt(cost));
         }
 
         if (unitChild.getNodeName().equals("attack") && unitChild.getFirstChild() != null) {
@@ -413,47 +412,37 @@ public class CardsParser {
             card.setFusionLevel(Integer.parseInt(level));
         }
         if (unitChild.getNodeName().equals("skill")) {
+
             NamedNodeMap skill = unitChild.getAttributes();
-            String id = skill.getNamedItem("id") == null ? "" : skill.getNamedItem("id").getNodeValue();
-            String x = skill.getNamedItem("x") == null ? "" : skill.getNamedItem("x").getNodeValue();
-            String y = skill.getNamedItem("y") == null ? "" : skill.getNamedItem("y").getNodeValue();
-            String all = skill.getNamedItem("all") == null ? "" : skill.getNamedItem("all").getNodeValue();
-            String c = skill.getNamedItem("c") == null ? "" : skill.getNamedItem("c").getNodeValue();
-            String card_id = skill.getNamedItem("card_id") == null ? "" : skill.getNamedItem("card_id").getNodeValue();
-            String trigger = skill.getNamedItem("trigger") == null ? "" : skill.getNamedItem("trigger").getNodeValue();
-            String n = skill.getNamedItem("n") == null ? "" : skill.getNamedItem("n").getNodeValue();
-            String s = skill.getNamedItem("s") == null ? "" : skill.getNamedItem("s").getNodeValue();
-            String s2 = skill.getNamedItem("s2") == null ? "" : skill.getNamedItem("s2").getNodeValue();
-
-            
-            SkillSpec new_skill = new SkillSpec(); // Skill.valueOf(id.toUpperCase()), x, y, n, c, s, s2, all, Integer.valueOf(card_id), SkillTrigger.valueOf(trigger.toUpperCase())
-            new_skill.setId(Skill.valueOf(id.toUpperCase()));
-            setSkillSpec(card, x, y, all, c, card_id, trigger, new_skill, n, s, s2);
-            skillSpecs.add(new_skill);
-        }
-    }
-
-    private static void setSkillSpec(Card card, String x, String y, String all, String c, String card_id, String trigger, SkillSpec new_skill, String n, String s, String s2) {
-        new_skill.setAll(all != null && all.equals("1"));
-        if (!x.isEmpty()) {
-            new_skill.setX(Float.parseFloat(x));
-        }
-        if (!y.isEmpty()) {
-            new_skill.setY(Faction.values()[Integer.parseInt(y)]);
-        }
-
-        if (!c.isEmpty()) {
-            new_skill.setC(Integer.parseInt(c));
-        }
-        if (!card_id.isEmpty()) {
-            new_skill.setCardId(Integer.parseInt(card_id));
-        }
-        if (trigger != null && !trigger.isEmpty()) {
             try {
-                new_skill.setTrigger(SkillTrigger.valueOf(trigger.toUpperCase()));
+                Skill id = skill.getNamedItem("id") == null ? Skill.NO_SKILL
+                        : Skill.valueOf(skill.getNamedItem("id").getNodeValue().toUpperCase());
+                int x = skill.getNamedItem("x") == null ? 0
+                        : Integer.parseInt(skill.getNamedItem("x").getNodeValue());
+                Faction y = skill.getNamedItem("y") == null ? Faction.ALL_FACTIONS
+                        : Faction.values()[Integer.parseInt(skill.getNamedItem("y").getNodeValue())];
+                boolean all = skill.getNamedItem("all") != null
+                        && skill.getNamedItem("all").getNodeValue().equals("1");
+                int c = skill.getNamedItem("c") == null ? 0
+                        : Integer.parseInt(skill.getNamedItem("c").getNodeValue());
+                int card_id = skill.getNamedItem("card_id") == null ? 0
+                        : Integer.parseInt(skill.getNamedItem("card_id").getNodeValue());
+                SkillTrigger trigger = skill.getNamedItem("trigger") == null ? SkillTrigger.ACTIVATE
+                        : SkillTrigger.valueOf(skill.getNamedItem("trigger").getNodeValue().toUpperCase());
+                int n = skill.getNamedItem("n") == null ? 0
+                        : Integer.parseInt(skill.getNamedItem("n").getNodeValue());
+                Skill s = skill.getNamedItem("s") == null ? Skill.NO_SKILL
+                        : Skill.valueOf(skill.getNamedItem("s").getNodeValue().toUpperCase());
+                Skill s2 = skill.getNamedItem("s2") == null ? Skill.NO_SKILL
+                        : Skill.valueOf(skill.getNamedItem("s2").getNodeValue().toUpperCase());
+
+                card.addSkill(trigger, id, x, y, n, c, s, s2, all, card_id);
+
             } catch (IllegalArgumentException e) {
-                System.out.println("Unkonow trigger: " + trigger + " " + e.getLocalizedMessage());
+                System.err.println("Error: failed to parse skills for " + card.getName());
             }
+
         }
     }
+
 }

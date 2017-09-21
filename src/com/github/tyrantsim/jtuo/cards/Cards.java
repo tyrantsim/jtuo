@@ -1,6 +1,7 @@
 package com.github.tyrantsim.jtuo.cards;
 
 import com.github.tyrantsim.jtuo.skills.Skill;
+import com.github.tyrantsim.jtuo.skills.SkillSpec;
 
 import java.util.*;
 
@@ -83,6 +84,12 @@ public class Cards {
         } catch (Exception e) {
             return "UnknownCard.id[" + id + "]";
         }
+    }
+
+    public static Card getCardByName(String name) throws Exception {
+        if (cardsByName.containsKey(simplifyName(name)))
+            return cardsByName.get(simplifyName(name));
+        throw new Exception("Unknown card name: " + name);
     }
 
     public static void organize() {
@@ -202,5 +209,53 @@ public class Cards {
 
     /* End of cards.cpp functions */
 
+    public static String cardDescription(Card c) {
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        sb.append(c.getId());
+        sb.append("] ");
+        sb.append(c.getName());
+        sb.append(" (");
+        sb.append(Rarity.values()[c.getRarity()]);
+        sb.append(" ");
+        sb.append(c.getFaction());
+        sb.append(" ");
+        sb.append(c.getType());
+        sb.append(") ");
+        sb.append(c.getAttack());
+        sb.append("/");
+        sb.append(c.getHealth());
+        sb.append("/");
+        sb.append(c.getDelay());
+        sb.append(" >>SKILLS:");
+
+        for (SkillSpec s: c.getSkillsOnPlay()) {
+            sb.append(" [");
+            sb.append(s.description());
+            sb.append("]");
+        }
+
+        for (SkillSpec s: c.getSkillsOnAttacked()) {
+            sb.append(" [");
+            sb.append(s.description());
+            sb.append("]");
+        }
+
+        for (SkillSpec s: c.getSkills()) {
+            sb.append(" [");
+            sb.append(s.description());
+            sb.append("]");
+        }
+
+        for (SkillSpec s: c.getSkillsOnDeath()) {
+            sb.append(" [");
+            sb.append(s.description());
+            sb.append("]");
+        }
+
+        return sb.toString();
+
+    }
 
 }

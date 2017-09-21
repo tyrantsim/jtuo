@@ -3,30 +3,30 @@ package com.github.tyrantsim.jtuo.skills;
 public enum Skill {
 
     // Placeholder for no-skill:
-    NO_SKILL("no skill"),
+    NO_SKILL("No Skill"),
 
     // Activation (harmful):
-    ENFEEBLE("Enfeeble"), JAM("jam"), BESIEGE("mortar"), SIEGE("siege"), STRIKE("strike"), SUNDER(""), WEAKEN(""),
+    ENFEEBLE("Enfeeble"), JAM("Jam"), BESIEGE("Mortar"), SIEGE("Siege"), STRIKE("Strike"), SUNDER("Sunder"), WEAKEN("Weaken"),
 
     // Activation (helpful):
-    ENHANCE("enhance"), EVOLVE("evolve"), HEAL("heal"), MEND("MEND"), OVERLOAD("OVERLOAD"), PROTECT("PROTECT"), RALLY("RALLY"),
-    ENRAGE("ENRAGE"), ENTRAP("ENTRAP"), RUSH("RUSH"),
+    ENHANCE("Enhance"), EVOLVE("Evolve"), HEAL("Heal"), MEND("Mend"), OVERLOAD("Overload"), PROTECT("Protect"), RALLY("Rally"),
+    ENRAGE("Enrage"), ENTRAP("Entrap"), RUSH("Rush"),
 
     // Activation (unclassified/polymorphic):
-    MIMIC("mimic"),
+    MIMIC("Mimic"),
 
     // Defensive:
-    ARMORED("ARMORED"), AVENGE("AVENGE"), CORROSIVE("CORROSIVE"), COUNTER("COUNTER"), EVADE("EVADE"), SUBDUE("SUBDUE"),
-    PAYBACK("PAYBACK"), REVENGE("REVENGE"), TRIBUTE("TRIBUTE"), REFRESH("REFRESH"), WALL("WALL"), BARRIER("BARRIER"),
+    ARMORED("Armor"), AVENGE("Avenge"), CORROSIVE("Corrosive"), COUNTER("Counter"), EVADE("Evade"), SUBDUE("Subdue"),
+    PAYBACK("Payback"), REVENGE("Revenge"), TRIBUTE("Tribute"), REFRESH("Refresh"), WALL("Wall"), BARRIER("Barrier"),
 
     // Combat-Modifier:
-    COALITION("COALITION"), LEGION("LEGION"), PIERCE("PIERCE"), RUPTURE("RUPTURE"), SWIPE("SWIPE"), DRAIN("DRAIN"), VENOM("VENOM"),
+    COALITION("Coalition"), LEGION("Legion"), PIERCE("Pierce"), RUPTURE("Rupture"), SWIPE("Swipe"), DRAIN("Drain"), VENOM("Venom"),
 
     // Damage-Dependent:
-    BERSERK("BERSERK"), INHIBIT("INHIBIT"), SABOTAGE("SABOTAGE"), LEECH("LEECH"), POISON("POISON"),
+    BERSERK("Berserk"), INHIBIT("Inhibit"), SABOTAGE("Sabotage"), LEECH("Leech"), POISON("Poison"),
 
     // Triggered:
-    ALLEGIANCE("ALLEGIANCE"), FLURRY("FLURRY"), VALOR("VALOR"), STASIS("STASIS"), SUMMON("SUMMON");
+    ALLEGIANCE("Allegiance"), FLURRY("Flurry"), VALOR("Valor"), STASIS("Stasis"), SUMMON("Summon");
 
     private String description;
     
