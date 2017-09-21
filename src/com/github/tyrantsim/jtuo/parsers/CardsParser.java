@@ -149,15 +149,20 @@ public class CardsParser {
                 updateSameCardAttributes(unitChild, baseCard, false);
             }
             
-            updateSkills(baseCard);
             recognizeCardType(baseCard);
-            Card topLevelCard = baseCard;
-
+            Card topLevelCard = baseCard.clone();
+            baseCard.setTopLevelCard(topLevelCard);
+            
+            //System.out.println(baseCard.toString());
+            
             Map<Integer, Card> upgrades = new TreeMap<>();
 
             NodeList upgradeChilds = unit.getElementsByTagName("upgrade");
             for (int l = 0; l < upgradeChilds.getLength(); l++) {
-                Card card = baseCard.clone();
+                Card card = topLevelCard.clone();
+                card.setTopLevelCard(topLevelCard);
+                topLevelCard.addUsedForCard(card, 1);
+                
                 Element upgradeChild = (Element) upgradeChilds.item(l);
                 Integer idInt = Integer.parseInt(upgradeChild.getElementsByTagName("card_id").item(0).getTextContent());
                 card.setId(idInt);
@@ -172,53 +177,11 @@ public class CardsParser {
                 for (int j = 0; j < upgradeChild.getChildNodes().getLength(); j++) {
                     updateSameCardAttributes(upgradeChild.getChildNodes().item(j), card, true);
                 }
-                updateSkills(card);
-            }
-
-            for (Card card : upgrades.values()) {
-                if (card.getLevel() > topLevelCard.getLevel()) {
-                    topLevelCard = card;
-                    card.setType(baseCard.getType());
-                }
-            }
-            baseCard.setTopLevelCard(topLevelCard);
-            for (Card card : upgrades.values()) {
-                if (card.getLevel() == baseCard.getLevel() + 1) {
-                    baseCard.addUsedForCard(card, 1);
-                } else if (card.getLevel() != baseCard.getLevel()) {
-                    upgrades.get(card.getLevel() - 1).addUsedForCard(card, 1);
-                }
-                card.setTopLevelCard(topLevelCard);
+                topLevelCard = card;
+                //System.out.println(card.toString());
             }
         }
         return cards;
-    }
-
-    private static void updateSkills(Card card) throws AssertionError {
-        card.setSkillsOnPlay(new ArrayList<>());
-        card.setSkillsOnAttacked(new ArrayList<>());
-        card.setSkillsOnDeath(new ArrayList<>());
-        
-        for (SkillSpec skillSpec : card.getSkills()) {
-            if (skillSpec.getTrigger() != null) {
-                // add a new one
-                switch (skillSpec.getTrigger()) {
-                case ACTIVATE:
-                    break;
-                case PLAY:
-                    card.getSkillsOnPlay().add(skillSpec);
-                    break;
-                case ATTACKED:
-                    card.getSkillsOnAttacked().add(skillSpec);
-                    break;
-                case DEATH:
-                    card.getSkillsOnDeath().add(skillSpec);
-                    break;
-                default:
-                    throw new AssertionError("No storage for skill with trigger " + skillSpec.getTrigger());
-                }
-            }
-        }
     }
 
     private static void recognizeCardType(Card baseCard) {
@@ -398,7 +361,6 @@ public class CardsParser {
             } catch (IllegalArgumentException e) {
                 System.err.println("Error: failed to parse skills for " + card.getName());
             }
-
         }
     }
 }

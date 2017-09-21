@@ -213,7 +213,7 @@ public class Card implements Cloneable {
 
     @Override
     public String toString() {
-        return baseId + "/" + id + ": " + type.name() + " " + faction.name() + " " + name;
+        return baseId + "/" + id + ": " + type.name() + " " + faction.name() + " " + name + "-" + level;
     }
 
     @Override
