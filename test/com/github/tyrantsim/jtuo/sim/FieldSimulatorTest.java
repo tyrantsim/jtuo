@@ -16,8 +16,8 @@ import java.util.Random;
 
 public class FieldSimulatorTest {
 
-    private static final String yourDeckString = "Cyrus, Vile Darter-6";
-    private static final String enemyDeckString = "Nexor, Deserted Baughe";
+    private static final String yourDeckString = "Nexor the Farseer, Broodmother's Nexus, Azure Carver #2, Towering Titan #2";
+    private static final String enemyDeckString = "Octane Optimized, Alpha Replicant, Vile Darter #5";
     private static final Random random = new Random();
     private static List<Deck> enemyDecks = new ArrayList<>();
 

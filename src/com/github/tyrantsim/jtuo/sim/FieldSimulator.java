@@ -204,7 +204,7 @@ public class FieldSimulator {
             CardStatus status = assaults.get(index);
             status.setIndex(index);
             if (status.getDelay() > 0) {
-                debug(1, "%s reduces its timer\n", status.description());
+                debug(1, "%s reduces its timer", status.description());
                 status.reduceDelay();
                 if (status.getDelay() == 0) {
                     checkAndPerformValor(field, status);
@@ -247,8 +247,6 @@ public class FieldSimulator {
     }
 
     private static void resolveSkill(Field field) {
-
-        debug(2, "Skills in queue: %d", field.getSkillQueue().size());
 
         while (!field.getSkillQueue().isEmpty()) {
 
@@ -473,7 +471,7 @@ public class FieldSimulator {
             CardStatus currentStatus = field.getTap().getAssaults().get(i);
             Boolean attacked = false;
 
-            if (!currentStatus.isAlive()) {
+            if (!currentStatus.isActive()) {
                 debug(2, "%s cannot take action.", currentStatus.description());
                 // Passive BGE: Halted orders
                 int inhibitValue;
@@ -580,7 +578,7 @@ public class FieldSimulator {
     }
 
     private static void removeDead(List<CardStatus> cards) {
-        cards.removeIf(card->!card.isAlive());
+        cards.removeIf(card -> !card.isAlive());
     }
 
     private static void cooldownSkills(CardStatus status) {
@@ -702,7 +700,7 @@ public class FieldSimulator {
             field.prepareAction();
 
             for (SkillSpec ss: skills) {
-                debug(2, "Skill: %s", ss.description());
+                //debug(2, "Skill: %s", ss.description());
                 if (!SkillUtils.isActivationSkill(ss.getId())) continue;
                 if (status.getSkillCd(ss.getId()) > 0) continue;
                 field.addSkillToQueue(status, ss);
@@ -791,7 +789,7 @@ public class FieldSimulator {
         return true;
     }
 
-    private static int performAttack(Field field, CardType cardType, CardStatus attStatus, CardStatus defStatus) {
+    private static int performAttack(Field field, CardType enemyCardType, CardStatus attStatus, CardStatus defStatus) {
         int preModifierDmg = attStatus.getAttackPower();
 
         // Evaluation order:
@@ -801,17 +799,19 @@ public class FieldSimulator {
         // counter, berserk
         // assaults only: (leech if still alive)
 
-        int attDmg = modifyAttackDamage(field, cardType, attStatus, defStatus, preModifierDmg);
+        int attDmg = modifyAttackDamage(field, enemyCardType, attStatus, defStatus, preModifierDmg);
 
         if (attDmg == 0) {
             return 0;
         }
 
-        attackDamage(field, cardType, attStatus, defStatus, attDmg);
+        attackDamage(field, enemyCardType, attStatus, defStatus, attDmg);
         if (field.isEnd()) {
             return attDmg;
         }
-        damageDependantPreOA(field, attStatus, defStatus);
+
+        if (enemyCardType == CardType.ASSAULT)
+            damageDependantPreOA(field, attStatus, defStatus);
 
         // Resolve On-Attacked skills
         for (SkillSpec ss: defStatus.getCard().getSkillsOnAttacked()) {
@@ -832,7 +832,7 @@ public class FieldSimulator {
 
             // Passive BGE: Counterflux
             if (field.hasBGEffect(field.tapi, PassiveBGE.COUNTERFLUX)
-                    && cardType == CardType.ASSAULT && defStatus.isAlive()) {
+                    && enemyCardType == CardType.ASSAULT && defStatus.isAlive()) {
                 int fluxDenominator = field.getBGEffectValue(field.tapi, PassiveBGE.COUNTERFLUX) > 0
                         ? field.getBGEffectValue(field.tapi, PassiveBGE.COUNTERFLUX) : 4;
                 int fluxValue = (defStatus.skill(Skill.COUNTER) - 1) / fluxDenominator + 1;
@@ -876,10 +876,12 @@ public class FieldSimulator {
         }
 
         // Skill: Leech
-        int leechValue = Math.min(attDmg, attStatus.skill(Skill.LEECH));
-        if (leechValue > 0 && skillCheck(field, Skill.LEECH, attStatus, null)) {
-            debug(1, "%s leeches %d health", attStatus.description(), leechValue);
-            attStatus.addHP(leechValue);
+        if (enemyCardType == CardType.ASSAULT) {
+            int leechValue = Math.min(attDmg, attStatus.skill(Skill.LEECH));
+            if (leechValue > 0 && skillCheck(field, Skill.LEECH, attStatus, null)) {
+                debug(1, "%s leeches %d health", attStatus.description(), leechValue);
+                attStatus.addHP(leechValue);
+            }
         }
 
         // Passive BGE: Heroism
@@ -887,7 +889,7 @@ public class FieldSimulator {
         if (field.hasBGEffect(field.tapi, PassiveBGE.HEROISM)
                 && (valorValue = attStatus.skill(Skill.VALOR)) > 0
                 && !attStatus.isSundered()
-                && cardType == CardType.ASSAULT
+                && enemyCardType == CardType.ASSAULT
                 && defStatus.getHP() <= 0) {
             debug(1, "Heroism: %s gain %d attack", attStatus.description(), valorValue);
             attStatus.addPermAttackBuff(valorValue);
@@ -897,7 +899,7 @@ public class FieldSimulator {
         int leechDevourValue;
         if (field.hasBGEffect(field.tapi, PassiveBGE.DEVOUR)
                 && (leechDevourValue = attStatus.skill(Skill.LEECH) + attStatus.skill(Skill.REFRESH)) > 0
-                && cardType == CardType.ASSAULT) {
+                && enemyCardType == CardType.ASSAULT) {
 
             int bgeDenominator = field.getBGEffectValue(field.tapi, PassiveBGE.DEVOUR) > 0
                     ? field.getBGEffectValue(field.tapi, PassiveBGE.DEVOUR) : 4;
@@ -1838,10 +1840,9 @@ public class FieldSimulator {
 
     private static void debugSelection(String format, Field fd, Object... args) {
         if(Main.debug_print >= 2) {
-            debug(2, MessageFormat.format("Possible targets of " + format + ":", args));
-                for(CardStatus c: fd.selectionArray) {
+            debug(2, "Possible targets of " + format + ":", args);
+                for(CardStatus c: fd.selectionArray)
                     debug(2, "+ %s", c.description());
-                }
         }                                                              
     }
 
@@ -1861,14 +1862,15 @@ public class FieldSimulator {
 
     private static List<CardStatus> skillTargets(Skill skill, Field fd, CardStatus src) {
         switch (skill) {
+            case SIEGE:
+                return fd.getPlayer(opponent(src.getPlayer())).getStructures();
             case ENFEEBLE:
             case JAM:
-            case SIEGE:
             case STRIKE:
             case SUNDER:
             case WEAKEN:
             case MIMIC:
-                return fd.getPlayers()[opponent(src.getPlayer())].getAssaults(); // .getassaults.m_indirect)
+                return fd.getPlayer(opponent(src.getPlayer())).getAssaults(); // .getassaults.m_indirect)
             case ENHANCE:
             case EVOLVE:
             case HEAL:
@@ -1879,7 +1881,7 @@ public class FieldSimulator {
             case ENRAGE:
             case ENTRAP:
             case RUSH:
-                return fd.getPlayers()[src.getPlayer()].getAssaults(); // .getIndirect()
+                return fd.getPlayer(src.getPlayer()).getAssaults(); // .getIndirect()
             default:
                 System.err.println("skill_targets: Error: no specialization for " + skill.getDescription() + "");
                 throw new RuntimeException();
