@@ -271,18 +271,20 @@ public class CardsParser {
         case 41:
         case 42:
         case 43:
+            if (id == 43451 || id == 43452) {
+                baseCard.setType(CardType.ASSAULT);
+                baseCard.setCategory(CardCategory.DOMINION_MATERIAL);
+                break;
+            }
         case 44:
         case 45:
         case 46:
         case 47:
         case 48:
         case 49:
-        case 50:
             baseCard.setType(CardType.ASSAULT);
-            if (id == 43451 || id == 43452) {
-                baseCard.setCategory(CardCategory.DOMINION_MATERIAL);
-            }
-            if (id < 50238) break; // Dominions start at 50238
+            break;
+        case 50:
         case 51:
         case 52:
         case 53:

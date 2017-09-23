@@ -28,10 +28,12 @@ public class PlayCard {
         setStorage(card.getType());
         placeCard();
 
+        if (status.getDelay() == 0)
+            FieldSimulator.checkAndPerformValor(field, status);
+
         // resolve On-Play skills
-        for (SkillSpec skillSpec : card.getSkillsOnPlay()) {
+        for (SkillSpec skillSpec : card.getSkillsOnPlay())
             field.addSkillToQueue(status, skillSpec);
-        }
 
         return status;
     }
@@ -42,23 +44,19 @@ public class PlayCard {
                 storage = field.getPlayer(actorIndex).getAssaults();
                 break;
             case STRUCTURE:
-                storage = field.getPlayer(actorIndex).getAssaults();
+                storage = field.getPlayer(actorIndex).getStructures();
                 break;
             default:
                 throw new RuntimeException("Unexpected card type: " + cardType);
         }
     }
 
-    void placeCard() {
+    private void placeCard() {
         status = new CardStatus();
         storage.add(status);
         status.set(card);
         status.setIndex(storage.size() - 1);
         status.setPlayer(actorIndex);
-
-        if (status.getDelay() == 0) {
-            FieldSimulator.checkAndPerformValor(field, status);
-        }
     }
 
 }

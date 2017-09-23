@@ -239,6 +239,8 @@ public class Field {
         return currentCI;
     }
 
+    void incrementCI() { this.currentCI++; }
+
     void setAssaultBloodlusted(boolean assaultBloodlusted) {
         this.assaultBloodlusted = assaultBloodlusted;
     }

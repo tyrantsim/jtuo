@@ -6,7 +6,6 @@ import com.github.tyrantsim.jtuo.decks.Deck;
 import com.github.tyrantsim.jtuo.decks.Decks;
 import com.github.tyrantsim.jtuo.parsers.CardsParser;
 import com.github.tyrantsim.jtuo.parsers.DeckParser;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -16,20 +15,24 @@ import java.util.Random;
 
 public class FieldSimulatorTest {
 
-    private static final String yourDeckString = "Daedalus Enraged, Broodmother's Nexus, Azure Carver #2, Towering Titan #2";
-    private static final String enemyDeckString = "Octane Optimized, Alpha Replicant, Shieldwolf #5";
+    private static final String yourDeckString = "Cyrus-1, Scarab";
+    private static final String enemyDeckString = "Cyrus-1, Beam Gate, Dutiful Veteran, Infantry #3";
     private static final Random random = new Random();
     private static List<Deck> enemyDecks = new ArrayList<>();
 
+    /*
     @BeforeClass
     public static void loadCards() throws Exception {
         CardsParser.initialize();
     }
+    */
 
     @Test
     public void testFieldSim() throws Exception {
 
-        Deck yourDeck = null;
+        CardsParser.initialize();
+
+        Deck yourDeck;
 
         try {
             yourDeck = Decks.findDeck(yourDeckString).clone();
@@ -49,7 +52,7 @@ public class FieldSimulatorTest {
         for (String deckStr: deckListParsed.keySet()) {
 
             // Construct the enemy decks
-            Deck deck = null;
+            Deck deck;
             try {
                 deck = Decks.findDeck(deckStr).clone();
             } catch (RuntimeException e) {
@@ -72,14 +75,19 @@ public class FieldSimulatorTest {
         yourHand.reset(random);
         enemyHand.reset(random);
 
+        int[] passiveBGEs = new int[PassiveBGE.values().length];
+        //passiveBGEs[PassiveBGE.DEVOUR.ordinal()] = 1;
+
         Field fd = new Field(
                 random,
                 null,
                 yourHand, enemyHand,
                 GameMode.FIGHT,
                 OptimizationMode.WINRATE,
+                //passiveBGEs, passiveBGEs,
                 new ArrayList<>(), new ArrayList<>()
         );
+        FieldSimulator.play(fd);
         Results result = FieldSimulator.play(fd);
         System.out.println(result);
 
@@ -88,10 +96,36 @@ public class FieldSimulatorTest {
 
     @Test
     public void testCardSkills() throws Exception {
+        CardsParser.initialize();
+        Card card = Cards.getCardByName("Alpha Replicant").clone();
+        System.out.println(Cards.cardDescription(card));
+        System.out.println(card.getCategory());
 
-        //for (Card c: Cards.allCards) System.out.println(Cards.cardDescription(c));
-        Card nexor = Cards.getCardByName("Octane Optimized").clone();
-        System.out.println(Cards.cardDescription(nexor));
+    }
+
+    @Test
+    public void testDeck() throws Exception {
+        CardsParser.initialize();
+        Deck yourDeck = null;
+
+        try {
+            yourDeck = Decks.findDeck(yourDeckString).clone();
+        } catch (RuntimeException e) {
+            e.printStackTrace();
+            System.err.println("Error: Deck " + yourDeckString + ": " + e.getMessage());
+            return;
+        }
+
+        if (yourDeck == null) {
+            System.err.println("Error: Invalid attack deck name/hash " + yourDeckString);
+            return;
+        }
+
+        Hand yourHand = new Hand(yourDeck);
+        yourHand.reset(new Random());
+
+        System.out.println(yourHand.getStructures().get(0));
+
 
     }
 

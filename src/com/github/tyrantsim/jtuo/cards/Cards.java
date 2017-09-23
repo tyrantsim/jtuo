@@ -228,30 +228,34 @@ public class Cards {
         sb.append(c.getHealth());
         sb.append("/");
         sb.append(c.getDelay());
-        sb.append(" >>SKILLS:");
 
-        for (SkillSpec s: c.getSkillsOnPlay()) {
-            sb.append(" [");
-            sb.append(s.description());
-            sb.append("]");
-        }
+        if (!c.getSkills().isEmpty() || !c.getSkillsOnDeath().isEmpty()
+                || !c.getSkillsOnAttacked().isEmpty() || !c.getSkillsOnPlay().isEmpty()) {
+            sb.append(" >>SKILLS:");
 
-        for (SkillSpec s: c.getSkillsOnAttacked()) {
-            sb.append(" [");
-            sb.append(s.description());
-            sb.append("]");
-        }
+            for (SkillSpec s : c.getSkillsOnPlay()) {
+                sb.append(" [");
+                sb.append(s.description());
+                sb.append("]");
+            }
 
-        for (SkillSpec s: c.getSkills()) {
-            sb.append(" [");
-            sb.append(s.description());
-            sb.append("]");
-        }
+            for (SkillSpec s : c.getSkillsOnAttacked()) {
+                sb.append(" [");
+                sb.append(s.description());
+                sb.append("]");
+            }
 
-        for (SkillSpec s: c.getSkillsOnDeath()) {
-            sb.append(" [");
-            sb.append(s.description());
-            sb.append("]");
+            for (SkillSpec s : c.getSkills()) {
+                sb.append(" [");
+                sb.append(s.description());
+                sb.append("]");
+            }
+
+            for (SkillSpec s : c.getSkillsOnDeath()) {
+                sb.append(" [");
+                sb.append(s.description());
+                sb.append("]");
+            }
         }
 
         return sb.toString();

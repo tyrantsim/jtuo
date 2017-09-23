@@ -3,7 +3,7 @@ package com.github.tyrantsim.jtuo;
 import com.github.tyrantsim.jtuo.control.ConsoleLauncher;
 
 public class Main {
-    public static int debug_print = 2;
+    public static int debug_print = 3;
     public static boolean debug_line = true;
     public static int debug_cached = 0;
     public static StringBuilder debug_str = new StringBuilder();
