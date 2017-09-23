@@ -15,7 +15,7 @@ import java.util.Random;
 
 public class FieldSimulatorTest {
 
-    private static final String yourDeckString = "Cyrus-1, Scarab";
+    private static final String yourDeckString = "Cyrus-1, Hope Mason";
     private static final String enemyDeckString = "Cyrus-1, Beam Gate, Dutiful Veteran, Infantry #3";
     private static final Random random = new Random();
     private static List<Deck> enemyDecks = new ArrayList<>();

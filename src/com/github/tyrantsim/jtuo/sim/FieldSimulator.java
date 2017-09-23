@@ -158,11 +158,17 @@ public class FieldSimulator {
         // Active player's commander card
         cooldownSkills(field.getTap().getCommander());
 
+        List<CardStatus> assaults = field.getTap().getAssaults();
+        List<CardStatus> structures = field.getTap().getStructures();
+
+        // Save list sizes before summoned cards (to avoid timer reduction)
+        int assaultsSize = assaults.size();
+        int structuresSize = structures.size();
+
         // Active player's assault skills:
         // update index
         // reduce delay; reduce skill cooldown
-        List<CardStatus> assaults = field.getTap().getAssaults();
-        for (int index = 0; index < assaults.size(); index++) {
+        for (int index = 0; index < assaultsSize; index++) {
             CardStatus status = assaults.get(index);
             status.setIndex(index);
             if (status.getDelay() > 0) {
@@ -180,8 +186,7 @@ public class FieldSimulator {
         // Active player's structure cards:
         // update index
         // reduce delay; reduce skill cooldown
-        List<CardStatus> structures = field.getTap().getStructures();
-        for (int index = 0; index < structures.size(); index++) {
+        for (int index = 0; index < structuresSize; index++) {
             CardStatus status = structures.get(index);
             status.setIndex(index);
             if (status.getDelay() > 0) {
@@ -197,14 +202,16 @@ public class FieldSimulator {
 
         // Defending player's assault cards:
         // update index
-        for (int index = 0; index < assaults.size(); index++) {
-            CardStatus status = assaults.get(index);
+        List<CardStatus> defenderAssaults = field.getTip().getAssaults();
+        for (int index = 0, end = defenderAssaults.size(); index < end; index++) {
+            CardStatus status = defenderAssaults.get(index);
             status.setIndex(index);
         }
 
         // Defending player's structure cards:
-        for (int index = 0; index < structures.size(); index++) {
-            CardStatus status = structures.get(index);
+        List<CardStatus> defenderStructures = field.getTip().getStructures();
+        for (int index = 0, end = defenderStructures.size(); index < end; index++) {
+            CardStatus status = defenderStructures.get(index);
             status.setIndex(index);
         }
     }
@@ -225,8 +232,6 @@ public class FieldSimulator {
         CardStatus playedStatus;
         switch (playedCard.getType()) {
             case ASSAULT:
-                playedStatus = new PlayCard(playedCard, field, field.getTapi(), field.getTap().getCommander()).op();
-                break;
             case STRUCTURE:
                 playedStatus = new PlayCard(playedCard, field, field.getTapi(), field.getTap().getCommander()).op();
                 break;
