@@ -41,7 +41,7 @@ public class CardStatus implements Cloneable {
     private int enraged;
     private int entrapped;
 
-    private int[] primarySkillOffset;
+    private int[] primarySkillOffset = new int[Skill.values().length];
     private int[] evolvedSkillOffset = new int[Skill.values().length];
     private int[] enhancedValue = new int[Skill.values().length];
     private int[] skillCd = new int[Skill.values().length];
@@ -51,6 +51,7 @@ public class CardStatus implements Cloneable {
     private boolean rushAttempted;
     private boolean sundered;
 
+    // Card
     void set(Card card) {
         this.card = card;
 
@@ -87,91 +88,22 @@ public class CardStatus implements Cloneable {
         skillCd = new int[Skill.values().length];
     }
 
-    int skill(Skill skillId) {
-        return SkillUtils.isActivationSkillWithX(skillId)
-                ? safeMinus(skillBaseValue(skillId), sabotaged)
-                : skillBaseValue(skillId);
+    public Card getCard() {
+        return card;
     }
 
-    int getMaxHP() {
-        return card.getHealth() + safeMinus(permHealthBuff, subdued);
-    }
+    // Status
+    boolean isAlive() { return hp > 0; }
 
-    int addHP(int value) {
-        hp = Math.min(hp + value, getMaxHP());
-        return hp;
-    }
+    boolean canAct() { return isAlive() && !isJammed(); }
 
-    int extHP(int value) {
-        permHealthBuff += value;
-        return addHP(value);
-    }
+    boolean isActive() { return canAct() && getDelay() == 0; }
 
-    int getAttackPower() {
-        return safeMinus(card.getAttack() + safeMinus(permAttackBuff, subdued), corrodedWeakened) + tempAttackBuff;
-    }
-
-    int protectedValue() {
-        return protectedBy + protectedByStasis;
-    }
-
-    void addPermAttackBuff(int incBy) {
-        this.permAttackBuff += incBy;
-    }
-
-    void addTempAttackBuff(int incBy) { this.tempAttackBuff += incBy; }
-
-    void addProtection(int protection) {
-        this.protectedBy += protection;
-    }
-
-    void reduceDelay() {
-        delay--;
-    }
-
-    boolean isAlive() {
-        return hp > 0;
-    }
-
-    boolean canAct() {
-        return isAlive() && !isJammed();
-    }
-
-    boolean isActive() {
-        return canAct() && getDelay() == 0;
-    }
+    boolean isActiveNextTurn() { return canAct() && delay <= 1; }
 
     boolean canBeHealed() { return isAlive() && hp < getMaxHP(); }
 
-    boolean isDominion() {
-        return getCard().getCategory() == CardCategory.DOMINION_ALPHA;
-    }
-
-    int skillBaseValue(Skill skillId) {
-        return card.getSkillValue()[skillId.ordinal() + primarySkillOffset[skillId.ordinal()]]
-                + (skillId == Skill.BERSERK ? enraged : 0)
-                + (skillId == Skill.COUNTER ? entrapped : 0);
-    }
-
-    boolean hasSkill(Skill skillId) {
-        return skillBaseValue(skillId) != 0;
-    }
-
-    int getEvolvedSkillOffset(Skill skillId) {
-        return evolvedSkillOffset[skillId.ordinal()];
-    }
-
-    void clearPrimarySkillOffset() {
-        Arrays.fill(primarySkillOffset, 0);
-    }
-
-    void clearEvolvedSkillOffset() {
-        Arrays.fill(evolvedSkillOffset, 0);
-    }
-
-    void clearEnhancedValue() {
-        Arrays.fill(enhancedValue, 0);
-    }
+    boolean isDominion() { return getCard().getCategory() == CardCategory.DOMINION_ALPHA; }
 
     boolean isGilian() {
         return (card.getId() >= 25054 && card.getId() <= 25063) // Gilian Commander
@@ -182,29 +114,15 @@ public class CardStatus implements Cloneable {
         return isAlive() && isGilian();
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+    boolean hasAttacked() { return step == CardStep.ATTACKED; }
 
-        CardStatus that = (CardStatus) o;
+    CardStep getStep() { return step; }
 
-        return index == that.index && player == that.player && card.equals(that.card);
+    void setStep(CardStep step) {
+        this.step = step;
     }
 
-    @Override
-    public int hashCode() {
-        int result = card.hashCode();
-        result = 31 * result + index;
-        result = 31 * result + player;
-        return result;
-    }
-
-    // Getters & Setters
-    public Card getCard() {
-        return card;
-    }
-
+    // Field
     void setIndex(int index) {
         this.index = index;
     }
@@ -221,24 +139,137 @@ public class CardStatus implements Cloneable {
         return player;
     }
 
-    int getDelay() {
-        return delay;
+    // HP
+    int getMaxHP() { return card.getHealth() + safeMinus(permHealthBuff, subdued); }
+
+    int addHP(int value) {
+        hp = Math.min(hp + value, getMaxHP());
+        return hp;
     }
 
-    void setStep(CardStep step) {
-        this.step = step;
+    int extHP(int value) {
+        permHealthBuff += value;
+        return addHP(value);
     }
+
+    void setHP(int hp) { this.hp = hp; }
+
+    int getHP() { return hp; }
+
+
+
+    // Attack
+    int getAttackPower() {
+        return safeMinus(card.getAttack() + safeMinus(permAttackBuff, subdued), corrodedWeakened) + tempAttackBuff;
+    }
+
+    void addPermAttackBuff(int incBy) { this.permAttackBuff += incBy; }
+
+    void addTempAttackBuff(int incBy) { this.tempAttackBuff += incBy; }
 
     int getPermAttackBuff() {
         return permAttackBuff;
+    }
+
+    void setPermAttackBuff(int permAttackBuff) {
+        this.permAttackBuff = permAttackBuff;
     }
 
     void setTempAttackBuff(int tempAttackBuff) {
         this.tempAttackBuff = tempAttackBuff;
     }
 
+    // Delay
+    int getDelay() {
+        return delay;
+    }
+
+    void setDelay(int delay) {
+        this.delay = delay;
+    }
+
+    void reduceDelay() { delay--; }
+
+    // Skills
+    int skill(Skill skillId) {
+        return (SkillUtils.isActivationSkillWithX(skillId)
+                ? safeMinus(skillBaseValue(skillId), sabotaged)
+                : skillBaseValue(skillId))
+                + getEnhanced(skillId);
+    }
+
+    int skillBaseValue(Skill skillId) {
+        return card.getSkillValue()[skillId.ordinal() + primarySkillOffset[skillId.ordinal()]]
+                + (skillId == Skill.BERSERK ? enraged : 0)
+                + (skillId == Skill.COUNTER ? entrapped : 0);
+    }
+
+    boolean hasSkill(Skill skillId) {
+        return skillBaseValue(skillId) != 0;
+    }
+
+    void setSkillCd(Skill skill, int cd) { skillCd[skill.ordinal()] = cd; }
+
+    int getSkillCd(Skill skill) { return skillCd[skill.ordinal()]; }
+
+    void cooldownSkillCd(Skill skill) { skillCd[skill.ordinal()]--; }
+
+    // Enhance / Evolve
+    int getEvolvedSkillOffset(Skill skillId) { return evolvedSkillOffset[skillId.ordinal()]; }
+
+    int getPrimarySkillOffset(Skill skillId) { return primarySkillOffset[skillId.ordinal()]; }
+
+    void setPrimarySkillOffset(Skill skillId, int offset) { primarySkillOffset[skillId.ordinal()] = offset; }
+
+    void setEvolvedSkillOffset(int skillPosition, int offset) { evolvedSkillOffset[skillPosition] = offset; }
+
+    int getEnhanced(Skill skillId) { return enhancedValue[skillId.ordinal() + primarySkillOffset[skillId.ordinal()]]; }
+
+    void addEnhancedValue(int skillPosition, int inc) { enhancedValue[skillPosition] += inc; }
+
+    void clearPrimarySkillOffset() {
+        Arrays.fill(primarySkillOffset, 0);
+    }
+
+    void clearEvolvedSkillOffset() {
+        Arrays.fill(evolvedSkillOffset, 0);
+    }
+
+    void clearEnhancedValue() {
+        Arrays.fill(enhancedValue, 0);
+    }
+
+    // Skill: Protect
+    int protectedValue() {
+        return protectedBy + protectedByStasis;
+    }
+
+    void addProtection(int protection) { this.protectedBy += protection; }
+
+    void setProtectedBy(int protectedBy) {
+        this.protectedBy = protectedBy;
+    }
+
+    int getProtectedBy() {
+        return protectedBy;
+    }
+
+    // Skill: Stasis
+    void setProtectedByStasis(int protectedByStasis) {
+        this.protectedByStasis = protectedByStasis;
+    }
+
+    int getProtectedByStasis() {
+        return protectedByStasis;
+    }
+
+    // Skill: Corrosive
     int getCorrodedRate() {
         return corrodedRate;
+    }
+
+    void setCorrodedRate(int corrodedRate) {
+        this.corrodedRate = corrodedRate;
     }
 
     void setCorrodedWeakened(int corrodedWeakened) {
@@ -249,10 +280,16 @@ public class CardStatus implements Cloneable {
         return corrodedWeakened;
     }
 
+    // Skill: Subdue
     int getSubdued() {
         return subdued;
     }
 
+    void setSubdued(int subdued) {
+        this.subdued = subdued;
+    }
+
+    // Skill: Enfeeble
     void setEnfeebled(int enfeebled) {
         this.enfeebled = enfeebled;
     }
@@ -263,6 +300,7 @@ public class CardStatus implements Cloneable {
 
     void incEnfeebled(int incBy) { this.enfeebled += incBy; }
 
+    // Skill: Evade
     void setEvaded(int evaded) {
         this.evaded = evaded;
     }
@@ -273,6 +311,7 @@ public class CardStatus implements Cloneable {
 
     void incEvaded() { this.evaded++; }
 
+    // Skill: Inhibit
     void setInhibited(int inhibited) {
         this.inhibited = inhibited;
     }
@@ -283,6 +322,7 @@ public class CardStatus implements Cloneable {
 
     void reduceInhibited() { this.inhibited--; }
 
+    // Skill: Sabotage
     void setSabotaged(int sabotaged) {
         this.sabotaged = sabotaged;
     }
@@ -291,6 +331,7 @@ public class CardStatus implements Cloneable {
         return sabotaged;
     }
 
+    // Skill: Payback
     void setPaybacked(int paybacked) {
         this.paybacked = paybacked;
     }
@@ -299,6 +340,7 @@ public class CardStatus implements Cloneable {
         return paybacked;
     }
 
+    // Skill: Tribute
     void setTributed(int tributed) {
         this.tributed = tributed;
     }
@@ -309,30 +351,16 @@ public class CardStatus implements Cloneable {
 
     void incTributed() { this.tributed++; }
 
+    // Skill: Poison
     int getPoisoned() {
         return poisoned;
     }
 
-    void setProtectedBy(int protectedBy) {
-        this.protectedBy = protectedBy;
+    void setPoisoned(int poisoned) {
+        this.poisoned = poisoned;
     }
 
-    int getProtectedBy() {
-        return protectedBy;
-    }
-
-    void incProtectedBy(int incBy) { this.protectedBy += incBy; }
-
-    void setProtectedByStasis(int protectedByStasis) {
-        this.protectedByStasis = protectedByStasis;
-    }
-
-    int getProtectedByStasis() {
-        return protectedByStasis;
-    }
-
-    int[] getPrimarySkillOffset() { return primarySkillOffset; }
-
+    // Skill: Enrage
     void setEnraged(int enranged) {
         this.enraged = enranged;
     }
@@ -341,6 +369,7 @@ public class CardStatus implements Cloneable {
         return enraged;
     }
 
+    // Skill: Entrap
     void setEntrapped(int entrapped) {
         this.entrapped = entrapped;
     }
@@ -349,6 +378,7 @@ public class CardStatus implements Cloneable {
         return entrapped;
     }
 
+    // Skill: Jam
     void setJammed(boolean jammed) {
         this.jammed = jammed;
     }
@@ -357,6 +387,7 @@ public class CardStatus implements Cloneable {
         return jammed;
     }
 
+    // Skill: Overload
     void setOverloaded(boolean overloaded) {
         this.overloaded = overloaded;
     }
@@ -365,10 +396,16 @@ public class CardStatus implements Cloneable {
         return overloaded;
     }
 
+    // Skill: Rush
     boolean isRushAttempted() {
         return rushAttempted;
     }
 
+    void setRushAttempted(boolean rushAttempted) {
+        this.rushAttempted = rushAttempted;
+    }
+
+    // Skill: Sunder
     void setSundered(boolean sundered) {
         this.sundered = sundered;
     }
@@ -377,80 +414,22 @@ public class CardStatus implements Cloneable {
         return sundered;
     }
 
-    void setHP(int hp) {
-        this.hp = hp;
-    }
 
-    int getHP() {
-        return hp;
-    }
 
-    void setSkillCd(Skill skill, int cd) {
-        skillCd[skill.ordinal()] = cd;
-    }
 
-    void cooldownSkillCd(Skill skill) { skillCd[skill.ordinal()]--; }
-
-    void setSkillCd(int[] skillCd) { this.skillCd = skillCd; }
-
-    int getSkillCd(Skill skill) {
-        return skillCd[skill.ordinal()];
-    }
-
-    int getEnhanced(Skill skillId) {
-        return enhancedValue[skillId.ordinal() + primarySkillOffset[skillId.ordinal()]];
-    }
-
-    boolean hasAttacked() { return step == CardStep.ATTACKED; }
-
-    CardStep getStep() { return step; }
-
-    boolean isActiveNextTurn() { return canAct() && delay <= 1; }
-
-    void setDelay(int delay) {
-        this.delay = delay;
-    }
-
-    void setPermHealthBuff(int permHealthBuff) {
+    // Methods for cloning
+    private void setPermHealthBuff(int permHealthBuff) {
         this.permHealthBuff = permHealthBuff;
     }
 
-    void setPermAttackBuff(int permAttackBuff) {
-        this.permAttackBuff = permAttackBuff;
-    }
+    private void setSkillCd(int[] skillCd) { this.skillCd = skillCd; }
 
-    void setCorrodedRate(int corrodedRate) {
-        this.corrodedRate = corrodedRate;
-    }
+    private void setPrimarySkillOffset(int[] primarySkillOffset) { this.primarySkillOffset = primarySkillOffset; }
 
-    void setSubdued(int subdued) {
-        this.subdued = subdued;
-    }
+    private void setEvolvedSkillOffset(int[] evolvedSkillOffset) { this.evolvedSkillOffset = evolvedSkillOffset; }
 
-    void setPoisoned(int poisoned) {
-        this.poisoned = poisoned;
-    }
-
-    void setPrimarySkillOffset(int[] primarySkillOffset) {
-        this.primarySkillOffset = primarySkillOffset;
-    }
-
-    void setPrimarySkillOffset(int skillPosition, int offset) { primarySkillOffset[skillPosition] = offset; }
-
-    void setEvolvedSkillOffset(int[] evolvedSkillOffset) {
-        this.evolvedSkillOffset = evolvedSkillOffset;
-    }
-
-    void setEvolvedSkillOffset(int skillPosition, int offset) { evolvedSkillOffset[skillPosition] = offset; }
-
-    void setEnhancedValue(int[] enhancedValue) {
+    private void setEnhancedValue(int[] enhancedValue) {
         this.enhancedValue = enhancedValue;
-    }
-
-    void addEnhancedValue(int skillPosition, int inc) { enhancedValue[skillPosition] += inc; }
-
-    void setRushAttempted(boolean rushAttempted) {
-        this.rushAttempted = rushAttempted;
     }
 
     public CardStatus clone() {
@@ -582,5 +561,22 @@ public class CardStatus implements Cloneable {
         return desc + "]";
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        CardStatus that = (CardStatus) o;
+
+        return index == that.index && player == that.player && card.equals(that.card);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = card.hashCode();
+        result = 31 * result + index;
+        result = 31 * result + player;
+        return result;
+    }
 
 }

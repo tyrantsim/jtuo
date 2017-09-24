@@ -1,22 +1,21 @@
 package com.github.tyrantsim.jtuo.sim;
 
-import com.github.tyrantsim.jtuo.cards.Card;
-import com.github.tyrantsim.jtuo.cards.Cards;
+import com.github.tyrantsim.jtuo.cards.*;
 import com.github.tyrantsim.jtuo.decks.Deck;
 import com.github.tyrantsim.jtuo.decks.Decks;
 import com.github.tyrantsim.jtuo.parsers.CardsParser;
 import com.github.tyrantsim.jtuo.parsers.DeckParser;
+import com.github.tyrantsim.jtuo.skills.Skill;
+import com.github.tyrantsim.jtuo.skills.SkillSpec;
+import com.github.tyrantsim.jtuo.skills.SkillTrigger;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 public class FieldSimulatorTest {
 
-    private static final String yourDeckString = "Cyrus-1, Hope Mason";
-    private static final String enemyDeckString = "Cyrus-1, Beam Gate, Dutiful Veteran, Infantry #3";
+    private static final String yourDeckString = "[70000], [70001]";
+    private static final String enemyDeckString = "[70000], [70003]";
     private static final Random random = new Random();
     private static List<Deck> enemyDecks = new ArrayList<>();
 
@@ -29,6 +28,8 @@ public class FieldSimulatorTest {
 
     @Test
     public void testFieldSim() throws Exception {
+
+        createCustomCards();
 
         CardsParser.initialize();
 
@@ -67,16 +68,24 @@ public class FieldSimulatorTest {
             }
 
             enemyDecks.add(deck);
-
         }
 
+        // Passive BGEs
+        int[] passiveBGEs = new int[PassiveBGE.values().length];
+        passiveBGEs[PassiveBGE.DEVOUR.ordinal()] = 1;
+
+        // BGE Activation Skills
+        List<SkillSpec> bgSkills = new ArrayList<>();
+//        bgSkills.add(new SkillSpec(Skill.ENHANCE, 50, Faction.ALL_FACTIONS, 0, 0,
+//                Skill.POISON, Skill.NO_SKILL, false, 0, SkillTrigger.ACTIVATE));
+//        bgSkills.add(new SkillSpec(Skill.STRIKE, 3, Faction.ALL_FACTIONS, 0, 0,
+//                Skill.NO_SKILL, Skill.NO_SKILL, true, 0, SkillTrigger.ACTIVATE));
+
+        // Prepare decks
         Hand yourHand = new Hand(yourDeck);
         Hand enemyHand = new Hand(enemyDecks.get(0));
         yourHand.reset(random);
         enemyHand.reset(random);
-
-        int[] passiveBGEs = new int[PassiveBGE.values().length];
-        //passiveBGEs[PassiveBGE.DEVOUR.ordinal()] = 1;
 
         Field fd = new Field(
                 random,
@@ -84,30 +93,30 @@ public class FieldSimulatorTest {
                 yourHand, enemyHand,
                 GameMode.FIGHT,
                 OptimizationMode.WINRATE,
-                //passiveBGEs, passiveBGEs,
-                new ArrayList<>(), new ArrayList<>()
+//                passiveBGEs, passiveBGEs,
+                bgSkills, bgSkills
         );
         FieldSimulator.play(fd);
         Results result = FieldSimulator.play(fd);
         System.out.println(result);
 
-        System.out.println("done");
+        System.out.println("Done");
     }
 
     @Test
     public void testCardSkills() throws Exception {
         CardsParser.initialize();
-        Card card = Cards.getCardByName("Alpha Replicant").clone();
+        Card card = Cards.getCardByName("Alpha Replicant");
         System.out.println(Cards.cardDescription(card));
         System.out.println(card.getCategory());
-
     }
 
     @Test
     public void testDeck() throws Exception {
-        CardsParser.initialize();
-        Deck yourDeck = null;
 
+        CardsParser.initialize();
+
+        Deck yourDeck;
         try {
             yourDeck = Decks.findDeck(yourDeckString).clone();
         } catch (RuntimeException e) {
@@ -126,6 +135,132 @@ public class FieldSimulatorTest {
 
         System.out.println(yourHand.getStructures().get(0));
 
+    }
+
+    public void createCustomCards() {
+
+        // Custom test cards
+        Card noSkillsCommander = new Card(
+                70000,
+                70000,
+                CardType.COMMANDER,
+                CardCategory.NORMAL,
+                "Commander Test Card",
+                6,
+                Faction.PROGENITOR,
+                Rarity.MYTHIC.ordinal(),
+                2,
+                0,
+                0,
+                50,
+                0,
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new int[Skill.values().length],
+                new SkillTrigger[Skill.values().length],
+                null,
+                0,
+                new HashMap<>(),
+                new HashMap<>()
+        );
+
+        noSkillsCommander.setTopLevelCard(noSkillsCommander);
+
+        Cards.allCards.add(noSkillsCommander);
+
+        ////////////////////////////////////////////////////////////////////
+        Card c = new Card(
+                70001,
+                70001,
+                CardType.ASSAULT,
+                CardCategory.NORMAL,
+                "Jam Test Card",
+                1,
+                Faction.PROGENITOR,
+                Rarity.MYTHIC.ordinal(),
+                0,
+                0,
+                15,
+                70,
+                0,
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new int[Skill.values().length],
+                new SkillTrigger[Skill.values().length],
+                null,
+                0,
+                new HashMap<>(),
+                new HashMap<>()
+        );
+
+        c.setTopLevelCard(c);
+
+        c.addSkill(SkillTrigger.ACTIVATE, Skill.JAM, 0, Faction.ALL_FACTIONS, 2, 3,
+                Skill.NO_SKILL, Skill.NO_SKILL, false, 0);
+
+        Cards.allCards.add(c);
+
+        ////////////////////////////////////////////////////////////////////
+        Card c2 = new Card(
+                70002,
+                70002,
+                CardType.ASSAULT,
+                CardCategory.NORMAL,
+                "Summoned Card",
+                1,
+                Faction.PROGENITOR,
+                Rarity.MYTHIC.ordinal(),
+                0,
+                0,
+                1,
+                700,
+                0,
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new int[Skill.values().length],
+                new SkillTrigger[Skill.values().length],
+                null,
+                0,
+                new HashMap<>(),
+                new HashMap<>()
+        );
+
+        c2.setTopLevelCard(c2);
+
+        Cards.allCards.add(c2);
+
+        ////////////////////////////////////////////////////////////////////
+        Card c3 = new Card(
+                70003,
+                70003,
+                CardType.ASSAULT,
+                CardCategory.NORMAL,
+                "Defender Test Card",
+                1,
+                Faction.PROGENITOR,
+                Rarity.MYTHIC.ordinal(),
+                0,
+                0,
+                5,
+                100,
+                0,
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new int[Skill.values().length],
+                new SkillTrigger[Skill.values().length],
+                null,
+                0,
+                new HashMap<>(),
+                new HashMap<>()
+        );
+
+        c3.setTopLevelCard(c3);
+
+        Cards.allCards.add(c3);
 
     }
 

@@ -37,11 +37,10 @@ public class FieldSimulator {
 
         while (field.getTurn() <= turnLimit && !field.isEnd()) {
 
-            debug(1, "TURN %d begins for %s", field.getTurn(), field.tap.getCommander().description());
-
-            debugPrintField(field);
-
             field.setCurrentPhase(FieldPhase.PLAYCARD_PHASE);
+
+            debug(1, "TURN %d begins for %s", field.getTurn(), field.tap.getCommander().description());
+            debugPrintField(field);
 
             // Initialize stuff, remove dead cards
             // reduce timers & perform triggered skills (like Summon)
@@ -52,12 +51,10 @@ public class FieldSimulator {
 
             // Play a card
             Card playedCard = field.getTap().getDeck().next();
-            if (playedCard != null) {
+            if (playedCard != null)
                 simulatePlayCardPhase(field, playedCard);
-            }
-            if (field.isEnd()) {
-                break;
-            }
+
+            if (field.isEnd()) break;
 
             // Evaluate Passive BGE Heroism skills
             if (field.hasBGEffect(field.getTapi(), PassiveBGE.HEROISM)) {
@@ -67,43 +64,29 @@ public class FieldSimulator {
             // Evaluate activation BGE skills
             for (SkillSpec bgSkill : field.getBGSkills(field.getTapi())) {
                 field.prepareAction();
-                field.skillQueue.addLast(new Pair<>(field.tap.getCommander().clone(), bgSkill.clone()));
+                field.skillQueue.addLast(new Pair<>(field.tap.getCommander(), bgSkill));
                 resolveSkill(field);
                 field.finalizeAction();
             }
 
-            if (field.isEnd()) {
-                break;
-            }
+            if (field.isEnd()) break;
 
             evaluateCommander(field);
-            if (field.isEnd()) {
-                break;
-            }
+            if (field.isEnd()) break;
 
             evaluateStructures(field);
-            if (field.isEnd()) {
-                break;
-            }
+            if (field.isEnd()) break;
 
             evaluateAssaults(field);
 
             field.setCurrentPhase(FieldPhase.END_PHASE);
             turnEndPhase(field);
-            if(field.isEnd()) {
-                break;
-            }
+            if(field.isEnd()) break;
 
             debug(1, "TURN %d ends for %s", field.getTurn(), field.tap.getCommander().description());
 
             // Swap hand and player index
-            int tmpTapi = field.getTapi();
-            field.setTapi(field.getTipi());
-            field.setTipi(tmpTapi);
-
-            Hand tmpHand = field.getTip();
-            field.setTip(field.getTap());
-            field.setTap(tmpHand);
+            swapHands(field);
 
             field.nextTurn();
         }
@@ -123,22 +106,16 @@ public class FieldSimulator {
         for (int i = 0, ai = field.getTapi(); i < 2; i++) {
 
             if (field.getPlayer(ai).getDeck().getAlphaDominion() != null) {
-                CardStatus dom = new PlayCard(field.getPlayer(ai).getDeck().getAlphaDominion(),
-                        field, ai, field.getPlayer(ai).getCommander()).op();
-                debug(2, "Alpha dominion played: %s", dom.description());
+                CardStatus dom = playCard(field.getPlayer(ai).getDeck().getAlphaDominion(),
+                        field, ai, field.getPlayer(ai).getCommander());
+                debug(2, "Dominion played: %s", dom.description());
             }
 
             for (Card playedCard: field.getPlayer(ai).getDeck().getShuffledForts())
-                new PlayCard(playedCard, field, ai, field.getPlayer(ai).getCommander()).op();
+                playCard(playedCard, field, ai, field.getPlayer(ai).getCommander());
 
             // Swap
-            int tmp = field.getTipi();
-            field.setTipi(field.getTapi());
-            field.setTapi(tmp);
-
-            Hand tmpHand = field.getTip();
-            field.setTip(field.getTap());
-            field.setTap(tmpHand);
+            swapHands(field);
 
             ai = opponent(ai);
         }
@@ -233,7 +210,7 @@ public class FieldSimulator {
         switch (playedCard.getType()) {
             case ASSAULT:
             case STRUCTURE:
-                playedStatus = new PlayCard(playedCard, field, field.getTapi(), field.getTap().getCommander()).op();
+                playedStatus = playCard(playedCard, field, field.getTapi(), field.getTap().getCommander());
                 break;
             default:
                 throw new RuntimeException("Unknown card type: " + playedCard.getType());
@@ -575,7 +552,7 @@ public class FieldSimulator {
         List<CardStatus> structures = field.getTip().getStructures();
         for (CardStatus status : structures) {
             if (status.getHP() <= 0) continue;
-            status.setEvaded(0); // so far only useful in Inactive turn
+            status.setEvaded(0);
         }
 
         // Active player's assault cards:
@@ -583,16 +560,22 @@ public class FieldSimulator {
         for (CardStatus status : assaults) {
             if (status.getHP() <= 0) continue;
 
+            // Skill: Refresh
             int refreshValue = status.skill(Skill.REFRESH);
             if (refreshValue != 0 && skillCheck(field, Skill.REFRESH, status, null)) {
+                debug(3, "%s refreshes and gains %d hp", status.description(), refreshValue);
                 status.addHP(refreshValue);
             }
+
+            // Skill: Poison
             if (status.getPoisoned() > 0) {
                 int poisonDmg = safeMinus(status.getPoisoned() + status.getEnfeebled(), status.protectedValue());
                 if (poisonDmg > 0) {
+                    debug(3, "%s poisoned for %d damage", status.description(), poisonDmg);
                     removeHP(field, status, poisonDmg);
                 }
             }
+
             // end of the opponent's next turn for enemy units
             status.setTempAttackBuff(0);
             status.setJammed(false);
@@ -606,7 +589,11 @@ public class FieldSimulator {
         }
 
         // Active player's structure cards:
-        // nothing so far
+        List<CardStatus> activeStructures = field.getTap().getStructures();
+        for (CardStatus status : activeStructures) {
+            if (status.getHP() <= 0) continue;
+            status.setEvaded(0); // reset evaded if structure is hit by on-attacked skill
+        }
 
         prependOnDeath(field); // poison
         resolveSkill(field);
@@ -956,7 +943,7 @@ public class FieldSimulator {
     /**
      * @return true if valor triggered
      */
-    static boolean checkAndPerformValor(Field field, CardStatus src) {
+    private static boolean checkAndPerformValor(Field field, CardStatus src) {
 
         int valorValue = src.skill(Skill.VALOR);
 
@@ -1002,7 +989,7 @@ public class FieldSimulator {
             switch (summonedCard.getType()) {
                 case ASSAULT:
                 case STRUCTURE:
-                    return new PlayCard(summonedCard, field, status.getPlayer(), status).op();
+                    return playCard(summonedCard, field, status.getPlayer(), status);
                 default:
                     debug(0, "Unknown card type: #%d %s: %s", summonedCard.getId(),
                             summonedCard.getName(), summonedCard.getType().toString());
@@ -1059,15 +1046,15 @@ public class FieldSimulator {
 
             case ENHANCE:
 
-                dst.addEnhancedValue(s.getS().ordinal() + dst.getPrimarySkillOffset()[s.getS().ordinal()], s.getX());
+                dst.addEnhancedValue(s.getS().ordinal() + dst.getPrimarySkillOffset(s.getS()), s.getX());
                 break;
 
             case EVOLVE:
 
-                int primaryS1 = dst.getPrimarySkillOffset()[s.getS().ordinal()] + s.getS().ordinal();
-                int primaryS2 = dst.getPrimarySkillOffset()[s.getS2().ordinal()] + s.getS2().ordinal();
-                dst.setPrimarySkillOffset(s.getS().ordinal(), primaryS2 - s.getS().ordinal());
-                dst.setPrimarySkillOffset(s.getS2().ordinal(), primaryS1 - s.getS2().ordinal());
+                int primaryS1 = dst.getPrimarySkillOffset(s.getS()) + s.getS().ordinal();
+                int primaryS2 = dst.getPrimarySkillOffset(s.getS2()) + s.getS2().ordinal();
+                dst.setPrimarySkillOffset(s.getS(), primaryS2 - s.getS().ordinal());
+                dst.setPrimarySkillOffset(s.getS2(), primaryS1 - s.getS2().ordinal());
                 dst.setEvolvedSkillOffset(primaryS1, s.getS2().ordinal() - primaryS1);
                 dst.setEvolvedSkillOffset(primaryS2, s.getS().ordinal() - primaryS2);
                 break;
@@ -1082,7 +1069,7 @@ public class FieldSimulator {
                     int bgeValue = (int) (((float) s.getX() + 1) / 2);
                     debug(1, "Zealot's Preservation: %s Protect %d on %s",
                             src.description(), bgeValue, dst.description());
-                    dst.incProtectedBy(bgeValue);
+                    dst.addProtection(bgeValue);
                 }
                 break;
 
@@ -1114,7 +1101,7 @@ public class FieldSimulator {
 
             case PROTECT:
 
-                dst.incProtectedBy(s.getX());
+                dst.addProtection(s.getX());
                 break;
 
             case RALLY:
@@ -1534,9 +1521,16 @@ public class FieldSimulator {
                 && (leechDevourValue = attStatus.skill(Skill.LEECH) + attStatus.skill(Skill.REFRESH)) > 0
                 && enemyCardType == CardType.ASSAULT) {
 
+            /*
+            // Devour implementation in C++ code
             int bgeDenominator = field.getBGEffectValue(field.tapi, PassiveBGE.DEVOUR) > 0
                     ? field.getBGEffectValue(field.tapi, PassiveBGE.DEVOUR) : 4;
             int bgeValue = (leechDevourValue - 1) / bgeDenominator + 1;
+            */
+
+            // Proper Devour implementation
+            int bgeValue = (leechDevourValue - 1) / 4 + 1;
+
             if (!attStatus.isSundered()) {
                 debug(1, "Devour: %s gains %d attack", attStatus.description(), bgeValue);
                 attStatus.addPermAttackBuff(bgeValue);
@@ -1878,8 +1872,8 @@ public class FieldSimulator {
                         Faction.ALL_FACTIONS, 0, 0, Skill.NO_SKILL, Skill.NO_SKILL, true, 0, SkillTrigger.ACTIVATE);
                 CardStatus commander = field.getPlayer(status.getPlayer()).getCommander();
                 debug(2, "Revenge: Preparing (head) skills  %s and %s", ssHeal.description(), ssRally.description());
-                field.skillQueue.addFirst(new Pair<>(commander.clone(), ssRally));
-                field.skillQueue.addFirst(new Pair<>(commander.clone(), ssHeal)); // +1: keep ss_heal at first place
+                field.skillQueue.addFirst(new Pair<>(commander, ssRally));
+                field.skillQueue.addFirst(new Pair<>(commander, ssHeal)); // +1: keep ss_heal at first place
             }
 
             // resolve On-Death skills
@@ -1889,6 +1883,55 @@ public class FieldSimulator {
         }
         field.getKilledUnits().clear();
     }
+
+    /**
+     *
+     * @param card = Card to be played
+     * @param field
+     * @param actorIndex = player index
+     * @param actorStatus = player commander
+     *
+     * Creating new CardStatus and places it in player's hand (assaults / structures)
+     * Resolving On-Play skills, checking and performing Valor and Summon if card's delay == 0
+     * @return CardStatus of created card
+     */
+    private static CardStatus playCard(Card card, Field field, int actorIndex, CardStatus actorStatus) {
+        List<CardStatus> storage;
+
+        switch (card.getType()) {
+            case ASSAULT: storage = field.getPlayer(actorIndex).getAssaults(); break;
+            case STRUCTURE: storage = field.getPlayer(actorIndex).getStructures(); break;
+            default:
+                throw new RuntimeException("Unexpected card type: " + card.getType());
+        }
+
+        CardStatus status = new CardStatus();
+        storage.add(status);
+        status.set(card);
+        status.setIndex(storage.size() - 1);
+        status.setPlayer(actorIndex);
+
+        // Resolve On-Play Skills
+        for (SkillSpec skillSpec : card.getSkillsOnPlay())
+            field.addSkillToQueue(status, skillSpec);
+
+        if (status.getDelay() == 0) {
+            checkAndPerformValor(field, status);
+            checkAndPerformSummon(field, status);
+        }
+
+        return status;
+    }
+
+    private static void swapHands(Field field) {
+        int tmpTapi = field.getTapi();
+        field.setTapi(field.getTipi());
+        field.setTipi(tmpTapi);
+
+        Hand tmpHand = field.getTip();
+        field.setTip(field.getTap());
+        field.setTap(tmpHand);
+    }
     /*
      * Field & CardStatus modifications [END]
      */
@@ -1896,13 +1939,6 @@ public class FieldSimulator {
     /*
      * Score and results [START]
      */
-    private static int evaluateBrawlScore(Field field, int player) {
-        return 55
-                + field.getPlayer(opponent(player)).getTotalCardsDestroyed()
-                + field.getPlayer(player).getDeck().getShuffledCards().size()
-                - ((field.turn + 7) / 8);
-    }
-
     private static Results calculateResult(Field field) {
 
         int raidDamage = 0;
@@ -1968,6 +2004,13 @@ public class FieldSimulator {
         // Huh? How did we get here?
         throw new AssertionError();
     }
+
+    private static int evaluateBrawlScore(Field field, int player) {
+        return 55
+                + field.getPlayer(opponent(player)).getTotalCardsDestroyed()
+                + field.getPlayer(player).getDeck().getShuffledCards().size()
+                - ((field.turn + 7) / 8);
+    }
     /*
      * Score and results [END]
      */
@@ -2004,12 +2047,12 @@ public class FieldSimulator {
     private static void debugPrintField(Field field) {
 
         debug(3, "Active player field:");
-        debug(3, "> %s", field.getTap().getCommander().description());
+        debug(3, "\t> %s", field.getTap().getCommander().description());
         debugList(field.getTap().getStructures());
         debugList(field.getTap().getAssaults());
 
         debug(3, "Inactive player field:");
-        debug(3, "> %s", field.getTip().getCommander().description());
+        debug(3, "\t> %s", field.getTip().getCommander().description());
         debugList(field.getTip().getStructures());
         debugList(field.getTip().getAssaults());
 
@@ -2017,7 +2060,7 @@ public class FieldSimulator {
 
     private static void debugList(List<CardStatus> list) {
         for (CardStatus c: list)
-            debug(3, "> %s", c.description());
+            debug(3, "\t> %s", c.description());
     }
     /*
      * Util methods [END]
